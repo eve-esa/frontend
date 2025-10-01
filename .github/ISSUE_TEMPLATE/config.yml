@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 GitHub Discussions
+    url: https://github.com/pischool/eve-fe-3/discussions
+    about: Ask questions and discuss ideas with the community
+  - name: 📖 Documentation
+    url: https://github.com/pischool/eve-fe-3#readme
+    about: Check out the project documentation and README
+  - name: 🔒 Security Issues
+    url: https://github.com/pischool/eve-fe-3/security/policy
+    about: Report security vulnerabilities (see SECURITY.md)

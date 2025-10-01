@@ -1,0 +1,53 @@
+name: Deploy production
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [22.16.0]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::686812424034:role/gh-eve-esa-fe-prod
+          role-session-name: github-action-${{ github.run_id }}
+          aws-region: eu-west-1
+
+      - run: yarn install --frozen-lockfile
+
+      - name: Set short SHA
+        run: echo "SHORT_SHA=${GITHUB_SHA::7}" >> $GITHUB_ENV
+
+      - name: Build
+        run: CI=false NODE_OPTIONS=--max_old_space_size=4096 yarn build
+        env:
+          DEPLOY_ID: ${{ env.SHORT_SHA }}
+          VITE_API_URL: ${{ vars.PRODUCTION_VITE_API_ENDPOINT }}
+          VITE_CONTACT_URL: ${{ vars.PRODUCTION_VITE_CONTACT_URL }}
+          VITE_PRIVACY_POLICY_URL: ${{ vars.PRODUCTION_VITE_PRIVACY_POLICY_URL }}
+          VITE_HIDE_CLASSIFICATION_FILTERS: ${{ vars.PRODUCTION_VITE_HIDE_CLASSIFICATION_FILTERS }}
+          VITE_ABOUT_US_URL: ${{ vars.PRODUCTION_VITE_ABOUT_US_URL }}
+
+      - name: Deploy to S3
+        run: aws s3 sync ./dist s3://${{ vars.PRODUCTION_S3_BUCKET }}
+
+      - name: CloudFront Cache Invalidation
+        run: aws cloudfront create-invalidation --distribution-id ${{ vars.PRODUCTION_CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*"

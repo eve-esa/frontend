@@ -1,0 +1,203 @@
+name: ✨ Feature Request
+description: Suggest a new feature or enhancement for EVE Frontend
+title: "[Feature]: "
+labels: ["enhancement", "needs-triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting a new feature! Please fill out this form as completely as possible.
+
+  - type: checkboxes
+    id: prerequisites
+    attributes:
+      label: Prerequisites
+      description: Please confirm you have completed the following
+      options:
+        - label: I have searched existing issues to avoid duplicates
+          required: true
+        - label: I have read the [Contributing Guidelines](../../CONTRIBUTING.md)
+          required: true
+        - label: This feature aligns with the project's goals and scope
+          required: true
+
+  - type: textarea
+    id: feature-description
+    attributes:
+      label: Feature Description
+      description: A clear and concise description of the feature you'd like to see
+      placeholder: Describe the feature...
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem-statement
+    attributes:
+      label: Problem Statement
+      description: What problem does this feature solve? What use case does it address?
+      placeholder: |
+        As a [user type], I want [functionality] so that [benefit/value].
+        
+        Currently, users have to [current process/limitation] which is [pain point].
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: Proposed Solution
+      description: Describe how you envision this feature working
+      placeholder: |
+        I suggest implementing [solution] that would:
+        1. [functionality 1]
+        2. [functionality 2]
+        3. [functionality 3]
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternative Solutions
+      description: Are there any alternative solutions or workarounds you've considered?
+      placeholder: Describe alternative approaches...
+
+  - type: dropdown
+    id: feature-type
+    attributes:
+      label: Feature Type
+      description: What type of feature is this?
+      options:
+        - New Component
+        - UI/UX Enhancement
+        - Performance Improvement
+        - Accessibility Improvement
+        - Developer Experience
+        - Integration/API
+        - Security Enhancement
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How important is this feature to you?
+      options:
+        - Low - Nice to have
+        - Medium - Would improve my workflow
+        - High - Critical for my use case
+        - Urgent - Blocking current work
+    validations:
+      required: true
+
+  - type: dropdown
+    id: complexity
+    attributes:
+      label: Estimated Complexity
+      description: How complex do you think this feature would be to implement?
+      options:
+        - Low - Simple changes or additions
+        - Medium - Moderate changes across multiple files
+        - High - Significant changes or new architecture
+        - Unknown - Not sure about implementation complexity
+
+  - type: checkboxes
+    id: affected-areas
+    attributes:
+      label: Affected Areas
+      description: Which parts of the application would this feature affect?
+      options:
+        - label: Authentication/Authorization
+        - label: Chat Interface
+        - label: User Interface (UI)
+        - label: User Experience (UX)
+        - label: Performance
+        - label: Accessibility
+        - label: Mobile Responsiveness
+        - label: API Integration
+        - label: Data Management
+        - label: Settings/Configuration
+        - label: Documentation
+        - label: Testing
+        - label: Build/Deploy Process
+
+  - type: textarea
+    id: user-stories
+    attributes:
+      label: User Stories
+      description: Provide detailed user stories for this feature
+      placeholder: |
+        **As a** [user type]
+        **I want** [functionality]
+        **So that** [benefit]
+        
+        **Acceptance Criteria:**
+        - [ ] Criterion 1
+        - [ ] Criterion 2
+        - [ ] Criterion 3
+
+  - type: textarea
+    id: mockups
+    attributes:
+      label: Mockups/Wireframes
+      description: If you have any mockups, wireframes, or design ideas, please share them
+      placeholder: Drag and drop images here or provide links to design files...
+
+  - type: textarea
+    id: technical-considerations
+    attributes:
+      label: Technical Considerations
+      description: Any technical details, constraints, or considerations for implementation?
+      placeholder: |
+        - Dependencies needed
+        - Performance considerations
+        - Browser compatibility
+        - Accessibility requirements
+        - Security implications
+
+  - type: textarea
+    id: success-metrics
+    attributes:
+      label: Success Metrics
+      description: How would you measure the success of this feature?
+      placeholder: |
+        - User engagement metrics
+        - Performance improvements
+        - Error reduction
+        - User feedback
+
+  - type: dropdown
+    id: willingness-to-contribute
+    attributes:
+      label: Contribution
+      description: Would you be willing to contribute to implementing this feature?
+      options:
+        - Yes, I can implement this feature
+        - Yes, I can help with testing/feedback
+        - Yes, I can help with documentation
+        - Maybe, with guidance
+        - No, but I'd like to see it implemented
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Add any other context, links, or examples related to this feature
+      placeholder: |
+        - Links to similar features in other applications
+        - Research or articles supporting this feature
+        - Community feedback or discussions
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Code of Conduct
+      description: By submitting this issue, you agree to follow our [Code of Conduct](../../CODE_OF_CONDUCT.md)
+      options:
+        - label: I agree to follow this project's Code of Conduct
+          required: true

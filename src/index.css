@@ -1,0 +1,276 @@
+@import "tailwindcss";
+
+/* Custom Font Declarations */
+@font-face {
+  font-family: "NotesESA";
+  src: url("./assets/fonts/NotesESAregular.woff") format("woff");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "NotesESA";
+  src: url("./assets/fonts/NotesESAbold.woff") format("woff");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@theme {
+  --font-sans: "Arial", sans-serif;
+  --text-sm: 13px;
+  --text-md: 15px;
+  --text-lg: 16px;
+  --text-xl: 20px;
+  --text-2xl: 24px;
+  --text-3xl: 28px;
+  --color-natural-50: #ffffff;
+  --color-natural-100: #e8e8e4;
+  --color-natural-200: #d2dadc;
+  --color-natural-300: #171f21;
+  --color-natural-900: #12181a;
+  --color-natural-1000: #000000;
+
+  --color-primary-50: #3a6f86;
+  --color-primary-100: #0050d5;
+  --color-primary-200: #002433;
+  --color-primary-300: #8197a6;
+  --color-primary-400: #335e6f;
+  --color-primary-500: #003247;
+  --color-primary-600: #001923;
+  --color-primary-700: #002b3d;
+  --color-primary-800: #223636;
+  --color-primary-900: #012b3c;
+
+  --color-danger-100: #fbab18;
+  --color-danger-200: #ff96a0;
+  --color-danger-300: #f1666a;
+  --color-danger-400: #ed1b2f;
+  --color-danger-500: #a90b1a;
+
+  --color-success-50: #08af08;
+  --color-success-100: #00a67c;
+  --color-success-200: #00ae9d;
+  --animate-fade-in: fadeIn 0.2s ease-out;
+  --animate-fade-out: fadeOut 0.2s ease-in;
+
+  /* Custom breakpoints */
+  --breakpoint-3xl: 187.5rem; /* 3000px */
+
+  /* Custom container query breakpoints for very large screens */
+  --container-5xl: 90rem; /* 1440px */
+  --container-6xl: 100rem; /* 1600px */
+  --container-7xl: 110rem; /* 1760px */
+  --container-8xl: 120rem; /* 1920px */
+  --container-9xl: 140rem; /* 2240px */
+  --container-10xl: 160rem; /* 2560px */
+  --container-11xl: 187.5rem; /* 3000px */
+}
+
+/* Typography System */
+@layer base {
+  *:not(.katex):not(.katex *) {
+    @apply font-sans text-md;
+  }
+
+  /* Large screen font size adjustment */
+  @media (min-width: 3000px) {
+    *:not(.katex):not(.katex *) {
+      @apply text-2xl;
+    }
+  }
+}
+/* Custom Scrollbar Styles */
+@layer components {
+  ::-webkit-scrollbar {
+    width: 14px;
+    height: 14px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 4px;
+    margin: 0;
+    padding: 0;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-primary-50);
+    border-radius: 8px;
+    border: 4px solid transparent;
+    background-clip: content-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-primary-50);
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+}
+
+/* Custom Sonner toast styles */
+@layer components {
+  .toaster [data-sonner-toast][data-type="error"] {
+    background: var(--color-danger-300) !important;
+    color: var(--color-natural-50) !important;
+    border: 1px solid var(--color-danger-400) !important;
+  }
+
+  .toaster [data-sonner-toast][data-type="success"] {
+    background: var(--color-success-100) !important;
+    color: var(--color-natural-50) !important;
+    border: 2px solid var(--color-success-200) !important;
+  }
+
+  .toaster [data-sonner-toast][data-type="warning"] {
+    background: var(--color-primary-500) !important;
+    color: var(--color-natural-50) !important;
+    border: 1px solid var(--color-primary-400) !important;
+  }
+
+  .toaster [data-sonner-toast][data-type="info"] {
+    background: var(--color-primary-500) !important;
+    color: var(--color-natural-50) !important;
+    border: 1px solid var(--color-primary-400) !important;
+  }
+
+  .toaster [data-close-button] {
+    background: var(--color-natural-50) !important;
+    color: var(--color-natural-900) !important;
+    border: 1px solid transparent !important;
+    position: absolute !important;
+    right: -18px !important;
+    top: -4px !important;
+    left: auto !important;
+  }
+}
+
+/* Browser autocomplete overrides */
+@layer utilities {
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px var(--color-primary-200) inset !important;
+    -webkit-text-fill-color: var(--color-natural-100) !important;
+    background-color: var(--color-primary-200) !important;
+    transition: background-color 5000s ease-in-out 0s !important;
+  }
+
+  input::-webkit-calendar-picker-indicator,
+  input::-webkit-list-button,
+  input::-webkit-datetime-edit {
+    background-color: var(--color-primary-200) !important;
+    color: var(--color-natural-100) !important;
+  }
+}
+
+/* Custom Animations */
+@keyframes pulse-scale {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    max-height: 0;
+    overflow: hidden;
+  }
+  to {
+    opacity: 1;
+    max-height: 400px;
+    overflow: visible;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+    max-height: 400px;
+    overflow: visible;
+  }
+  to {
+    opacity: 0;
+    max-height: 0;
+    overflow: hidden;
+  }
+}
+
+.animate-fade-in {
+  animation: var(--animate-fade-in);
+}
+
+.animate-fade-out {
+  animation: var(--animate-fade-out);
+}
+
+/* Joyride Tour Styles */
+.react-joyride__overlay {
+  position: fixed !important;
+}
+
+body:has(.react-joyride__overlay) {
+  overflow: hidden !important;
+}
+
+/* Simple tooltip styling */
+.react-joyride__tooltip {
+  background-color: #003247 !important;
+  color: white !important;
+  border: 2px solid #335e6f !important;
+}
+
+/* Style the arrow to match the content background */
+.__floater__arrow {
+  border-color: #002433 !important;
+}
+
+.__floater__arrow:before {
+  border-color: #335e6f !important;
+}
+
+/* Style the skip button */
+.react-joyride__tooltip button[data-action="skip"] {
+  color: var(--color-natural-200) !important;
+  text-decoration: underline !important;
+  background: transparent !important;
+  border: none !important;
+  font-size: 13px !important;
+  cursor: pointer !important;
+  transition: color 0.2s ease !important;
+}
+
+.react-joyride__tooltip button[data-action="skip"]:hover {
+  color: var(--color-natural-50) !important;
+}
+
+/* Style the navigation buttons (previous and next) */
+.react-joyride__tooltip button[data-action="back"],
+.react-joyride__tooltip button[data-action="next"],
+.react-joyride__tooltip button[data-action="primary"] {
+  color: white !important;
+  background: transparent !important;
+  border: 1px solid #335e6f !important;
+  border-radius: 0 !important;
+  padding: 8px 16px !important;
+  font-size: 15px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+.react-joyride__tooltip button[data-action="back"]:hover,
+.react-joyride__tooltip button[data-action="next"]:hover,
+.react-joyride__tooltip button[data-action="primary"]:hover {
+  background-color: #335e6f !important;
+  color: white !important;
+}

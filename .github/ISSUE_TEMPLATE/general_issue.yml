@@ -1,0 +1,89 @@
+name: 📝 General Issue
+description: Create a general issue for questions, discussions, or other topics
+title: "[General]: "
+labels: ["question", "needs-triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for creating an issue! Please use this template for general questions, discussions, or topics that don't fit into bug reports or feature requests.
+
+  - type: checkboxes
+    id: prerequisites
+    attributes:
+      label: Prerequisites
+      description: Please confirm you have completed the following
+      options:
+        - label: I have searched existing issues to avoid duplicates
+          required: true
+        - label: I have read the [Contributing Guidelines](../../CONTRIBUTING.md)
+          required: true
+        - label: I have checked the documentation and README
+          required: true
+
+  - type: dropdown
+    id: issue-type
+    attributes:
+      label: Issue Type
+      description: What type of issue is this?
+      options:
+        - Question
+        - Discussion
+        - Documentation
+        - Support Request
+        - Suggestion
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Provide a clear and detailed description of your issue
+      placeholder: Describe your question, discussion topic, or issue...
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Provide any relevant context, background information, or use case
+      placeholder: |
+        - What are you trying to achieve?
+        - What have you already tried?
+        - Any relevant background information?
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment (if applicable)
+      description: If relevant, provide details about your environment
+      placeholder: |
+        - Node.js version:
+        - Browser:
+        - Operating System:
+        - Project version:
+
+  - type: textarea
+    id: additional-info
+    attributes:
+      label: Additional Information
+      description: Any additional information, links, or resources that might be helpful
+      placeholder: |
+        - Links to relevant documentation
+        - Code snippets
+        - Screenshots
+        - External resources
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Code of Conduct
+      description: By submitting this issue, you agree to follow our [Code of Conduct](../../CODE_OF_CONDUCT.md)
+      options:
+        - label: I agree to follow this project's Code of Conduct
+          required: true

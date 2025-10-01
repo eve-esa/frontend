@@ -1,0 +1,30 @@
+export const MUTATION_KEYS = {
+  signup: "signup",
+  login: "login",
+  resetPassword: "resetPassword",
+  forgotPassword: "forgotPassword",
+  logout: "logout",
+  deleteConversation: "deleteConversation",
+  deleteCollection: "deleteCollection",
+  renameConversation: "renameConversation",
+  message: "message",
+  documents: "documents",
+  uploadDocument: "uploadDocument",
+  feedback: "feedback",
+  conversation: "conversation",
+  profile: "profile",
+  createCollection: "createCollection",
+  deleteDocument: "deleteDocument",
+  sendRequest: "sendRequest",
+  retryRequest: "retryRequest",
+};
+
+export const QUERY_KEYS = {
+  profile: "profile",
+  publicCollections: "publicCollections",
+  myCollections: "myCollections",
+  conversationsList: "conversationsList",
+  conversation: "conversation",
+  documents: "documents",
+  getDocument: "getDocument",
+};
