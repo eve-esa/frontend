@@ -9,6 +9,7 @@ import { faCheck } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import rehypeRaw from "rehype-raw";
 import { cn } from "@/lib/utils";
+import { prepareLatexContent } from "@/utilities/prepareLatexContent";
 import "katex/dist/katex.min.css";
 
 type SmartTextProps = {
@@ -184,6 +185,9 @@ const SmartText: React.FC<SmartTextProps> = ({ text, className }) => {
     ),
   };
 
+  // Prepare content to handle LaTeX delimiters
+  const preparedText = prepareLatexContent(text);
+
   return (
     <div className={cn(baseText, className)}>
       <ReactMarkdown
@@ -191,7 +195,7 @@ const SmartText: React.FC<SmartTextProps> = ({ text, className }) => {
         rehypePlugins={[rehypeKatex, rehypeRaw]}
         components={components}
       >
-        {text}
+        {preparedText}
       </ReactMarkdown>
     </div>
   );
