@@ -108,7 +108,7 @@ export const Message = ({
             <Skeleton className="w-full max-w-[40%] h-2" />
           </div>
         ) : message?.output ? (
-          <SmartText text={message?.output} />
+          <SmartText text={String.raw`${message?.output}`} />
         ) : (
           <p className="text-danger-400">
             Something went wrong! Retry please your request.
