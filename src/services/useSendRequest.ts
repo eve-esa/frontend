@@ -110,7 +110,8 @@ export const useSendRequest = (conversationId?: string) => {
 
         return null as unknown as MessageType;
       } catch (e) {
-        return sendRequest({ query, conversationId, settings });
+        console.log("streaming error", e);
+        return null as unknown as MessageType;
       }
     },
     onMutate: async (newMessage: SendRequestProps) => {
