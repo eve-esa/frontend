@@ -45,6 +45,7 @@ jobs:
           VITE_PRIVACY_POLICY_URL: ${{ vars.STAGING_VITE_PRIVACY_POLICY_URL }}
           VITE_ABOUT_US_URL: ${{ vars.STAGING_VITE_ABOUT_US_URL }}
           VITE_HIDE_CLASSIFICATION_FILTERS: ${{ vars.STAGING_VITE_HIDE_CLASSIFICATION_FILTERS }}
+          VITE_ENABLE_STREAMING: ${{ vars.STAGING_VITE_ENABLE_STREAMING }}
 
       - name: Deploy to S3
         run: aws s3 sync ./dist s3://${{ vars.STAGING_S3_BUCKET }}
