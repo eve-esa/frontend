@@ -3,6 +3,7 @@ import { MUTATION_KEYS, QUERY_KEYS } from "./keys";
 import { toast } from "sonner";
 import type { AdvancedSettingsValidation } from "@/components/chat/SettingsForm";
 import api from "./axios";
+import { postStream } from "./streaming";
 import type { ApiError, ChaMessageType, MessageType } from "@/types";
 import { handleApiError } from "@/utilities/helpers";
 import { LOCAL_STORAGE_PUBLIC_COLLECTIONS } from "@/utilities/localStorage";
@@ -36,8 +37,81 @@ export const useSendRequest = (conversationId?: string) => {
 
   return useMutation({
     mutationKey: [MUTATION_KEYS.sendRequest, conversationId],
-    mutationFn: ({ query, conversationId, settings }: SendRequestProps) => {
-      return sendRequest({ query, conversationId, settings });
+    mutationFn: async ({ query, conversationId, settings }: SendRequestProps) => {
+      const enableStreaming = (
+        import.meta.env.VITE_ENABLE_STREAMING ?? "false"
+      ) === "true";
+
+       const payload = {
+        query,
+        ...settings,
+        public_collections: JSON.parse(
+          localStorage.getItem(LOCAL_STORAGE_PUBLIC_COLLECTIONS) ?? "[]"
+        ),
+      };
+
+      try {
+        if (!enableStreaming) {
+          return sendRequest({ query, conversationId, settings });
+        }
+
+        const applyTokenToOptimisticMessage = (tokenChunk: string) => {
+          queryClient.setQueryData<ChaMessageType>(
+            [QUERY_KEYS.conversation, conversationId],
+            (old) => {
+              if (!old || !old.messages?.length) return old;
+              const lastIndex = old.messages.length - 1;
+              const last = old.messages[lastIndex];
+              if (!last?.id?.startsWith("temp-")) return old;
+              const updated = {
+                ...last,
+                output: (last.output || "") + tokenChunk,
+              } as MessageType;
+              const newMessages = [...old.messages];
+              newMessages[lastIndex] = updated;
+              return { ...old, messages: newMessages };
+            }
+          );
+        };
+
+        const setFinalAnswer = (answer: string) => {
+          queryClient.setQueryData<ChaMessageType>(
+            [QUERY_KEYS.conversation, conversationId],
+            (old) => {
+              if (!old || !old.messages?.length) return old;
+              const lastIndex = old.messages.length - 1;
+              const last = old.messages[lastIndex];
+              if (!last?.id?.startsWith("temp-")) return old;
+              const updated = { ...last, output: answer } as MessageType;
+              const newMessages = [...old.messages];
+              newMessages[lastIndex] = updated;
+              return { ...old, messages: newMessages };
+            }
+          );
+        };
+
+        await postStream({
+          url: `/conversations/${conversationId}/stream_messages`,
+          payload,
+          onEvent: (evt) => {
+            if (
+              (evt as any)?.type === "token" &&
+              typeof (evt as any).content === "string"
+            ) {
+              applyTokenToOptimisticMessage((evt as any).content);
+            } else if (
+              (evt as any)?.type === "final" &&
+              typeof (evt as any).answer === "string"
+            ) {
+              setFinalAnswer((evt as any).answer);
+            }
+          },
+        });
+
+        return null as unknown as MessageType;
+      } catch (e) {
+        return sendRequest({ query, conversationId, settings });
+      }
     },
     onMutate: async (newMessage: SendRequestProps) => {
       //OPTIMISTIC UPDATE
@@ -126,8 +200,8 @@ export const useSendRequest = (conversationId?: string) => {
             id: data.id,
             timestamp: new Date(),
             conversation_id: data.conversation_id,
-            input: data.query || "",
-            output: data.answer || "",
+            input: data.query || data.input || "",
+            output: data.answer || data.output || "",
             feedback: null,
             documents: data.documents ?? [],
           };
