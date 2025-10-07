@@ -35,7 +35,7 @@ export const Message = ({
   const textRef = useRef<HTMLDivElement | null>(null);
   const stickyRef = useRef<HTMLDivElement | null>(null);
 
-  const showLoading = isSending && isLastMessage;
+  const showLoading = isSending && isLastMessage && !message?.output;
 
   // Check if text overflows
   useEffect(() => {
@@ -99,7 +99,9 @@ export const Message = ({
 
       {/* ANSWER SECTION */}
       <div className="md:pt-8 pt-4 px-[1px]">
-        {showLoading ? (
+        {message?.output ? (
+          <SmartText text={message.output} />
+        ) : showLoading ? (
           <div className="flex flex-col gap-2 text-natural-600">
             <Skeleton className="w-full h-2 max-w-[98%]" />
             <Skeleton className="w-full h-2 max-w-[100%]" />
@@ -107,8 +109,6 @@ export const Message = ({
             <Skeleton className="w-full max-w-[87%] h-2" />
             <Skeleton className="w-full max-w-[40%] h-2" />
           </div>
-        ) : message?.output ? (
-          <SmartText text={String.raw`${message?.output}`} />
         ) : (
           <p className="text-danger-400">
             Something went wrong! Retry please your request.
