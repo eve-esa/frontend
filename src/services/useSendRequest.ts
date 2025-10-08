@@ -90,6 +90,7 @@ export const useSendRequest = (conversationId?: string) => {
           );
         };
 
+        let finalAnswer: string | null = null;
         await postStream({
           url: `/conversations/${conversationId}/stream_messages`,
           payload,
@@ -103,12 +104,28 @@ export const useSendRequest = (conversationId?: string) => {
               (evt as any)?.type === "final" &&
               typeof (evt as any).answer === "string"
             ) {
-              setFinalAnswer((evt as any).answer);
+              finalAnswer = (evt as any).answer;
+              setFinalAnswer(finalAnswer ?? "");
             }
           },
         });
 
-        return null as unknown as MessageType;
+        // Build the final MessageType to return so onSuccess can replace temp message
+        const now = new Date();
+        const finalMessage: MessageType = {
+          id: `srv-${now.getTime()}`,
+          timestamp: now,
+          conversation_id: conversationId || "",
+          input: payload.query,
+          output: finalAnswer || "",
+          feedback: null,
+          feedback_reason: null as any,
+          documents: [],
+          answer: finalAnswer || "",
+          query: payload.query,
+        } as unknown as MessageType;
+
+        return finalMessage;
       } catch (e) {
         console.log("streaming error", e);
         return null as unknown as MessageType;
