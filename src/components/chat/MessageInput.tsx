@@ -43,7 +43,7 @@ export const MessageInput = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const inputValue = useWatch({ control, name: "input" });
-  const maxCharacters = 345000;
+  const maxCharacters = 100000;
   const inputLengthWithoutNewlines = inputValue.replace(/\n/g, "").length;
   const isOverLimit = inputLengthWithoutNewlines > maxCharacters;
 

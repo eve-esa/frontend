@@ -17,7 +17,7 @@ export const StepInput = ({
   value,
   onChange,
   min = 0,
-  max = 1000,
+  max = 10,
   step = 1,
   className,
   disabled = false,
