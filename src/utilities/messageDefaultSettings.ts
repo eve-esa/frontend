@@ -1,6 +1,6 @@
 export const messageDefaultSettings = {
-  score_threshold: 0.5,
-  temperature: 0.5,
+  score_threshold: 0.6,
+  temperature: 0.1,
   year: {
     startYear: undefined,
     endYear: undefined,
@@ -10,5 +10,5 @@ export const messageDefaultSettings = {
   scientific_and_technical: undefined,
   market_perspective: undefined,
   n_citations: 0,
-  k: 5,
+  k: 10,
 };
