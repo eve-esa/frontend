@@ -1,6 +1,6 @@
 export const messageDefaultSettings = {
   score_threshold: 0.6,
-  temperature: 0.1,
+  temperature: 0.0645,
   year: {
     startYear: undefined,
     endYear: undefined,

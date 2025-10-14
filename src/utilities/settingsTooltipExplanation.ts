@@ -2,12 +2,12 @@ export const settingsTooltipExplanation = {
   temperature: {
     title: "Temperature",
     explanation:
-      "Controls how creative or deterministic the model's responses are. Lower values (e.g., 0.2) make the output more focused and predictable, while higher values (e.g., 0.8) encourage more diverse and exploratory answers.",
+      "Controls how creative or deterministic the model's responses are. Lower values (e.g., 0.2) make the output more focused and predictable, while higher values (e.g., 0.8) encourage more diverse and exploratory answers. Recommended value: 0.1",
   },
   score_threshold: {
     title: "Similarity Threshold",
     explanation:
-      "Sets the minimum similarity score a document must have to be considered relevant. Higher thresholds return fewer, but more closely matched documents; lower thresholds return a broader set of results.",
+      "Sets the minimum similarity score a document must have to be considered relevant. Higher thresholds return fewer, but more closely matched documents; lower thresholds return a broader set of results. Recommended value: 0.6",
   },
   year: {
     title: "Document Year",
@@ -39,6 +39,6 @@ export const settingsTooltipExplanation = {
   k: {
     title: "Max Documents",
     explanation:
-      "Choose the maximum number of documents to retrieve in a single query. Increasing this may provide broader coverage but can include less relevant results.",
+      "Choose the maximum number of documents to retrieve in a single query. Increasing this may provide broader coverage but can include less relevant results. Recommended value: 10",
   },
 };
