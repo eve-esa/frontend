@@ -29,6 +29,7 @@ export const MessageList = ({
             isSending={isSending}
             isLastMessage={isLastMessage}
             scrollContainerRef={scrollContainerRef}
+            messageIndex={index}
           />
         );
       })}

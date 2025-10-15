@@ -5,12 +5,14 @@ import type { MessageType } from "@/types";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useMessageAtTop } from "@/hooks/useMessageAtTop";
 import { cn } from "@/lib/utils";
+import { useSmoothStream } from "@/hooks/useSmoothStream";
 
 type MessageProps = {
   message: MessageType;
   isSending: boolean;
   isLastMessage: boolean;
   scrollContainerRef?: React.RefObject<HTMLDivElement | null>;
+  messageIndex?: number;
 };
 
 export const Message = ({
@@ -18,6 +20,7 @@ export const Message = ({
   isSending,
   isLastMessage,
   scrollContainerRef,
+  messageIndex,
 }: MessageProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isOverflowing, setIsOverflowing] = useState(false);
@@ -36,6 +39,18 @@ export const Message = ({
   const stickyRef = useRef<HTMLDivElement | null>(null);
 
   const showLoading = isSending && isLastMessage && !message?.output;
+
+  const isStreamingTarget = isSending && isLastMessage;
+  const persistKey = `${message.conversation_id ?? ""}:${String(
+    messageIndex ?? (isLastMessage ? "last" : "")
+  )}`;
+  const smoothed = useSmoothStream(message.output || "", isStreamingTarget, {
+    ratePerSecond: 1000,
+    chunkSize: 1,
+  }, persistKey);
+  const effectiveOutput = smoothed.length >= (message.output?.length || 0)
+    ? message.output
+    : smoothed;
 
   // Check if text overflows
   useEffect(() => {
@@ -99,8 +114,8 @@ export const Message = ({
 
       {/* ANSWER SECTION */}
       <div className="md:pt-8 pt-4 px-[1px]">
-        {message?.output ? (
-          <SmartText text={message.output} />
+        {effectiveOutput ? (
+          <SmartText text={effectiveOutput} />
         ) : showLoading ? (
           <div className="flex flex-col gap-2 text-natural-600">
             <Skeleton className="w-full h-2 max-w-[98%]" />
