@@ -45,7 +45,7 @@ export const Message = ({
     messageIndex ?? (isLastMessage ? "last" : "")
   )}`;
   const smoothed = useSmoothStream(message.output || "", isStreamingTarget, {
-    ratePerSecond: 1000,
+    ratePerSecond: 100,
     chunkSize: 1,
   }, persistKey);
   const effectiveOutput = smoothed.length >= (message.output?.length || 0)
