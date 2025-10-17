@@ -15,6 +15,7 @@ type ProfileMenubarProps = {
   className?: string;
   isOpen: boolean;
   onProfileClick: () => void;
+  onCO2eqClick: () => void;
   onLogoutClick: () => void;
   isLoadingProfile: boolean;
 };
@@ -24,6 +25,7 @@ export const ProfileMenubar = ({
   className = "",
   isOpen,
   onProfileClick,
+  onCO2eqClick,
   onLogoutClick,
   isLoadingProfile,
 }: ProfileMenubarProps) => {
@@ -80,6 +82,9 @@ export const ProfileMenubar = ({
         <MenubarContent side="bottom">
           <MenubarItem onClick={onProfileClick}>
             <span>Profile</span>
+          </MenubarItem>
+          <MenubarItem onClick={onCO2eqClick}>
+            <span>CO2eq</span>
           </MenubarItem>
           <MenubarItem onClick={onAboutUsClick}>
             <span>About Us</span>
