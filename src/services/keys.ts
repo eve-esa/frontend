@@ -27,4 +27,5 @@ export const QUERY_KEYS = {
   conversation: "conversation",
   documents: "documents",
   getDocument: "getDocument",
+  userMessageStats: "userMessageStats",
 };
