@@ -10,7 +10,13 @@ type UseSmoothStreamOptions = {
  * It assumes `sourceText` is append-only while streaming is active.
  */
 // Module-level store to persist animation state across component remounts
-type Persisted = { displayed: string; sourceLen: number; queue: string };
+type Persisted = {
+  displayed: string;
+  sourceLen: number;
+  queue: string;
+  lastTickMs?: number;
+  budget?: number;
+};
 const PERSIST_STORE = new Map<string, Persisted>();
 
 export const useSmoothStream = (
@@ -34,6 +40,12 @@ export const useSmoothStream = (
 
   const sourceLenRef = useRef<number>(persisted ? persisted.sourceLen : sourceText.length);
   const queueRef = useRef<string>(persisted ? persisted.queue : "");
+  // Persisted timing for smooth catch-up after unmounts or throttling
+  const lastTickRef = useRef<number>(
+    (persisted && typeof persisted.lastTickMs === "number" && persisted.lastTickMs) ||
+      (typeof performance !== "undefined" ? performance.now() : Date.now())
+  );
+  const budgetRef = useRef<number>(persisted?.budget ?? 0);
 
   useEffect(() => {
     if (!persistKey) return;
@@ -41,6 +53,8 @@ export const useSmoothStream = (
       displayed,
       sourceLen: sourceLenRef.current,
       queue: queueRef.current,
+      lastTickMs: lastTickRef.current,
+      budget: budgetRef.current,
     });
   }, [persistKey, displayed]);
 
@@ -62,6 +76,8 @@ export const useSmoothStream = (
           displayed,
           sourceLen: sourceLenRef.current,
           queue: queueRef.current,
+          lastTickMs: lastTickRef.current,
+          budget: budgetRef.current,
         });
       }
     } else if (newLen < prevLen) {
@@ -73,6 +89,8 @@ export const useSmoothStream = (
           displayed: "",
           sourceLen: sourceLenRef.current,
           queue: queueRef.current,
+          lastTickMs: lastTickRef.current,
+          budget: budgetRef.current,
         });
       }
     }
@@ -81,11 +99,18 @@ export const useSmoothStream = (
   // Reveal buffered characters at a steady pace regardless of active state
   // The interval is lightweight and only appends when there is a queue.
   useEffect(() => {
-    const timer = setInterval(() => {
+    const nowInit = typeof performance !== "undefined" ? performance.now() : Date.now();
+    // On (re)mount, catch up by elapsed time since last tick so it looks continuous
+    const elapsedOnMount = Math.max(0, nowInit - lastTickRef.current);
+    const drainWithElapsed = (elapsedMs: number) => {
       if (queueRef.current.length === 0) return;
-      const take = Math.min(chunkSize, queueRef.current.length);
-      const nextChunk = queueRef.current.slice(0, take);
-      queueRef.current = queueRef.current.slice(take);
+      budgetRef.current += (ratePerSecond * elapsedMs) / 1000;
+      const maxBurst = Math.max(chunkSize * 50, 200);
+      const toAppend = Math.min(queueRef.current.length, Math.floor(budgetRef.current), maxBurst);
+      if (toAppend <= 0) return;
+      const nextChunk = queueRef.current.slice(0, toAppend);
+      queueRef.current = queueRef.current.slice(toAppend);
+      budgetRef.current -= toAppend;
       setDisplayed((d) => d + nextChunk);
       if (persistKey) {
         PERSIST_STORE.set(persistKey, {
@@ -94,12 +119,53 @@ export const useSmoothStream = (
             : undefined) ?? "",
           sourceLen: sourceLenRef.current,
           queue: queueRef.current,
+          lastTickMs: lastTickRef.current,
+          budget: budgetRef.current,
+        });
+      }
+    };
+
+    if (elapsedOnMount > 0) {
+      drainWithElapsed(elapsedOnMount);
+    }
+    lastTickRef.current = nowInit;
+
+    const timer = setInterval(() => {
+      const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+      const elapsed = Math.max(0, now - lastTickRef.current);
+      lastTickRef.current = now;
+      drainWithElapsed(elapsed);
+      if (persistKey) {
+        PERSIST_STORE.set(persistKey, {
+          displayed: PERSIST_STORE.get(persistKey)?.displayed ?? "",
+          sourceLen: sourceLenRef.current,
+          queue: queueRef.current,
+          lastTickMs: lastTickRef.current,
+          budget: budgetRef.current,
         });
       }
     }, intervalMs);
 
-    return () => clearInterval(timer);
-  }, [intervalMs, chunkSize]);
+    const onVisibility = () => {
+      if (typeof document === "undefined") return;
+      if (document.visibilityState === "visible") {
+        const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+        const elapsed = Math.max(0, now - lastTickRef.current);
+        lastTickRef.current = now;
+        drainWithElapsed(elapsed);
+      }
+    };
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", onVisibility);
+    }
+
+    return () => {
+      clearInterval(timer);
+      if (typeof document !== "undefined") {
+        document.removeEventListener("visibilitychange", onVisibility);
+      }
+    };
+  }, [intervalMs, chunkSize, ratePerSecond, persistKey]);
 
   return displayed;
 };
