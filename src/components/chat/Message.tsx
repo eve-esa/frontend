@@ -118,6 +118,19 @@ export const Message = ({
           <SmartText text={effectiveOutput} />
         ) : showLoading ? (
           <div className="flex flex-col gap-2 text-natural-600">
+            {Array.isArray(message.pre_answer_notices) &&
+              message.pre_answer_notices.length > 0 && (
+                <div className="mb-2 space-y-1">
+                  {message.pre_answer_notices.map((notice, idx) => (
+                    <div
+                      key={idx}
+                      className="text-base font-bold text-natural-50 animate-pulse"
+                    >
+                      {notice}
+                    </div>
+                  ))}
+                </div>
+              )}
             <Skeleton className="w-full h-2 max-w-[98%]" />
             <Skeleton className="w-full h-2 max-w-[100%]" />
             <Skeleton className="w-full h-2 max-w-[97%]" />

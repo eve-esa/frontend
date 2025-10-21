@@ -32,6 +32,8 @@ export type MessageType = {
   answer?: string;
   was_copied?: boolean;
   query?: string;
+  // Transient notices to show before the final answer while streaming
+  pre_answer_notices?: string[];
 };
 
 export type ChaMessageType = {

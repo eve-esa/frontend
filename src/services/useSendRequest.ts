@@ -90,6 +90,28 @@ export const useSendRequest = (conversationId?: string) => {
           );
         };
 
+        const addPreAnswerNotice = (notice: string) => {
+          queryClient.setQueryData<ChaMessageType>(
+            [QUERY_KEYS.conversation, conversationId],
+            (old) => {
+              if (!old || !old.messages?.length) return old;
+              const lastIndex = old.messages.length - 1;
+              const last = old.messages[lastIndex];
+              if (!last?.id?.startsWith("temp-")) return old;
+              const updated = {
+                ...last,
+                pre_answer_notices: [
+                  ...((last as MessageType).pre_answer_notices ?? []),
+                  notice,
+                ],
+              } as MessageType;
+              const newMessages = [...old.messages];
+              newMessages[lastIndex] = updated;
+              return { ...old, messages: newMessages };
+            }
+          );
+        };
+
         let finalAnswer: string | null = null;
         await postStream({
           url: `/conversations/${conversationId}/stream_messages`,
@@ -106,6 +128,16 @@ export const useSendRequest = (conversationId?: string) => {
             ) {
               finalAnswer = (evt as any).answer;
               setFinalAnswer(finalAnswer ?? "");
+            } else if (
+              (evt as any)?.type === "status" &&
+              typeof (evt as any).content === "string"
+            ) {
+              addPreAnswerNotice((evt as any).content);
+            } else if (
+              (evt as any)?.type === "requery" &&
+              typeof (evt as any).content === "string"
+            ) {
+              addPreAnswerNotice((evt as any).content);
             }
           },
         });

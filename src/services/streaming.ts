@@ -4,6 +4,8 @@ import type { AxiosProgressEvent } from "axios";
 export type StreamEvent =
   | { type: "token"; content: string }
   | { type: "final"; answer: string }
+  | { type: "status"; content: string }
+  | { type: "requery"; content: string }
   | Record<string, unknown>;
 
 export type PostStreamOptions<TPayload> = {
