@@ -28,8 +28,8 @@ export const CO2eqDialog = ({ isOpen, onOpenChange }: CO2eqDialogProps) => {
 
   const totalCO2eqKg =
     typeof totalCharacters === "number" && totalCharacters > 0
-      ? (totalCharacters / CHARS_PER_TOKEN) * (CO2_PER_TOKEN_MG / MG_PER_KG)
-      : 0;
+      ? Intl.NumberFormat("en-US", { style: "decimal", maximumFractionDigits: 2 }).format((totalCharacters / CHARS_PER_TOKEN) * (CO2_PER_TOKEN_MG / MG_PER_KG))
+      : "0";
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
