@@ -17,7 +17,19 @@ export const CO2eqDialog = ({ isOpen, onOpenChange }: CO2eqDialogProps) => {
     await refetch();
   };
 
-  const total = data?.total_characters;
+  const totalCharacters = data?.total_characters;
+  // Assumptions:
+  // - Roughly 4 characters per token
+  // - ~3mg CO2 per token
+  // - Convert mg to kg
+  const CHARS_PER_TOKEN = 4;
+  const CO2_PER_TOKEN_MG = 3;
+  const MG_PER_KG = 1000000;
+
+  const totalCO2eqKg =
+    typeof totalCharacters === "number" && totalCharacters > 0
+      ? (totalCharacters / CHARS_PER_TOKEN) * (CO2_PER_TOKEN_MG / MG_PER_KG)
+      : 0;
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -31,7 +43,7 @@ export const CO2eqDialog = ({ isOpen, onOpenChange }: CO2eqDialogProps) => {
 
         <div className="flex flex-col gap-4 mt-4">
           <div className="rounded-lg border border-primary-400 p-4 bg-primary-700/30">
-            <div className="text-3xl font-semibold text-natural-50">{shouldFetch ? (isFetching ? "Calculating..." : total ?? 0) : "—"}</div>
+            <div className="text-3xl font-semibold text-natural-50">{shouldFetch ? (isFetching ? "Calculating..." : `${totalCO2eqKg} Kg`) : "—"}</div>
           </div>
 
           {shouldFetch && !isFetching && data && (
