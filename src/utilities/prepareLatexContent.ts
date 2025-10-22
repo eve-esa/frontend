@@ -41,6 +41,23 @@ export const prepareLatexContent = (content: string): string => {
     if (opens > closes) {
       s += "}".repeat(opens - closes);
     }
+
+    // Fix misuse of sizing/paired delimiter commands given with braced arguments, e.g., \bigg{(} -> \bigg(
+    // KaTeX expects sizing commands to be followed directly by a delimiter token, not a grouped {token}
+    const sizedCmdPattern =
+      /(\\(?:big|Big|bigg|Bigg))\s*\{\s*(\\[a-zA-Z]+|\\.|\{|\}|[()\[\]\|])\s*\}/g;
+    s = s.replace(sizedCmdPattern, (_m, cmd, tok) => {
+      const token = tok === "{" || tok === "}" ? `\\${tok}` : tok;
+      return `${cmd}${token}`;
+    });
+
+    // Also fix \left{token} and \right{token} -> \left token (e.g., \left{(} -> \left()
+    const leftRightPattern =
+      /(\\(?:left|right))\s*\{\s*(\\[a-zA-Z]+|\\.|\{|\}|[()\[\]\|])\s*\}/g;
+    s = s.replace(leftRightPattern, (_m, cmd, tok) => {
+      const token = tok === "{" || tok === "}" ? `\\${tok}` : tok;
+      return `${cmd} ${token}`;
+    });
     return s;
   };
 
@@ -63,6 +80,12 @@ export const prepareLatexContent = (content: string): string => {
       }
       return `$${sanitized}$`;
     }
+  );
+
+  // Sanitize already-present $$ ... $$ display math blocks
+  processedContent = processedContent.replace(
+    /\$\$([\s\S]*?)\$\$/g,
+    (_m, latex) => `$$\n${sanitizeLatex(latex)}\n$$`
   );
 
   // Convert LaTeX tabular environments to GitHub-Flavored Markdown tables so
