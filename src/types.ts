@@ -34,6 +34,31 @@ export type MessageType = {
   query?: string;
   // Transient notices to show before the final answer while streaming
   pre_answer_notices?: string[];
+  metadata?: {
+    latencies: {
+      guardrail_latency: number | null;
+      rag_decision_latency: number | null;
+      reranking_latency: number | null;
+      query_embedding_latency: number | null;
+      qdrant_retrieval_latency: number | null;
+      mcp_retrieval_latency: number | null;
+      base_generation_latency: number | null;
+      fallback_latency: number | null;
+      hallucination_latency: number | null;
+      total_latency: number | null;
+    },
+    prompts: {
+      guardrail_prompt: string | null;
+      guardrail_result: string | null;
+      is_rag_prompt: string | null;
+      rag_decision_result: {
+        use_rag: boolean;
+        reason: string;
+        requery: string;
+      },
+      generation_prompt: string | null;
+    }
+  };
 };
 
 export type ChaMessageType = {

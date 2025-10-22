@@ -44,13 +44,19 @@ export const Message = ({
   const persistKey = `${message.conversation_id ?? ""}:${String(
     messageIndex ?? (isLastMessage ? "last" : "")
   )}`;
-  const smoothed = useSmoothStream(message.output || "", isStreamingTarget, {
-    ratePerSecond: 100,
-    chunkSize: 1,
-  }, persistKey);
-  const effectiveOutput = smoothed.length >= (message.output?.length || 0)
-    ? message.output
-    : smoothed;
+  const smoothed = useSmoothStream(
+    message.output || "",
+    isStreamingTarget,
+    {
+      ratePerSecond: 100,
+      chunkSize: 1,
+    },
+    persistKey
+  );
+  const effectiveOutput =
+    smoothed.length >= (message.output?.length || 0)
+      ? message.output
+      : smoothed;
 
   // Check if text overflows
   useEffect(() => {
@@ -115,7 +121,14 @@ export const Message = ({
       {/* ANSWER SECTION */}
       <div className="md:pt-8 pt-4 px-[1px]">
         {effectiveOutput ? (
-          <SmartText text={effectiveOutput} />
+          <SmartText
+            text={`**Searched for: ${
+              message.pre_answer_notices
+                ? message.pre_answer_notices[0]
+                : message.metadata?.prompts?.rag_decision_result?.requery ??
+                  message.input
+            }**\n\n ${effectiveOutput}`}
+          />
         ) : showLoading ? (
           <div className="flex flex-col gap-2 text-natural-600">
             {Array.isArray(message.pre_answer_notices) &&
