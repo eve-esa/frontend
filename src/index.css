@@ -274,3 +274,19 @@ body:has(.react-joyride__overlay) {
   background-color: #335e6f !important;
   color: white !important;
 }
+
+/* Scrollable display math inside SmartText */
+.smarttext .katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+}
+.smarttext .katex-display > .katex {
+  padding-right: 2.5em;
+}
+
+.smarttext .katex-display > .katex > .katex-html > .tag {
+  position: relative !important;
+  margin-left: 15px;
+}

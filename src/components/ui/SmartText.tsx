@@ -189,7 +189,7 @@ const SmartText: React.FC<SmartTextProps> = ({ text, className }) => {
   const preparedText = prepareLatexContent(text);
 
   return (
-    <div className={cn(baseText, className)}>
+    <div className={cn(baseText, "smarttext", className)}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath]}
         rehypePlugins={[rehypeKatex, rehypeRaw]}

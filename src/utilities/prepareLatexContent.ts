@@ -3,13 +3,65 @@
  * for proper rendering with react-markdown and remark-math
  */
 export const prepareLatexContent = (content: string): string => {
-  let processedContent = content.replace(/\\\[([\s\S]*?)\\\]/g, (_, latex) => {
-    return `$$${latex}$$`;
-  });
+  // Normalize escaped newlines from serialized sources so markdown and math blocks break correctly
+  let processedContent = content.replace(/\\n/g, "\n");
+
+  // Sanitize common LaTeX issues to avoid KaTeX parse errors
+  const sanitizeLatex = (latex: string): string => {
+    let s = latex;
+
+    // Convert commands that require braced arguments when given with parentheses, e.g., \bar(u) -> \bar{u}
+    const needsBraces = [
+      "bar",
+      "hat",
+      "tilde",
+      "vec",
+      "overline",
+      "underline",
+      "mathrm",
+      "mathit",
+      "mathbf",
+      "mathsf",
+      "mathtt",
+      "operatorname",
+      "mathcal",
+    ];
+    const parenArgPattern = new RegExp(
+      `\\\\(${needsBraces.join("|")})\\s*\\(([^()]+)\\)`,
+      "g"
+    );
+    s = s.replace(parenArgPattern, (_m, name, arg) => `\\${name}{${arg}}`);
+
+    // Remove unterminated \text{... at end of block
+    s = s.replace(/\\text\{[^}]*$/g, "");
+
+    // Balance unmatched braces to reduce parse failures
+    const opens = (s.match(/\{/g) || []).length;
+    const closes = (s.match(/\}/g) || []).length;
+    if (opens > closes) {
+      s += "}".repeat(opens - closes);
+    }
+    return s;
+  };
+
+  // Ensure display math becomes block $$ with surrounding newlines
+  processedContent = processedContent.replace(
+    /\\\[([\s\S]*?)\\\]/g,
+    (_m, latex) => {
+      const sanitized = sanitizeLatex(latex);
+      return `\n\n$$\n${sanitized}\n$$\n\n`;
+    }
+  );
+
+  // Inline math: convert \( ... \) to $...$, but if it contains \tag (display-only), promote to block $$
   processedContent = processedContent.replace(
     /\\\(([\s\S]*?)\\\)/g,
-    (_, latex) => {
-      return `$${latex}$`;
+    (_m, latex) => {
+      const sanitized = sanitizeLatex(latex);
+      if (/\\tag\b/.test(sanitized)) {
+        return `\n\n$$\n${sanitized}\n$$\n\n`;
+      }
+      return `$${sanitized}$`;
     }
   );
 
