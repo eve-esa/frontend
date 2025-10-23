@@ -46,7 +46,7 @@ export type MessageType = {
       fallback_latency: number | null;
       hallucination_latency: number | null;
       total_latency: number | null;
-    },
+    };
     prompts: {
       guardrail_prompt: string | null;
       guardrail_result: string | null;
@@ -55,9 +55,9 @@ export type MessageType = {
         use_rag: boolean;
         reason: string;
         requery: string;
-      },
+      };
       generation_prompt: string | null;
-    }
+    };
   };
 };
 
@@ -95,4 +95,9 @@ export type OptionType = z.infer<typeof OptionSchema>;
 
 export enum SSEEventType {
   CHAT = "chat:new-message",
+}
+
+export enum LLMType {
+  Runpod = "runpod",
+  Mistral = "mistral",
 }

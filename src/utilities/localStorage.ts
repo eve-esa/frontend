@@ -6,3 +6,4 @@ export const LOCAL_STORAGE_TOUR_COMPLETED = "tour_completed";
 export const LOCAL_STORAGE_LOGIN_EMAIL = "login_email";
 export const LOCAL_STORAGE_PUBLIC_COLLECTIONS = "public_collections";
 export const LOCAL_STORAGE_WELCOME_DIALOG_VIEWED = "welcome_dialog_viewed";
+export const LOCAL_STORAGE_LLM_TYPE = "llm_type";

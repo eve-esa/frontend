@@ -16,6 +16,8 @@ import { useNavigationBlocker } from "@/hooks/useNavigationBlocker";
 import { MessageSkeleton } from "./MessageSkeleton";
 import { routes } from "@/utilities/routes";
 import { adaptSettingsForRequest } from "@/utilities/helpers";
+import { LOCAL_STORAGE_LLM_TYPE } from "@/utilities/localStorage";
+import { LLMType } from "@/types";
 import { StopRequestWarningDialog } from "./StopRequestWarningDialog";
 import { useSidebar } from "./DynamicSidebarProvider";
 import { useIsMutating } from "@tanstack/react-query";
@@ -101,11 +103,15 @@ export const Chat = () => {
       const settings = JSON.parse(
         localStorage.getItem(LOCAL_STORAGE_SETTINGS) ?? "{}"
       );
+      const llm_type =
+        (localStorage.getItem(LOCAL_STORAGE_LLM_TYPE) as LLMType) ||
+        LLMType.Runpod;
 
       sendRequest({
         query: input,
         conversationId,
-        settings: adaptSettingsForRequest(settings),
+        settings: { ...adaptSettingsForRequest(settings) },
+        llm_type,
       });
     },
     [sendRequest, conversationId]

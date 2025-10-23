@@ -13,6 +13,16 @@ import { useEffect, useRef, useState } from "react";
 import logo from "@/assets/images/esa_phi_lab_1.svg";
 import { useTour } from "@/components/onboarding/TourContext";
 import { cn } from "@/lib/utils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/Select";
+import { LOCAL_STORAGE_LLM_TYPE } from "@/utilities/localStorage";
+import { LLMType } from "@/types";
+const isStaging = (import.meta.env.VITE_IS_STAGING ?? "false") === "true";
 
 export type MessageInputProps = {
   variant?: "primary" | "secondary";
@@ -56,6 +66,9 @@ export const MessageInput = ({
   };
 
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [llmType, setLlmType] = useState<string>(
+    (localStorage.getItem(LOCAL_STORAGE_LLM_TYPE) as LLMType) || LLMType.Runpod
+  );
   const [isAnimatingOut, setIsAnimatingOut] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -140,7 +153,29 @@ export const MessageInput = ({
             )}
 
             <div className="flex items-center justify-between pointer-events-none p-2 md:p-6 pt-0 md:pt-1">
-              <div className="pointer-events-auto">
+              <div className="pointer-events-auto flex items-center gap-2">
+                {isStaging && (
+                  <div className="min-w-[120px]">
+                    <Select
+                      value={llmType}
+                      onValueChange={(value) => {
+                        setLlmType(value);
+                        localStorage.setItem(LOCAL_STORAGE_LLM_TYPE, value);
+                      }}
+                    >
+                      <SelectTrigger
+                        size="sm"
+                        className="bg-primary-900/60 border border-primary-400/60"
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-primary-900/60 border-primary-400/60 backdrop-blur-[2px]">
+                        <SelectItem value={LLMType.Runpod}>runpod</SelectItem>
+                        <SelectItem value={LLMType.Mistral}>mistral</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <Button
                   type="button"
                   variant="icon"

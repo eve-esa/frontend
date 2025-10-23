@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { MUTATION_KEYS, QUERY_KEYS } from "./keys";
 import { toast } from "sonner";
 import type { AdvancedSettingsValidation } from "@/components/chat/SettingsForm";
+import type { LLMType } from "@/types";
 import api from "./axios";
 import { postStream } from "./streaming";
 import type { ApiError, ChaMessageType, MessageType } from "@/types";
@@ -12,18 +13,21 @@ type SendRequestProps = {
   query: string;
   conversationId?: string;
   settings: AdvancedSettingsValidation;
+  llm_type?: LLMType;
 };
 
 export const sendRequest = async ({
   query,
   conversationId,
   settings,
+  llm_type,
 }: SendRequestProps) => {
   const response = await api.post<MessageType>(
     `/conversations/${conversationId}/messages`,
     {
       query,
       ...settings,
+      ...(llm_type ? { llm_type } : {}),
       public_collections: JSON.parse(
         localStorage.getItem(LOCAL_STORAGE_PUBLIC_COLLECTIONS) ?? "[]"
       ),
@@ -37,14 +41,19 @@ export const useSendRequest = (conversationId?: string) => {
 
   return useMutation({
     mutationKey: [MUTATION_KEYS.sendRequest, conversationId],
-    mutationFn: async ({ query, conversationId, settings }: SendRequestProps) => {
-      const enableStreaming = (
-        import.meta.env.VITE_ENABLE_STREAMING ?? "false"
-      ) === "true";
+    mutationFn: async ({
+      query,
+      conversationId,
+      settings,
+      llm_type,
+    }: SendRequestProps) => {
+      const enableStreaming =
+        (import.meta.env.VITE_ENABLE_STREAMING ?? "false") === "true";
 
-       const payload = {
+      const payload = {
         query,
         ...settings,
+        ...(llm_type ? { llm_type } : {}),
         public_collections: JSON.parse(
           localStorage.getItem(LOCAL_STORAGE_PUBLIC_COLLECTIONS) ?? "[]"
         ),
@@ -52,7 +61,7 @@ export const useSendRequest = (conversationId?: string) => {
 
       try {
         if (!enableStreaming) {
-          return sendRequest({ query, conversationId, settings });
+          return sendRequest({ query, conversationId, settings, llm_type });
         }
 
         const applyTokenToOptimisticMessage = (tokenChunk: string) => {
