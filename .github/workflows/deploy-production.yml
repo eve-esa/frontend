@@ -47,6 +47,7 @@ jobs:
           VITE_ABOUT_US_URL: ${{ vars.PRODUCTION_VITE_ABOUT_US_URL }}
           VITE_ENABLE_STREAMING: ${{ vars.PRODUCTION_VITE_ENABLE_STREAMING }}
           VITE_ENABLE_CO2EQ_CALCULATION: ${{ vars.PRODUCTION_VITE_ENABLE_CO2EQ_CALCULATION }}
+          VITE_IS_STAGING: ${{ vars.PRODUCTION_VITE_IS_STAGING }}
 
       - name: Deploy to S3
         run: aws s3 sync ./dist s3://${{ vars.PRODUCTION_S3_BUCKET }}
