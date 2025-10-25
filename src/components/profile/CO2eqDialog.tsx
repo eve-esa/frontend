@@ -69,25 +69,25 @@ export const CO2eqDialog = ({ isOpen, onOpenChange }: CO2eqDialogProps) => {
               <div className="flex justify-between border border-primary-400/40 bg-primary-800/20 p-3">
                 <span className="text-natural-200">Messages</span>
                 <span className="text-natural-50 font-medium">
-                  {data.message_count}
+                  {Intl.NumberFormat("en-US").format(data.message_count)}
                 </span>
               </div>
               <div className="flex justify-between border border-primary-400/40 bg-primary-800/20 p-3">
                 <span className="text-natural-200">Input characters</span>
                 <span className="text-natural-50 font-medium">
-                  {data.input_characters}
+                  {Intl.NumberFormat("en-US").format(data.input_characters)}
                 </span>
               </div>
               <div className="flex justify-between border border-primary-400/40 bg-primary-800/20 p-3">
                 <span className="text-natural-200">Output characters</span>
                 <span className="text-natural-50 font-medium">
-                  {data.output_characters}
+                  {Intl.NumberFormat("en-US").format(data.output_characters)}
                 </span>
               </div>
               <div className="flex justify-between border border-primary-400/40 bg-primary-800/20 p-3">
                 <span className="text-natural-200">Total characters</span>
                 <span className="text-natural-50 font-semibold">
-                  {data.total_characters}
+                  {Intl.NumberFormat("en-US").format(data.total_characters)}
                 </span>
               </div>
             </div>
