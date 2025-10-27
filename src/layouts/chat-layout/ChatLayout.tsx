@@ -22,14 +22,46 @@ export const ChatLayout = () => {
   const { data: publicCollections } = useGetSharedCollection();
 
   useEffect(() => {
-    if (publicCollections && !storedPublicCollections) {
+    if (!publicCollections) return;
+
+    const allCollections = publicCollections.pages.flatMap((page) => page.data);
+
+    // If nothing stored yet, initialize with all IDs
+    if (!storedPublicCollections) {
       localStorage.setItem(
         LOCAL_STORAGE_PUBLIC_COLLECTIONS,
-        JSON.stringify(
-          publicCollections?.pages.flatMap((page) =>
-            page.data.map((collection) => collection?.name)
-          )
-        )
+        JSON.stringify(allCollections.map((c) => c.id))
+      );
+      return;
+    }
+
+    // Migration: if stored values look like names, map to IDs
+    try {
+      const parsed = JSON.parse(storedPublicCollections) as string[];
+      const containsId = parsed.some((v) =>
+        allCollections.some((c) => c.id === v)
+      );
+      const containsName = parsed.some((v) =>
+        allCollections.some((c) => c.name === v)
+      );
+
+      if (!containsId && containsName) {
+        const nameToId = new Map(
+          allCollections.map((c) => [c.name, c.id] as const)
+        );
+        const migrated = parsed
+          .map((name) => nameToId.get(name))
+          .filter((id): id is string => Boolean(id));
+        localStorage.setItem(
+          LOCAL_STORAGE_PUBLIC_COLLECTIONS,
+          JSON.stringify(migrated)
+        );
+      }
+    } catch (_) {
+      // If parsing fails, reset to all IDs
+      localStorage.setItem(
+        LOCAL_STORAGE_PUBLIC_COLLECTIONS,
+        JSON.stringify(allCollections.map((c) => c.id))
       );
     }
   }, [publicCollections]);

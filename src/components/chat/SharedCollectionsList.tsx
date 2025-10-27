@@ -31,12 +31,12 @@ export const SharedCollectionsList = ({
     string[]
   >(storedCollections ? JSON.parse(storedCollections) : []);
 
-  const toggleCollection = (collectionName: string) => {
+  const toggleCollection = (collectionId: string) => {
     setEnabledPublicCollections((prev) => {
-      const isCurrentlyEnabled = prev.includes(collectionName);
+      const isCurrentlyEnabled = prev.includes(collectionId);
       const newEnabledCollections = isCurrentlyEnabled
-        ? prev.filter((name) => name !== collectionName)
-        : [...prev, collectionName];
+        ? prev.filter((id) => id !== collectionId)
+        : [...prev, collectionId];
 
       localStorage.setItem(
         LOCAL_STORAGE_PUBLIC_COLLECTIONS,
@@ -62,8 +62,8 @@ export const SharedCollectionsList = ({
             <div className="flex flex-col gap-4" key={collection.id}>
               <div className="flex items-center gap-2">
                 <Switch
-                  checked={enabledPublicCollections.includes(collection.name)}
-                  onCheckedChange={() => toggleCollection(collection.name)}
+                  checked={enabledPublicCollections.includes(collection.id)}
+                  onCheckedChange={() => toggleCollection(collection.id)}
                 />
                 <span className="leading-none 3xl:text-3xl">
                   {collection.name}
