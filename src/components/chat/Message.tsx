@@ -71,6 +71,11 @@ export const Message = ({
     setIsExpanded(!isExpanded);
   };
 
+  const isRequery = message.metadata?.prompts?.rag_decision_result?.use_rag;
+  const requery = `**Searched for: ${
+    message.metadata?.prompts?.rag_decision_result?.requery || message.input
+  }**\n\n`;
+
   return (
     <div
       className="bg-natural-900 rounded-tl-[20px] rounded-br-[20px] pb-4 pt-0 relative"
@@ -121,14 +126,7 @@ export const Message = ({
       {/* ANSWER SECTION */}
       <div className="md:pt-8 pt-4 px-[1px]">
         {effectiveOutput ? (
-          <SmartText
-            text={`**Searched for: ${
-              message.pre_answer_notices
-                ? message.pre_answer_notices[0]
-                : message.metadata?.prompts?.rag_decision_result?.requery ??
-                  message.input
-            }**\n\n ${effectiveOutput}`}
-          />
+          <SmartText text={`${isRequery ? requery : ""}${effectiveOutput}`} />
         ) : showLoading ? (
           <div className="flex flex-col gap-2 text-natural-600">
             {Array.isArray(message.pre_answer_notices) &&
