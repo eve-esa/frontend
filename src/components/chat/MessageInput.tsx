@@ -172,7 +172,7 @@ export const MessageInput = ({
                       <SelectContent className="bg-primary-900/60 border-primary-400/60 backdrop-blur-[2px]">
                         <SelectItem value={LLMType.Runpod}>EVE</SelectItem>
                         <SelectItem value={LLMType.Mistral}>
-                          Mistral Small
+                          Mistral Medium
                         </SelectItem>
                         <SelectItem value={LLMType.Satcom_Small}>
                           SatcomLLM - Small
