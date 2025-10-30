@@ -174,8 +174,11 @@ export const MessageInput = ({
                         <SelectItem value={LLMType.Mistral}>
                           Mistral Small
                         </SelectItem>
-                        <SelectItem value={LLMType.Satcom}>
-                          SatcomLLM
+                        <SelectItem value={LLMType.Satcom_Small}>
+                          SatcomLLM - Small
+                        </SelectItem>
+                        <SelectItem value={LLMType.Satcom_Large}>
+                          SatcomLLM - Large
                         </SelectItem>
                       </SelectContent>
                     </Select>

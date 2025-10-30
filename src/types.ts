@@ -100,5 +100,6 @@ export enum SSEEventType {
 export enum LLMType {
   Runpod = "runpod",
   Mistral = "mistral",
-  Satcom = "satcom",
+  Satcom_Small = "satcom_small",
+  Satcom_Large = "satcom_large",
 }
