@@ -10,11 +10,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Tooltip } from "../ui/Tooltip";
 
-const enableCO2eqCalculation = (
-  import.meta.env.VITE_ENABLE_CO2EQ_CALCULATION ?? "false"
-) === "true";
-
-
 type ProfileMenubarProps = {
   email?: string;
   className?: string;
@@ -88,11 +83,9 @@ export const ProfileMenubar = ({
           <MenubarItem onClick={onProfileClick}>
             <span>Profile</span>
           </MenubarItem>
-          {enableCO2eqCalculation && (
-            <MenubarItem onClick={onCO2eqClick}>
-              <span>CO2eq</span>
-            </MenubarItem>
-          )}
+          <MenubarItem onClick={onCO2eqClick}>
+            <span>CO2eq</span>
+          </MenubarItem>
           <MenubarItem onClick={onAboutUsClick}>
             <span>About Us</span>
           </MenubarItem>
