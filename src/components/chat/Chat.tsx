@@ -105,7 +105,7 @@ export const Chat = () => {
       );
       const llm_type =
         (localStorage.getItem(LOCAL_STORAGE_LLM_TYPE) as LLMType) ||
-        LLMType.Runpod;
+        LLMType.Mistral;
 
       sendRequest({
         query: input,
