@@ -58,6 +58,18 @@ export type MessageType = {
       };
       generation_prompt: string | null;
     };
+    hallucination: {
+      label: number;
+      reason: string | null;
+      rewritten_query: string | null;
+      final_answer: string | null;
+      latencies: {
+        detect: number | null;
+        rewrite: number | null;
+        final_answer: number | null;
+        total: number | null;
+      };
+    } | null;
   };
 };
 

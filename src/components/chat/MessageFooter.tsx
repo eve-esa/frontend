@@ -11,13 +11,18 @@ import {
 } from "@fortawesome/free-regular-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Button } from "@/components/ui/Button";
-import type { MessageType } from "@/types";
+import SmartText from "@/components/ui/SmartText";
+import type { MessageType, ChaMessageType } from "@/types";
 import { useSidebar } from "./DynamicSidebarProvider";
 import { useClipboard } from "@/hooks/useClipboard";
 import { useState } from "react";
 import { FeedbackEnum, useSendFeedback } from "@/services/useSendFeedback";
+import { postStream, type StreamEvent } from "@/services/streaming";
+import { useSmoothStream } from "@/hooks/useSmoothStream";
 import { useParams } from "react-router-dom";
 import { SendFeedbackDialog } from "./SendFeedbackDialog";
+import { useQueryClient } from "@tanstack/react-query";
+import { QUERY_KEYS } from "@/services/keys";
 
 type MessageFooterProps = {
   message: MessageType;
@@ -25,6 +30,7 @@ type MessageFooterProps = {
 
 export const MessageFooter = ({ message }: MessageFooterProps) => {
   const { conversationId } = useParams();
+  const queryClient = useQueryClient();
   const { copyToClipboard, isCopied } = useClipboard();
   const {
     openDynamicSidebar,
@@ -77,6 +83,77 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
     }
   };
 
+  const [hallucinationRaw, setHallucinationRaw] = useState<string>(
+    message?.metadata?.hallucination?.final_answer ??
+      message?.metadata?.hallucination?.reason ??
+      ""
+  );
+  const [isHallucinationStreaming, setIsHallucinationStreaming] =
+    useState(false);
+
+  const hallucinationDisplay = useSmoothStream(
+    hallucinationRaw,
+    isHallucinationStreaming,
+    { ratePerSecond: 100, chunkSize: 1 },
+    `${conversationId ?? ""}:${message?.id ?? ""}:hallucination`
+  );
+
+  const hasHallucinationAnswer = (hallucinationRaw ?? "").trim().length > 0;
+
+  const handleHallucinationDetect = async () => {
+    if (!conversationId || !message?.id) return;
+    setHallucinationRaw("");
+    setIsHallucinationStreaming(true);
+    try {
+      await postStream({
+        url: `/conversations/${conversationId}/messages/${message.id}/stream-hallucination`,
+        payload: {},
+        onEvent: (evt: StreamEvent) => {
+          const anyEvt = evt as any;
+          // Stream tokens
+          if (anyEvt?.type === "token" && typeof anyEvt.content === "string") {
+            setHallucinationRaw((prev) => prev + anyEvt.content);
+            return;
+          }
+
+          if (anyEvt?.type === "final" && anyEvt?.answer) {
+            const finalText = String(anyEvt.answer);
+            setHallucinationRaw(finalText);
+
+            // Persist final answer into the cache as hallucination result
+            queryClient.setQueryData<ChaMessageType>(
+              [QUERY_KEYS.conversation, conversationId],
+              (old) => {
+                if (!old || !old.messages?.length) return old;
+                const newMessages = old.messages.map((m) => {
+                  if (m.id !== message?.id) return m as MessageType;
+                  const existingMeta = (m.metadata || ({} as any)) as any;
+                  const updatedMeta = {
+                    ...existingMeta,
+                    hallucination: {
+                      ...(existingMeta.hallucination || {}),
+                      final_answer: finalText,
+                      label: 1,
+                    },
+                  } as any;
+                  return {
+                    ...(m as MessageType),
+                    metadata: updatedMeta,
+                  } as MessageType;
+                });
+                return { ...old, messages: newMessages };
+              }
+            );
+          }
+        },
+      });
+    } catch (e) {
+      console.error("hallucination stream error", e);
+    } finally {
+      setIsHallucinationStreaming(false);
+    }
+  };
+
   const hasSources = message?.documents?.length;
 
   return (
@@ -85,41 +162,58 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
         !hasSources && "flex-col"
       } md:flex-row md:items-center justify-between gap-2`}
     >
-      {hasSources ? (
-        <Button
-          variant="primary"
-          onClick={() => {
-            const isSourcesOpen =
-              isOpenDynamicSidebar && content?.type === "sources";
-            const currentMessageId = content?.props?.messageId;
-
-            if (isSourcesOpen && currentMessageId === message?.id) {
-              closeDynamicSidebar();
-            } else {
-              openDynamicSidebar({
-                type: "sources",
-                props: {
-                  sources: message?.documents || [],
-                  messageId: message?.id,
-                },
-              });
-            }
-          }}
-        >
-          <FontAwesomeIcon icon={faBullseye} className="size-4" />
-          <span className="font-['NotesESA']">Sources</span>
-          <span className="font-['NotesESA']">
-            ({message?.documents?.length})
-          </span>
-        </Button>
-      ) : (
+      <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
-          <FontAwesomeIcon icon={faBullseye} className="size-3" />
-          <span className="font-['NotesESA'] text-sm">
-            The message was generated without using sources
-          </span>
+          {hasSources ? (
+            <Button
+              variant="primary"
+              onClick={() => {
+                const isSourcesOpen =
+                  isOpenDynamicSidebar && content?.type === "sources";
+                const currentMessageId = content?.props?.messageId;
+
+                if (isSourcesOpen && currentMessageId === message?.id) {
+                  closeDynamicSidebar();
+                } else {
+                  openDynamicSidebar({
+                    type: "sources",
+                    props: {
+                      sources: message?.documents || [],
+                      messageId: message?.id,
+                    },
+                  });
+                }
+              }}
+            >
+              <FontAwesomeIcon icon={faBullseye} className="size-4" />
+              <span className="font-['NotesESA']">Sources</span>
+              <span className="font-['NotesESA']">
+                ({message?.documents?.length})
+              </span>
+            </Button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <FontAwesomeIcon icon={faBullseye} className="size-3" />
+              <span className="font-['NotesESA'] text-sm">
+                The message was generated without using sources
+              </span>
+            </div>
+          )}
+          {!hasHallucinationAnswer && !isHallucinationStreaming && (
+            <Button variant="outline" onClick={handleHallucinationDetect}>
+              <span className="font-['NotesESA']">Hallucination Detector</span>
+            </Button>
+          )}
         </div>
-      )}
+        {(isHallucinationStreaming || hallucinationRaw) && (
+          <div className="pl-0">
+            <h3 className="font-['NotesESA'] mb-2 font-bold">
+              Hallucination Detection:
+            </h3>
+            <SmartText text={hallucinationDisplay} />
+          </div>
+        )}
+      </div>
       <div className="self-end cursor-pointer flex items-center">
         <Button variant="icon" onClick={handleLike}>
           <FontAwesomeIcon
