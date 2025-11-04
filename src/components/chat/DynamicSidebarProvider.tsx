@@ -118,6 +118,7 @@ export const DynamicSidebarProvider = ({ children }: SidebarProviderProps) => {
           <Sources
             onToggle={closeDynamicSidebar}
             sources={content.props?.sources || []}
+            messageId={content.props?.messageId}
           />
         );
       case "shared-collections":

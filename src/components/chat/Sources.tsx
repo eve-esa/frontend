@@ -2,13 +2,18 @@ import { faExternalLink, faTimes } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { type Document } from "@/types";
 import { SourceContent } from "./SourceContent";
+import { useParams } from "react-router-dom";
+import { useLogSourceClick } from "@/services/useLogSourceClick";
 
 type SourcesProps = {
   onToggle: () => void;
   sources: Document[];
+  messageId?: string;
 };
 
-export const Sources = ({ onToggle, sources }: SourcesProps) => {
+export const Sources = ({ onToggle, sources, messageId }: SourcesProps) => {
+  const { conversationId } = useParams();
+  const { mutate: logSourceClick } = useLogSourceClick();
   // Group sources by title only
   const groupedSources =
     sources?.reduce((acc, source) => {
@@ -64,6 +69,17 @@ export const Sources = ({ onToggle, sources }: SourcesProps) => {
                     className="text-lg 3xl:text-2xl leading-6 cursor-pointer"
                     onClick={() => {
                       if (sourcesLink) {
+                        if (conversationId && messageId) {
+                          logSourceClick({
+                            conversationId,
+                            messageId,
+                            source_id: String(groupSources[0]?.id),
+                            source_url: sourcesLink,
+                            source_title: title,
+                            source_collection_name:
+                              groupSources[0]?.collection_name ?? "unknown",
+                          });
+                        }
                         window.open(sourcesLink, "_blank");
                       }
                     }}

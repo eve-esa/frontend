@@ -17,6 +17,7 @@ export const MUTATION_KEYS = {
   deleteDocument: "deleteDocument",
   sendRequest: "sendRequest",
   retryRequest: "retryRequest",
+  sourceLog: "sourceLog",
 };
 
 export const QUERY_KEYS = {
