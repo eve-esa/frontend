@@ -137,13 +137,16 @@ export const MessageInput = ({
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
-                  if (inputValue.trim().length > 0 && !isOverLimit) {
+                  if (
+                    inputValue.trim().length > 0 &&
+                    !isOverLimit &&
+                    !disabled
+                  ) {
                     handleSubmit(onSubmit)();
                   }
                 }
               }}
               placeholder={placeholder}
-              disabled={disabled}
             />
             {isOverLimit && (
               <div className="text-sm 3xl:text-lg text-danger-400 px-4 md:px-8">
@@ -202,7 +205,9 @@ export const MessageInput = ({
               <div className="pointer-events-auto">
                 <Button
                   type="submit"
-                  disabled={!inputValue.trim().length || isOverLimit}
+                  disabled={
+                    !inputValue.trim().length || isOverLimit || disabled
+                  }
                   variant="icon"
                   size="sm"
                   className="h-8 w-8 p-0 cursor-pointer"
