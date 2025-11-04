@@ -58,6 +58,14 @@ export const Message = ({
       ? message.output
       : smoothed;
 
+  // Autoscroll while streaming so the newest tokens remain visible
+  useEffect(() => {
+    if (isStreamingTarget && scrollContainerRef?.current) {
+      const container = scrollContainerRef.current;
+      container.scrollTo({ top: container.scrollHeight, behavior: "auto" });
+    }
+  }, [effectiveOutput, isStreamingTarget, scrollContainerRef]);
+
   // Check if text overflows
   useEffect(() => {
     if (textRef.current) {

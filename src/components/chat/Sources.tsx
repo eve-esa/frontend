@@ -20,7 +20,7 @@ export const Sources = ({ onToggle, sources, messageId }: SourcesProps) => {
       const title =
         source?.metadata?.additionalMetadata?.title ??
         source?.payload?.title ??
-        "Unknown";
+        "Title not available";
 
       if (!acc[title]) {
         acc[title] = [];
