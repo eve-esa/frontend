@@ -143,7 +143,7 @@ export const Chat = () => {
       {/* Scroll container - always present */}
       <div
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto px-[2cqw] @sm:px-[3cqw] @md:px-[10cqw] @lg:px-[10cqw] @xl:px-[15cqw] @5xl:px-[14cqw] @7xl:px-[12cqw] @8xl:px-[15cqw] @9xl:px-[18cqw] @10xl:px-[20cqw] pb-4 @md:pb-8"
+        className="flex-1 overflow-y-auto px-[2cqw] @sm:px-[3cqw] @md:px-[10cqw] @lg:px-[10cqw] @xl:px-[15cqw] @5xl:px-[14cqw] @7xl:px-[12cqw] @8xl:px-[15cqw] @9xl:px-[18cqw] @10xl:px-[20cqw] pt-4 @md:pt-8 pb-4 @md:pb-8"
       >
         {isLoadingMessages && !firstMessageSent.current ? (
           <MessageSkeleton />
