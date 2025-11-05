@@ -23,6 +23,7 @@ import { useParams } from "react-router-dom";
 import { SendFeedbackDialog } from "./SendFeedbackDialog";
 import { useQueryClient } from "@tanstack/react-query";
 import { QUERY_KEYS } from "@/services/keys";
+const IS_STAGING = (import.meta.env.VITE_IS_STAGING ?? "false") === "true";
 
 type MessageFooterProps = {
   message: MessageType;
@@ -199,11 +200,15 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
               </span>
             </div>
           )}
-          {!hasHallucinationAnswer && !isHallucinationStreaming && (
-            <Button variant="outline" onClick={handleHallucinationDetect}>
-              <span className="font-['NotesESA']">Hallucination Detector</span>
-            </Button>
-          )}
+          {!hasHallucinationAnswer &&
+            !isHallucinationStreaming &&
+            IS_STAGING && (
+              <Button variant="outline" onClick={handleHallucinationDetect}>
+                <span className="font-['NotesESA']">
+                  Hallucination Detector
+                </span>
+              </Button>
+            )}
         </div>
         {(isHallucinationStreaming || hallucinationRaw) && (
           <div className="pl-0">
