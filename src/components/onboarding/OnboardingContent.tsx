@@ -2,8 +2,10 @@ import { MessageInput } from "@/components/chat/MessageInput";
 import { suggestions } from "@/utilities/suggestions";
 import { ChatHeader } from "@/components/chat/ChatHeader";
 import { useSidebar } from "../chat/DynamicSidebarProvider";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useTour } from "@/components/onboarding/TourContext";
+import { WelcomeDialog } from "@/components/onboarding/WelcomeDialog";
+import { LOCAL_STORAGE_WELCOME_DIALOG_VIEWED } from "@/utilities/localStorage";
 
 export const OnboardingContent = () => {
   const {
@@ -13,6 +15,15 @@ export const OnboardingContent = () => {
     content,
   } = useSidebar();
   const { currentStep } = useTour();
+
+  const [isOpenWelcomeDialog, setIsOpenWelcomeDialog] = useState(
+    !localStorage.getItem(LOCAL_STORAGE_WELCOME_DIALOG_VIEWED)
+  );
+
+  const handleWelcomeDialogClose = () => {
+    localStorage.setItem(LOCAL_STORAGE_WELCOME_DIALOG_VIEWED, "true");
+    setIsOpenWelcomeDialog(false);
+  };
 
   useEffect(() => {
     openDynamicSidebar({ type: "settings" });
@@ -56,6 +67,12 @@ export const OnboardingContent = () => {
           />
         </div>
       </div>
+      {isOpenWelcomeDialog && (
+        <WelcomeDialog
+          isOpen={isOpenWelcomeDialog}
+          onOpenChange={handleWelcomeDialogClose}
+        />
+      )}
     </div>
   );
 };
