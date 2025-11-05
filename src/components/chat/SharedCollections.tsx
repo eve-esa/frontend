@@ -36,9 +36,10 @@ export const SharedCollections = ({ onToggle }: SharedCollectionsProps) => {
         </div>
         <div>
           <p className="text-sm 3xl:text-xl text-natural-200 font-['NotesESA'] leading-6 pt-2">
-            Collection of documents to enrich the Knowledge base. You can enable
-            or disable collections to use them alongside your own collections in
-            your queries.
+            These document collections help the assistant give better, more
+            factual answers. When you enable a collection, the assistant can
+            look up relevant information from those documents while answering
+            your questions: this is called Retrieval-Augmented Generation (RAG)
           </p>
         </div>
       </div>

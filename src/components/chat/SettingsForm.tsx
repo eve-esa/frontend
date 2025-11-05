@@ -122,8 +122,10 @@ export const SettingsForm = ({ onToggle }: SettingsFormProps) => {
           </div>
 
           <p className="text-sm 3xl:text-xl text-natural-200 font-['NotesESA'] leading-6">
-            Configure AI model parameters and document filters to optimize
-            search results and response quality.
+            These settings control how the assistant searches and uses documents
+            during RAG (Retrieval-Augmented Generation). You can adjust how many
+            documents are retrieved, how relevant they must be, and other
+            filters.
           </p>
         </div>
         <div className="absolute bottom-[-26px] left-0 right-0 h-4 bg-gradient-to-b from-primary-900 to-transparent pointer-events-none" />
