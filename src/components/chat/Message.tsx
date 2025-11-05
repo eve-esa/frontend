@@ -60,11 +60,11 @@ export const Message = ({
 
   // Autoscroll while streaming so the newest tokens remain visible
   useEffect(() => {
-    if (isStreamingTarget && scrollContainerRef?.current) {
+    if (scrollContainerRef?.current) {
       const container = scrollContainerRef.current;
       container.scrollTo({ top: container.scrollHeight, behavior: "auto" });
     }
-  }, [effectiveOutput, isStreamingTarget, scrollContainerRef]);
+  }, [effectiveOutput, scrollContainerRef]);
 
   // Check if text overflows
   useEffect(() => {
