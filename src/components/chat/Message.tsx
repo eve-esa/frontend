@@ -54,7 +54,7 @@ export const Message = ({
     const container = scrollContainerRef?.current;
     if (!container) return;
 
-    const threshold = 48; // px buffer from bottom to still consider "near bottom"
+    const threshold = 20; // px buffer from bottom to still consider "near bottom"
     const handleScroll = () => {
       const distanceFromBottom =
         container.scrollHeight - (container.scrollTop + container.clientHeight);
