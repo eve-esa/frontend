@@ -46,13 +46,45 @@ export const Message = ({
       ? message.output
       : smoothed;
 
+  // Track whether the user is near the bottom of the scroll container
+  const [isUserNearBottom, setIsUserNearBottom] = useState(true);
+
+  useEffect(() => {
+    if (!isLastMessage) return; // only one listener for the list
+    const container = scrollContainerRef?.current;
+    if (!container) return;
+
+    const threshold = 48; // px buffer from bottom to still consider "near bottom"
+    const handleScroll = () => {
+      const distanceFromBottom =
+        container.scrollHeight - (container.scrollTop + container.clientHeight);
+      setIsUserNearBottom(distanceFromBottom <= threshold);
+    };
+
+    // Initialize state immediately in case we're already scrolled
+    handleScroll();
+    container.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      container.removeEventListener("scroll", handleScroll as EventListener);
+    };
+  }, [scrollContainerRef, isLastMessage]);
+
   // Autoscroll while streaming so the newest tokens remain visible
   useEffect(() => {
-    if (scrollContainerRef?.current) {
-      const container = scrollContainerRef.current;
+    if (!isStreamingTarget) return;
+    const container = scrollContainerRef?.current;
+    if (!container) return;
+
+    // Only auto-scroll if user hasn't scrolled away from the bottom area
+    if (isUserNearBottom) {
       container.scrollTo({ top: container.scrollHeight, behavior: "auto" });
     }
-  }, [effectiveOutput, scrollContainerRef]);
+  }, [
+    effectiveOutput,
+    scrollContainerRef,
+    isUserNearBottom,
+    isStreamingTarget,
+  ]);
 
   // Check if text overflows
   useEffect(() => {
