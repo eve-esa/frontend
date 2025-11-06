@@ -158,112 +158,116 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
   const hasSources = message?.documents?.length;
 
   return (
-    <div
-      className={`flex ${
-        !hasSources && "flex-col"
-      } md:flex-row md:items-center justify-between gap-2`}
-    >
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-2">
-          {hasSources ? (
-            <Button
-              variant="primary"
-              onClick={() => {
-                const isSourcesOpen =
-                  isOpenDynamicSidebar && content?.type === "sources";
-                const currentMessageId = content?.props?.messageId;
+    <div>
+      <div
+        className={`flex ${
+          !hasSources && "flex-col"
+        } md:flex-row md:items-center justify-between gap-2 mb-4`}
+      >
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            {hasSources ? (
+              <Button
+                variant="primary"
+                onClick={() => {
+                  const isSourcesOpen =
+                    isOpenDynamicSidebar && content?.type === "sources";
+                  const currentMessageId = content?.props?.messageId;
 
-                if (isSourcesOpen && currentMessageId === message?.id) {
-                  closeDynamicSidebar();
-                } else {
-                  openDynamicSidebar({
-                    type: "sources",
-                    props: {
-                      sources: message?.documents || [],
-                      messageId: message?.id,
-                    },
-                  });
-                }
-              }}
-            >
-              <FontAwesomeIcon icon={faBullseye} className="size-4" />
-              <span className="font-['NotesESA']">Sources</span>
-              <span className="font-['NotesESA']">
-                ({message?.documents?.length})
-              </span>
-            </Button>
-          ) : (
-            <div className="flex items-center gap-2">
-              <FontAwesomeIcon icon={faBullseye} className="size-3" />
-              <span className="font-['NotesESA'] text-sm">
-                The message was generated without using sources
-              </span>
-            </div>
-          )}
-          {!hasHallucinationAnswer &&
-            !isHallucinationStreaming &&
-            IS_STAGING && (
-              <Button variant="outline" onClick={handleHallucinationDetect}>
+                  if (isSourcesOpen && currentMessageId === message?.id) {
+                    closeDynamicSidebar();
+                  } else {
+                    openDynamicSidebar({
+                      type: "sources",
+                      props: {
+                        sources: message?.documents || [],
+                        messageId: message?.id,
+                      },
+                    });
+                  }
+                }}
+              >
+                <FontAwesomeIcon icon={faBullseye} className="size-4" />
+                <span className="font-['NotesESA']">Sources</span>
+                <span className="font-['NotesESA']">
+                  ({message?.documents?.length})
+                </span>
+              </Button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <FontAwesomeIcon icon={faBullseye} className="size-3" />
+                <span className="font-['NotesESA'] text-sm">
+                  The message was generated without using sources
+                </span>
+              </div>
+            )}
+            {IS_STAGING && (
+              <Button
+                variant="outline"
+                onClick={handleHallucinationDetect}
+                disabled={isHallucinationStreaming}
+              >
                 <span className="font-['NotesESA']">
                   Hallucination Detector
                 </span>
               </Button>
             )}
-        </div>
-        {(isHallucinationStreaming || hallucinationRaw) && (
-          <div className="pl-0">
-            <h3 className="font-['NotesESA'] mb-2 font-bold">
-              Hallucination Detection:
-            </h3>
-            <SmartText text={hallucinationDisplay} />
           </div>
-        )}
-      </div>
-      <div className="self-end cursor-pointer flex items-center">
-        <Button variant="icon" onClick={handleLike}>
-          <FontAwesomeIcon
-            icon={isThumbsUp ? faThumbsUpSolid : faThumbsUp}
-            className="size-4 hover:text-natural-200 transition-colors duration-200 cursor-pointer"
-          />
-        </Button>
-
-        <Button variant="icon" onClick={handleDislike}>
-          <FontAwesomeIcon
-            onClick={handleDislike}
-            icon={isThumbsDown ? faThumbsDownSolid : faThumbsDown}
-            className="size-4 hover:text-natural-200 transition-colors duration-200 cursor-pointer"
-          />
-        </Button>
-
-        <Button variant="icon" onClick={handleCopy}>
-          {isCopied ? (
+        </div>
+        <div className="self-end cursor-pointer flex items-center">
+          <Button variant="icon" onClick={handleLike}>
             <FontAwesomeIcon
-              icon={faCheck}
-              className="size-4 text-natural-50"
-            />
-          ) : (
-            <FontAwesomeIcon
-              onClick={handleCopy}
-              icon={faCopy}
+              icon={isThumbsUp ? faThumbsUpSolid : faThumbsUp}
               className="size-4 hover:text-natural-200 transition-colors duration-200 cursor-pointer"
             />
-          )}
-        </Button>
+          </Button>
+
+          <Button variant="icon" onClick={handleDislike}>
+            <FontAwesomeIcon
+              onClick={handleDislike}
+              icon={isThumbsDown ? faThumbsDownSolid : faThumbsDown}
+              className="size-4 hover:text-natural-200 transition-colors duration-200 cursor-pointer"
+            />
+          </Button>
+
+          <Button variant="icon" onClick={handleCopy}>
+            {isCopied ? (
+              <FontAwesomeIcon
+                icon={faCheck}
+                className="size-4 text-natural-50"
+              />
+            ) : (
+              <FontAwesomeIcon
+                onClick={handleCopy}
+                icon={faCopy}
+                className="size-4 hover:text-natural-200 transition-colors duration-200 cursor-pointer"
+              />
+            )}
+          </Button>
+        </div>
+        <SendFeedbackDialog
+          isOpen={isSendFeedbackDialogOpen}
+          onOpenChange={setIsSendFeedbackDialogOpen}
+          onSendFeedback={(feedbackText) => {
+            setIsThumbsDown(true);
+            setIsThumbsUp(false);
+            sendFeedback({
+              messageId: message?.id,
+              conversationId,
+              feedback: FeedbackEnum.BAD,
+              feedback_reason: feedbackText,
+            });
+          }}
+        />
       </div>
-      <SendFeedbackDialog
-        isOpen={isSendFeedbackDialogOpen}
-        onOpenChange={setIsSendFeedbackDialogOpen}
-        onSendFeedback={(feedbackText) => {
-          setIsThumbsDown(true);
-          setIsThumbsUp(false);
-          sendFeedback({
-            messageId: message?.id,
-            conversationId,
-            feedback: FeedbackEnum.BAD,
-            feedback_reason: feedbackText,
-          });
-        }}
-      />
+      {(isHallucinationStreaming || hallucinationRaw) && (
+        <div className="pl-0">
+          <h3 className="font-['NotesESA'] mb-2 font-bold">
+            Hallucination Detection:
+          </h3>
+          <SmartText text={hallucinationDisplay} />
+        </div>
+      )}
     </div>
   );
 };
