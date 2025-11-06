@@ -99,8 +99,6 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
     `${conversationId ?? ""}:${message?.id ?? ""}:hallucination`
   );
 
-  const hasHallucinationAnswer = (hallucinationRaw ?? "").trim().length > 0;
-
   const handleHallucinationDetect = async () => {
     if (!conversationId || !message?.id) return;
     setHallucinationRaw("");
