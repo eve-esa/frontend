@@ -12,7 +12,7 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Button } from "@/components/ui/Button";
 import SmartText from "@/components/ui/SmartText";
-import type { MessageType, ChaMessageType } from "@/types";
+import type { MessageType, ChaMessageType, Document } from "@/types";
 import { useSidebar } from "./DynamicSidebarProvider";
 import { useClipboard } from "@/hooks/useClipboard";
 import { useState } from "react";
@@ -90,6 +90,9 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
   const [isHallucinationStreaming, setIsHallucinationStreaming] =
     useState(false);
   const [hallucinationStatus, setHallucinationStatus] = useState<string>("");
+  const [hallucinationSources, setHallucinationSources] = useState<Document[]>(
+    message?.hallucination?.top_k_retrieved_docs ?? []
+  );
 
   const hallucinationDisplay = useSmoothStream(
     hallucinationRaw,
@@ -125,6 +128,14 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
             const finalText = String(anyEvt.answer);
             setHallucinationRaw(finalText);
             setHallucinationStatus("");
+            const docs: Document[] = Array.isArray(anyEvt?.top_k_retrieved_docs)
+              ? (anyEvt.top_k_retrieved_docs as Document[])
+              : Array.isArray(anyEvt?.documents)
+              ? (anyEvt.documents as Document[])
+              : [];
+            if (docs.length > 0) {
+              setHallucinationSources(docs);
+            }
 
             // Persist final answer into the cache as hallucination result
             queryClient.setQueryData<ChaMessageType>(
@@ -140,6 +151,11 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
                       ...(existingMeta.hallucination || {}),
                       final_answer: finalText,
                       label: 1,
+                      top_k_retrieved_docs:
+                        docs.length > 0
+                          ? docs
+                          : existingMeta?.hallucination?.top_k_retrieved_docs ??
+                            null,
                     },
                   } as any;
                   return {
@@ -276,6 +292,35 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
             </div>
           )}
           <SmartText text={hallucinationDisplay} />
+          {!isHallucinationStreaming && hallucinationSources?.length > 0 && (
+            <div className="mt-3">
+              <Button
+                variant="primary"
+                onClick={() => {
+                  const isSourcesOpen =
+                    isOpenDynamicSidebar && content?.type === "sources";
+                  const currentMessageId = content?.props?.messageId;
+                  if (isSourcesOpen && currentMessageId === message?.id) {
+                    closeDynamicSidebar();
+                  } else {
+                    openDynamicSidebar({
+                      type: "sources",
+                      props: {
+                        sources: hallucinationSources,
+                        messageId: message?.id,
+                      },
+                    });
+                  }
+                }}
+              >
+                <FontAwesomeIcon icon={faBullseye} className="size-4" />
+                <span className="font-['NotesESA']">Sources</span>
+                <span className="font-['NotesESA']">
+                  ({hallucinationSources.length})
+                </span>
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>
