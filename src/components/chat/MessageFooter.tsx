@@ -85,12 +85,11 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
   };
 
   const [hallucinationRaw, setHallucinationRaw] = useState<string>(
-    message?.metadata?.hallucination?.final_answer ??
-      message?.metadata?.hallucination?.reason ??
-      ""
+    message?.hallucination?.final_answer ?? message?.hallucination?.reason ?? ""
   );
   const [isHallucinationStreaming, setIsHallucinationStreaming] =
     useState(false);
+  const [hallucinationStatus, setHallucinationStatus] = useState<string>("");
 
   const hallucinationDisplay = useSmoothStream(
     hallucinationRaw,
@@ -102,6 +101,7 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
   const handleHallucinationDetect = async () => {
     if (!conversationId || !message?.id) return;
     setHallucinationRaw("");
+    setHallucinationStatus("");
     setIsHallucinationStreaming(true);
     try {
       await postStream({
@@ -115,9 +115,16 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
             return;
           }
 
+          if (anyEvt?.type === "status" && typeof anyEvt.content === "string") {
+            // Replace current status with the latest one
+            setHallucinationStatus(anyEvt.content);
+            return;
+          }
+
           if (anyEvt?.type === "final" && anyEvt?.answer) {
             const finalText = String(anyEvt.answer);
             setHallucinationRaw(finalText);
+            setHallucinationStatus("");
 
             // Persist final answer into the cache as hallucination result
             queryClient.setQueryData<ChaMessageType>(
@@ -263,6 +270,11 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
           <h3 className="font-['NotesESA'] mb-2 font-bold">
             Hallucination Detection:
           </h3>
+          {hallucinationStatus && (
+            <div className="mb-2 text-sm font-bold text-natural-50 animate-pulse">
+              {hallucinationStatus}
+            </div>
+          )}
           <SmartText text={hallucinationDisplay} />
         </div>
       )}

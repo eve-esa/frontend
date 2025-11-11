@@ -32,6 +32,19 @@ export type MessageType = {
   answer?: string;
   was_copied?: boolean;
   query?: string;
+  hallucination?: {
+    label: number;
+    reason: string | null;
+    rewritten_query: string | null;
+    final_answer: string | null;
+    latencies: {
+      detect: number | null;
+      rewrite: number | null;
+      final_answer: number | null;
+      total: number | null;
+    };
+    top_k_retrieved_docs?: Document[] | null;
+  } | null;
   // Transient notices to show before the final answer while streaming
   pre_answer_notices?: string[];
   metadata?: {
@@ -58,18 +71,6 @@ export type MessageType = {
       };
       generation_prompt: string | null;
     };
-    hallucination: {
-      label: number;
-      reason: string | null;
-      rewritten_query: string | null;
-      final_answer: string | null;
-      latencies: {
-        detect: number | null;
-        rewrite: number | null;
-        final_answer: number | null;
-        total: number | null;
-      };
-    } | null;
   };
 };
 
