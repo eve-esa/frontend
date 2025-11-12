@@ -363,7 +363,7 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
           <div className="space-y-3">
             <div>
               <h3 className="font-['NotesESA'] mb-1 font-bold">
-                Hallucination detection:
+                Possible hallucination detected:
               </h3>
               <div className="text-sm md:text-base">
                 <span className="font-bold">
