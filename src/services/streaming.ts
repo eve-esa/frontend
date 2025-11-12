@@ -6,6 +6,9 @@ export type StreamEvent =
   | { type: "final"; answer: string }
   | { type: "status"; content: string }
   | { type: "requery"; content: string }
+  | { type: "label"; content: number | string }
+  | { type: "reason"; content: string }
+  | { type: "rewritten_question"; content: string }
   | Record<string, unknown>;
 
 export type PostStreamOptions<TPayload> = {

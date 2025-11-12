@@ -71,7 +71,6 @@ export const Message = ({
 
   // Autoscroll while streaming so the newest tokens remain visible
   useEffect(() => {
-    if (!isStreamingTarget) return;
     const container = scrollContainerRef?.current;
     if (!container) return;
 
@@ -79,12 +78,7 @@ export const Message = ({
     if (isUserNearBottom) {
       container.scrollTo({ top: container.scrollHeight, behavior: "auto" });
     }
-  }, [
-    effectiveOutput,
-    scrollContainerRef,
-    isUserNearBottom,
-    isStreamingTarget,
-  ]);
+  }, [effectiveOutput, scrollContainerRef, isUserNearBottom]);
 
   // Check if text overflows
   useEffect(() => {

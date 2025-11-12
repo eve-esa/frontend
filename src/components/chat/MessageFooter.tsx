@@ -85,13 +85,24 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
   };
 
   const [hallucinationRaw, setHallucinationRaw] = useState<string>(
-    message?.hallucination?.final_answer ?? message?.hallucination?.reason ?? ""
+    message?.hallucination?.reason ?? ""
   );
   const [isHallucinationStreaming, setIsHallucinationStreaming] =
     useState(false);
   const [hallucinationStatus, setHallucinationStatus] = useState<string>("");
   const [hallucinationSources, setHallucinationSources] = useState<Document[]>(
     message?.hallucination?.top_k_retrieved_docs ?? []
+  );
+  const [hallucinationLabel, setHallucinationLabel] = useState<number | null>(
+    typeof message?.hallucination?.label === "number"
+      ? message?.hallucination?.label
+      : null
+  );
+  const [rewrittenQuery, setRewrittenQuery] = useState<string>(
+    message?.hallucination?.rewritten_question ?? ""
+  );
+  const [alternativeRaw, setAlternativeRaw] = useState<string>(
+    message?.hallucination?.final_answer ?? ""
   );
 
   const hallucinationDisplay = useSmoothStream(
@@ -100,11 +111,20 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
     { ratePerSecond: 100, chunkSize: 1 },
     `${conversationId ?? ""}:${message?.id ?? ""}:hallucination`
   );
+  const alternativeDisplay = useSmoothStream(
+    alternativeRaw,
+    isHallucinationStreaming,
+    { ratePerSecond: 100, chunkSize: 1 },
+    `${conversationId ?? ""}:${message?.id ?? ""}:hallucination:alt`
+  );
 
   const handleHallucinationDetect = async () => {
     if (!conversationId || !message?.id) return;
     setHallucinationRaw("");
     setHallucinationStatus("");
+    setHallucinationLabel(null);
+    setRewrittenQuery("");
+    setAlternativeRaw("");
     setIsHallucinationStreaming(true);
     try {
       await postStream({
@@ -114,7 +134,8 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
           const anyEvt = evt as any;
           // Stream tokens
           if (anyEvt?.type === "token" && typeof anyEvt.content === "string") {
-            setHallucinationRaw((prev) => prev + anyEvt.content);
+            // Alternative answer streams as tokens
+            setAlternativeRaw((prev) => prev + anyEvt.content);
             return;
           }
 
@@ -124,9 +145,32 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
             return;
           }
 
+          if (anyEvt?.type === "label" && anyEvt?.content !== undefined) {
+            const parsed =
+              typeof anyEvt.content === "number"
+                ? anyEvt.content
+                : Number(anyEvt.content);
+            if (!Number.isNaN(parsed)) {
+              setHallucinationLabel(parsed);
+            }
+            return;
+          }
+
+          if (anyEvt?.type === "reason" && typeof anyEvt.content === "string") {
+            setHallucinationRaw(anyEvt.content);
+            return;
+          }
+
+          if (
+            anyEvt?.type === "rewritten_question" &&
+            typeof anyEvt.content === "string"
+          ) {
+            setRewrittenQuery(anyEvt.content);
+            return;
+          }
+
           if (anyEvt?.type === "final" && anyEvt?.answer) {
-            const finalText = String(anyEvt.answer);
-            setHallucinationRaw(finalText);
+            const finalText = String(anyEvt.answer ?? "");
             setHallucinationStatus("");
             const docs: Document[] = Array.isArray(anyEvt?.top_k_retrieved_docs)
               ? (anyEvt.top_k_retrieved_docs as Document[])
@@ -135,6 +179,22 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
               : [];
             if (docs.length > 0) {
               setHallucinationSources(docs);
+            }
+            const rewritten =
+              (anyEvt?.rewritten_question as string) ||
+              (anyEvt?.rewritten_query as string) ||
+              "";
+            if (rewritten) {
+              setRewrittenQuery(rewritten);
+            }
+            if (typeof anyEvt?.reason === "string" && anyEvt.reason.length) {
+              setHallucinationRaw(anyEvt.reason);
+            }
+            if (typeof anyEvt?.label === "number") {
+              setHallucinationLabel(anyEvt.label);
+            }
+            if (finalText) {
+              setAlternativeRaw(finalText);
             }
 
             // Persist final answer into the cache as hallucination result
@@ -149,8 +209,20 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
                     ...existingMeta,
                     hallucination: {
                       ...(existingMeta.hallucination || {}),
-                      final_answer: finalText,
-                      label: 1,
+                      final_answer: finalText || null,
+                      reason:
+                        typeof anyEvt?.reason === "string" &&
+                        anyEvt.reason.length
+                          ? anyEvt.reason
+                          : message?.hallucination?.reason ??
+                            (hallucinationRaw || null),
+                      rewritten_question: rewritten || null,
+                      label:
+                        typeof anyEvt?.label === "number"
+                          ? anyEvt.label
+                          : typeof hallucinationLabel === "number"
+                          ? hallucinationLabel
+                          : existingMeta?.hallucination?.label ?? null,
                       top_k_retrieved_docs:
                         docs.length > 0
                           ? docs
@@ -281,17 +353,57 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
           }}
         />
       </div>
-      {(isHallucinationStreaming || hallucinationRaw) && (
+      {(isHallucinationStreaming || hallucinationRaw || alternativeRaw) && (
         <div className="pl-0">
-          <h3 className="font-['NotesESA'] mb-2 font-bold">
-            Hallucination Detection:
-          </h3>
           {hallucinationStatus && (
             <div className="mb-2 text-sm font-bold text-natural-50 animate-pulse">
               {hallucinationStatus}
             </div>
           )}
-          <SmartText text={hallucinationDisplay} />
+          <div className="space-y-3">
+            <div>
+              <h3 className="font-['NotesESA'] mb-1 font-bold">
+                Hallucination detection:
+              </h3>
+              <div className="text-sm md:text-base">
+                <span className="font-bold">
+                  {hallucinationLabel === 1
+                    ? "Yes"
+                    : hallucinationLabel === 0
+                    ? "No"
+                    : ""}
+                </span>
+                {Boolean(hallucinationDisplay) && (
+                  <>
+                    <span>
+                      {hallucinationLabel === 1 || hallucinationLabel === 0
+                        ? " — "
+                        : ""}
+                    </span>
+                    <SmartText text={hallucinationDisplay} />
+                  </>
+                )}
+              </div>
+            </div>
+            {Boolean(rewrittenQuery) && (
+              <div>
+                <span className="font-['NotesESA'] font-bold">
+                  Searched for:{" "}
+                </span>
+                <span className="whitespace-pre-wrap break-words">
+                  {rewrittenQuery}
+                </span>
+              </div>
+            )}
+            {Number(hallucinationLabel) === 1 && Boolean(alternativeRaw) && (
+              <div>
+                <h3 className="font-['NotesESA'] mb-2 font-bold">
+                  Alternative answer:
+                </h3>
+                <SmartText text={alternativeDisplay} />
+              </div>
+            )}
+          </div>
           {!isHallucinationStreaming && hallucinationSources?.length > 0 && (
             <div className="mt-3">
               <Button

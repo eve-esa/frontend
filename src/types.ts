@@ -35,7 +35,7 @@ export type MessageType = {
   hallucination?: {
     label: number;
     reason: string | null;
-    rewritten_query: string | null;
+    rewritten_question: string | null;
     final_answer: string | null;
     latencies: {
       detect: number | null;
