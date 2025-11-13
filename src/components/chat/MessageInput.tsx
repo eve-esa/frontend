@@ -6,6 +6,7 @@ import {
   faArrowRight,
   faSearch,
   faSliders,
+  faStop,
 } from "@fortawesome/free-solid-svg-icons";
 import { useForm, useWatch } from "react-hook-form";
 import { useSidebar } from "./DynamicSidebarProvider";
@@ -22,6 +23,9 @@ import {
 } from "@/components/ui/Select";
 import { LOCAL_STORAGE_LLM_TYPE } from "@/utilities/localStorage";
 import { LLMType } from "@/types";
+import { useParams } from "react-router-dom";
+import { abortCurrentStream } from "@/services/streaming";
+import { stopConversation as stopConversationApi } from "@/services/stopConversation";
 const isStaging = (import.meta.env.VITE_IS_STAGING ?? "false") === "true";
 
 export type MessageInputProps = {
@@ -38,6 +42,7 @@ export const MessageInput = ({
   variant = "primary",
   className,
   placeholder = "Ask something ...",
+  isLoading,
   disabled,
   sendRequest,
   suggestions,
@@ -51,6 +56,7 @@ export const MessageInput = ({
 
   const { openDynamicSidebar } = useSidebar();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { conversationId } = useParams();
 
   const inputValue = useWatch({ control, name: "input" });
   const maxCharacters = 100000;
@@ -71,6 +77,17 @@ export const MessageInput = ({
   );
   const [isAnimatingOut, setIsAnimatingOut] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleStop = async () => {
+    try {
+      abortCurrentStream();
+      if (conversationId) {
+        await stopConversationApi({ conversationId });
+      }
+    } catch (_e) {
+      console.error("Error stopping conversation", _e);
+    }
+  };
 
   useEffect(() => {
     if (currentStep === 9 && isRunning) {
@@ -203,22 +220,38 @@ export const MessageInput = ({
                 </Button>
               </div>
               <div className="pointer-events-auto">
-                <Button
-                  type="submit"
-                  disabled={
-                    !inputValue.trim().length || isOverLimit || disabled
-                  }
-                  variant="icon"
-                  size="sm"
-                  className="h-8 w-8 p-0 cursor-pointer"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleSubmit(onSubmit)();
-                  }}
-                >
-                  <FontAwesomeIcon icon={faPaperPlane} className="size-4 " />
-                </Button>
+                {isLoading ? (
+                  <Button
+                    type="button"
+                    variant="icon"
+                    size="sm"
+                    className="h-8 w-8 p-0 cursor-pointer"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleStop();
+                    }}
+                  >
+                    <FontAwesomeIcon icon={faStop} className="size-4" />
+                  </Button>
+                ) : (
+                  <Button
+                    type="submit"
+                    disabled={
+                      !inputValue.trim().length || isOverLimit || disabled
+                    }
+                    variant="icon"
+                    size="sm"
+                    className="h-8 w-8 p-0 cursor-pointer"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleSubmit(onSubmit)();
+                    }}
+                  >
+                    <FontAwesomeIcon icon={faPaperPlane} className="size-4 " />
+                  </Button>
+                )}
               </div>
             </div>
             {suggestions && showSuggestions && (
