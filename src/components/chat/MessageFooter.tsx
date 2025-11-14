@@ -222,35 +222,31 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
                 if (!old || !old.messages?.length) return old;
                 const newMessages = old.messages.map((m) => {
                   if (m.id !== message?.id) return m as MessageType;
-                  const existingMeta = (m.metadata || ({} as any)) as any;
-                  const updatedMeta = {
-                    ...existingMeta,
-                    hallucination: {
-                      ...(existingMeta.hallucination || {}),
-                      final_answer: finalText || null,
-                      reason:
-                        typeof anyEvt?.reason === "string" &&
-                        anyEvt.reason.length
-                          ? anyEvt.reason
-                          : message?.hallucination?.reason ??
-                            (hallucinationRaw || null),
-                      rewritten_question: rewritten || null,
-                      label:
-                        typeof anyEvt?.label === "number"
-                          ? anyEvt.label
-                          : typeof hallucinationLabel === "number"
-                          ? hallucinationLabel
-                          : existingMeta?.hallucination?.label ?? null,
-                      top_k_retrieved_docs:
-                        docs.length > 0
-                          ? docs
-                          : existingMeta?.hallucination?.top_k_retrieved_docs ??
-                            null,
-                    },
+                  const existingHallucination =
+                    (m as MessageType).hallucination || ({} as any);
+                  const updatedHallucination = {
+                    ...existingHallucination,
+                    final_answer: finalText || null,
+                    reason:
+                      typeof anyEvt?.reason === "string" && anyEvt.reason.length
+                        ? anyEvt.reason
+                        : (m as MessageType).hallucination?.reason ??
+                          (hallucinationRaw || null),
+                    rewritten_question: rewritten || null,
+                    label:
+                      typeof anyEvt?.label === "number"
+                        ? anyEvt.label
+                        : typeof hallucinationLabel === "number"
+                        ? hallucinationLabel
+                        : existingHallucination?.label ?? null,
+                    top_k_retrieved_docs:
+                      docs.length > 0
+                        ? docs
+                        : existingHallucination?.top_k_retrieved_docs ?? null,
                   } as any;
                   return {
                     ...(m as MessageType),
-                    metadata: updatedMeta,
+                    hallucination: updatedHallucination,
                   } as MessageType;
                 });
                 return { ...old, messages: newMessages };
