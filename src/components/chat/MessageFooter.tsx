@@ -186,8 +186,9 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
             return;
           }
 
-          if (anyEvt?.type === "final" && anyEvt?.answer) {
-            const finalText = String(anyEvt.answer ?? "");
+          if (anyEvt?.type === "final") {
+            const finalText =
+              typeof anyEvt?.answer === "string" ? anyEvt.answer : "";
             setHallucinationStatus("");
             const docs: Document[] = Array.isArray(anyEvt?.top_k_retrieved_docs)
               ? (anyEvt.top_k_retrieved_docs as Document[])
