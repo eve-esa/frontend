@@ -34,6 +34,10 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
   const queryClient = useQueryClient();
   const { copyToClipboard, isCopied } = useClipboard();
   const {
+    copyToClipboard: copyToClipboardHallucination,
+    isCopied: isHallucCopied,
+  } = useClipboard();
+  const {
     openDynamicSidebar,
     closeDynamicSidebar,
     isOpenDynamicSidebar,
@@ -52,6 +56,19 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
     useState(false);
 
   const { mutate: sendFeedback } = useSendFeedback();
+
+  // Hallucination feedback local state
+  const [hallucWasCopied, setHallucWasCopied] = useState(
+    message?.hallucination?.was_copied
+  );
+  const [hallucIsThumbsUp, setHallucIsThumbsUp] = useState(
+    message?.hallucination?.feedback === FeedbackEnum.GOOD
+  );
+  const [hallucIsThumbsDown, setHallucIsThumbsDown] = useState(
+    message?.hallucination?.feedback === FeedbackEnum.BAD
+  );
+  const [isHallucSendFeedbackDialogOpen, setIsHallucSendFeedbackDialogOpen] =
+    useState(false);
 
   const handleLike = () => {
     if (!isThumbsUp) {
@@ -404,35 +421,116 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
               </div>
             )}
           </div>
-          {!isHallucinationStreaming && hallucinationSources?.length > 0 && (
-            <div className="mt-3">
-              <Button
-                variant="primary"
-                onClick={() => {
-                  const isSourcesOpen =
-                    isOpenDynamicSidebar && content?.type === "sources";
-                  const currentMessageId = content?.props?.messageId;
-                  if (isSourcesOpen && currentMessageId === message?.id) {
-                    closeDynamicSidebar();
-                  } else {
-                    openDynamicSidebar({
-                      type: "sources",
-                      props: {
-                        sources: hallucinationSources,
+          {!isHallucinationStreaming && (
+            <div className="mt-3 flex items-center justify-between">
+              {hallucinationSources?.length > 0 ? (
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    const isSourcesOpen =
+                      isOpenDynamicSidebar && content?.type === "sources";
+                    const currentMessageId = content?.props?.messageId;
+                    if (isSourcesOpen && currentMessageId === message?.id) {
+                      closeDynamicSidebar();
+                    } else {
+                      openDynamicSidebar({
+                        type: "sources",
+                        props: {
+                          sources: hallucinationSources,
+                          messageId: message?.id,
+                        },
+                      });
+                    }
+                  }}
+                >
+                  <FontAwesomeIcon icon={faBullseye} className="size-4" />
+                  <span className="font-['NotesESA']">Sources</span>
+                  <span className="font-['NotesESA']">
+                    ({hallucinationSources.length})
+                  </span>
+                </Button>
+              ) : (
+                <div />
+              )}
+              <div className="self-end cursor-pointer flex items-center">
+                <Button
+                  variant="icon"
+                  onClick={() => {
+                    if (!hallucIsThumbsUp) {
+                      setHallucIsThumbsUp(true);
+                      setHallucIsThumbsDown(false);
+                      sendFeedback({
                         messageId: message?.id,
-                      },
-                    });
-                  }
-                }}
-              >
-                <FontAwesomeIcon icon={faBullseye} className="size-4" />
-                <span className="font-['NotesESA']">Sources</span>
-                <span className="font-['NotesESA']">
-                  ({hallucinationSources.length})
-                </span>
-              </Button>
+                        conversationId,
+                        hallucination_feedback: FeedbackEnum.GOOD,
+                      });
+                    }
+                  }}
+                >
+                  <FontAwesomeIcon
+                    icon={hallucIsThumbsUp ? faThumbsUpSolid : faThumbsUp}
+                    className="size-4 hover:text-natural-200 transition-colors duration-200 cursor-pointer"
+                  />
+                </Button>
+
+                <Button
+                  variant="icon"
+                  onClick={() => {
+                    if (!hallucIsThumbsDown) {
+                      setIsHallucSendFeedbackDialogOpen(true);
+                    }
+                  }}
+                >
+                  <FontAwesomeIcon
+                    icon={hallucIsThumbsDown ? faThumbsDownSolid : faThumbsDown}
+                    className="size-4 hover:text-natural-200 transition-colors duration-200 cursor-pointer"
+                  />
+                </Button>
+
+                <Button
+                  variant="icon"
+                  onClick={() => {
+                    const textToCopy = alternativeRaw || "";
+                    copyToClipboardHallucination(textToCopy);
+                    if (!hallucWasCopied) {
+                      sendFeedback({
+                        messageId: message?.id,
+                        conversationId,
+                        hallucination_was_copied: true,
+                      });
+                      setHallucWasCopied(true);
+                    }
+                  }}
+                >
+                  {isHallucCopied ? (
+                    <FontAwesomeIcon
+                      icon={faCheck}
+                      className="size-4 text-natural-50"
+                    />
+                  ) : (
+                    <FontAwesomeIcon
+                      icon={faCopy}
+                      className="size-4 hover:text-natural-200 transition-colors duration-200 cursor-pointer"
+                    />
+                  )}
+                </Button>
+              </div>
             </div>
           )}
+          <SendFeedbackDialog
+            isOpen={isHallucSendFeedbackDialogOpen}
+            onOpenChange={setIsHallucSendFeedbackDialogOpen}
+            onSendFeedback={(feedbackText) => {
+              setHallucIsThumbsDown(true);
+              setHallucIsThumbsUp(false);
+              sendFeedback({
+                messageId: message?.id,
+                conversationId,
+                hallucination_feedback: FeedbackEnum.BAD,
+                hallucination_feedback_reason: feedbackText,
+              });
+            }}
+          />
         </div>
       )}
     </div>

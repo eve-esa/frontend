@@ -15,6 +15,10 @@ export const FeedbackSchema = z.object({
   feedback: z.nativeEnum(FeedbackEnum).optional(),
   was_copied: z.boolean().optional(),
   feedback_reason: z.string().optional(),
+  // Hallucination-specific feedback fields
+  hallucination_feedback: z.nativeEnum(FeedbackEnum).optional(),
+  hallucination_was_copied: z.boolean().optional(),
+  hallucination_feedback_reason: z.string().optional(),
 });
 
 export type FeedbackType = z.infer<typeof FeedbackSchema>;
@@ -25,11 +29,17 @@ export const httpSendFeedback = async ({
   messageId,
   was_copied,
   feedback_reason,
+  hallucination_feedback,
+  hallucination_was_copied,
+  hallucination_feedback_reason,
 }: FeedbackType) => {
   await api.patch(`/conversations/${conversationId}/messages/${messageId}`, {
     feedback,
     was_copied,
     feedback_reason,
+    hallucination_feedback,
+    hallucination_was_copied,
+    hallucination_feedback_reason,
   });
 };
 

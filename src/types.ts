@@ -37,6 +37,10 @@ export type MessageType = {
     reason: string | null;
     rewritten_question: string | null;
     final_answer: string | null;
+    // Hallucination-specific feedback state
+    feedback?: string | null;
+    feedback_reason?: string | null;
+    was_copied?: boolean;
     latencies: {
       detect: number | null;
       rewrite: number | null;
