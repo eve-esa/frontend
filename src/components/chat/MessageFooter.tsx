@@ -79,6 +79,23 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
         conversationId,
         feedback: FeedbackEnum.GOOD,
       });
+      if (conversationId && message?.id) {
+        queryClient.setQueryData<ChaMessageType>(
+          [QUERY_KEYS.conversation, conversationId],
+          (old) => {
+            if (!old || !old.messages?.length) return old;
+            const newMessages = old.messages.map((m) => {
+              if (m.id !== message.id) return m as MessageType;
+              return {
+                ...(m as MessageType),
+                feedback: FeedbackEnum.GOOD,
+                feedback_reason: null,
+              } as MessageType;
+            });
+            return { ...old, messages: newMessages };
+          }
+        );
+      }
     }
   };
 
@@ -98,6 +115,22 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
         was_copied: true,
       });
       setWasCopied(true);
+      if (conversationId && message?.id) {
+        queryClient.setQueryData<ChaMessageType>(
+          [QUERY_KEYS.conversation, conversationId],
+          (old) => {
+            if (!old || !old.messages?.length) return old;
+            const newMessages = old.messages.map((m) => {
+              if (m.id !== message.id) return m as MessageType;
+              return {
+                ...(m as MessageType),
+                was_copied: true,
+              } as MessageType;
+            });
+            return { ...old, messages: newMessages };
+          }
+        );
+      }
     }
   };
 
@@ -364,6 +397,23 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
               feedback: FeedbackEnum.BAD,
               feedback_reason: feedbackText,
             });
+            if (conversationId && message?.id) {
+              queryClient.setQueryData<ChaMessageType>(
+                [QUERY_KEYS.conversation, conversationId],
+                (old) => {
+                  if (!old || !old.messages?.length) return old;
+                  const newMessages = old.messages.map((m) => {
+                    if (m.id !== message.id) return m as MessageType;
+                    return {
+                      ...(m as MessageType),
+                      feedback: FeedbackEnum.BAD,
+                      feedback_reason: feedbackText,
+                    } as MessageType;
+                  });
+                  return { ...old, messages: newMessages };
+                }
+              );
+            }
           }}
         />
       </div>
@@ -461,6 +511,28 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
                         conversationId,
                         hallucination_feedback: FeedbackEnum.GOOD,
                       });
+                      if (conversationId && message?.id) {
+                        queryClient.setQueryData<ChaMessageType>(
+                          [QUERY_KEYS.conversation, conversationId],
+                          (old) => {
+                            if (!old || !old.messages?.length) return old;
+                            const newMessages = old.messages.map((m) => {
+                              if (m.id !== message.id) return m as MessageType;
+                              const existingHalluc =
+                                (m as MessageType).hallucination || ({} as any);
+                              return {
+                                ...(m as MessageType),
+                                hallucination: {
+                                  ...(existingHalluc as any),
+                                  feedback: FeedbackEnum.GOOD,
+                                  feedback_reason: null,
+                                } as any,
+                              } as MessageType;
+                            });
+                            return { ...old, messages: newMessages };
+                          }
+                        );
+                      }
                     }
                   }}
                 >
@@ -496,6 +568,27 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
                         hallucination_was_copied: true,
                       });
                       setHallucWasCopied(true);
+                      if (conversationId && message?.id) {
+                        queryClient.setQueryData<ChaMessageType>(
+                          [QUERY_KEYS.conversation, conversationId],
+                          (old) => {
+                            if (!old || !old.messages?.length) return old;
+                            const newMessages = old.messages.map((m) => {
+                              if (m.id !== message.id) return m as MessageType;
+                              const existingHalluc =
+                                (m as MessageType).hallucination || ({} as any);
+                              return {
+                                ...(m as MessageType),
+                                hallucination: {
+                                  ...(existingHalluc as any),
+                                  was_copied: true,
+                                } as any,
+                              } as MessageType;
+                            });
+                            return { ...old, messages: newMessages };
+                          }
+                        );
+                      }
                     }
                   }}
                 >
@@ -526,6 +619,28 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
                 hallucination_feedback: FeedbackEnum.BAD,
                 hallucination_feedback_reason: feedbackText,
               });
+              if (conversationId && message?.id) {
+                queryClient.setQueryData<ChaMessageType>(
+                  [QUERY_KEYS.conversation, conversationId],
+                  (old) => {
+                    if (!old || !old.messages?.length) return old;
+                    const newMessages = old.messages.map((m) => {
+                      if (m.id !== message.id) return m as MessageType;
+                      const existingHalluc =
+                        (m as MessageType).hallucination || ({} as any);
+                      return {
+                        ...(m as MessageType),
+                        hallucination: {
+                          ...(existingHalluc as any),
+                          feedback: FeedbackEnum.BAD,
+                          feedback_reason: feedbackText,
+                        } as any,
+                      } as MessageType;
+                    });
+                    return { ...old, messages: newMessages };
+                  }
+                );
+              }
             }}
           />
         </div>
