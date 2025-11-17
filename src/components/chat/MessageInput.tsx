@@ -26,6 +26,7 @@ import { LLMType } from "@/types";
 import { useParams } from "react-router-dom";
 import { abortCurrentStream } from "@/services/streaming";
 import { stopConversation as stopConversationApi } from "@/services/stopConversation";
+import { Tooltip } from "@/components/ui/Tooltip";
 const isStaging = (import.meta.env.VITE_IS_STAGING ?? "false") === "true";
 
 export type MessageInputProps = {
@@ -204,20 +205,22 @@ export const MessageInput = ({
                     </Select>
                   </div>
                 )}
-                <Button
-                  type="button"
-                  variant="icon"
-                  size="sm"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    openDynamicSidebar({ type: "settings" });
-                  }}
-                  className="h-8 w-8 p-0 cursor-pointer settings-button-tour"
-                  data-tour="settings-button"
-                >
-                  <FontAwesomeIcon icon={faSliders} className="size-4" />
-                </Button>
+                <Tooltip content={<>Control Panel</>} disableClick={true}>
+                  <Button
+                    type="button"
+                    variant="icon"
+                    size="sm"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      openDynamicSidebar({ type: "settings" });
+                    }}
+                    className="h-8 w-8 p-0 cursor-pointer settings-button-tour"
+                    data-tour="settings-button"
+                  >
+                    <FontAwesomeIcon icon={faSliders} className="size-4" />
+                  </Button>
+                </Tooltip>
               </div>
               <div className="pointer-events-auto">
                 {isLoading ? (
