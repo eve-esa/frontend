@@ -1,10 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { STATUS, ACTIONS, type CallBackProps } from "react-joyride";
-import {
-  LOCAL_STORAGE_TOUR_COMPLETED,
-  LOCAL_STORAGE_WELCOME_DIALOG_VIEWED,
-} from "@/utilities/localStorage";
+import { LOCAL_STORAGE_TOUR_COMPLETED } from "@/utilities/localStorage";
 import { routes } from "@/utilities/routes";
 import { useIsMobile } from "@/hooks/useIsMobile";
 
@@ -32,35 +29,23 @@ export const useJoyride = () => {
     return () => clearTimeout(timer);
   }, [tourCompleted, isMobile, isOnboardingPage]);
 
-  // On onboarding page: wait until welcome dialog is closed before starting
+  // On onboarding page: wait until welcome dialog is closed before starting (no persistence)
   useEffect(() => {
     if (!isOnboardingPage || isMobile) return;
 
-    let poller: number | null = null;
-
-    const startIfReady = () => {
-      const viewed = localStorage.getItem(LOCAL_STORAGE_WELCOME_DIALOG_VIEWED);
-      if (viewed) {
-        setStepIndex(0);
-        setRun(true);
-        if (poller) {
-          clearInterval(poller);
-          poller = null;
-        }
-        return true;
-      }
-      return false;
+    const handleWelcomeClosed = () => {
+      setStepIndex(0);
+      setRun(true);
     };
-
-    // Try immediately, then poll until the dialog is closed
-    if (!startIfReady()) {
-      poller = window.setInterval(() => {
-        startIfReady();
-      }, 200);
-    }
-
+    window.addEventListener(
+      "welcome-dialog-closed",
+      handleWelcomeClosed as EventListener
+    );
     return () => {
-      if (poller) clearInterval(poller);
+      window.removeEventListener(
+        "welcome-dialog-closed",
+        handleWelcomeClosed as EventListener
+      );
     };
   }, [isOnboardingPage, isMobile]);
 

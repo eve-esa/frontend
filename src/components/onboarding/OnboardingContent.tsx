@@ -5,7 +5,6 @@ import { useSidebar } from "../chat/DynamicSidebarProvider";
 import { useEffect, useState } from "react";
 import { useTour } from "@/components/onboarding/TourContext";
 import { WelcomeDialog } from "@/components/onboarding/WelcomeDialog";
-import { LOCAL_STORAGE_WELCOME_DIALOG_VIEWED } from "@/utilities/localStorage";
 
 export const OnboardingContent = () => {
   const {
@@ -16,13 +15,12 @@ export const OnboardingContent = () => {
   } = useSidebar();
   const { currentStep } = useTour();
 
-  const [isOpenWelcomeDialog, setIsOpenWelcomeDialog] = useState(
-    !localStorage.getItem(LOCAL_STORAGE_WELCOME_DIALOG_VIEWED)
-  );
+  const [isOpenWelcomeDialog, setIsOpenWelcomeDialog] = useState(true);
 
   const handleWelcomeDialogClose = () => {
-    localStorage.setItem(LOCAL_STORAGE_WELCOME_DIALOG_VIEWED, "true");
     setIsOpenWelcomeDialog(false);
+    // Signal joyride to start without persisting any state
+    window.dispatchEvent(new CustomEvent("welcome-dialog-closed"));
   };
 
   useEffect(() => {
