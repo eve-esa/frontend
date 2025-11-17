@@ -26,11 +26,11 @@ export const CollectionDocumentItem = ({
       <div className="flex w-full items-center justify-between gap-2 group">
         <div className="flex w-full items-start flex-col justify-between gap-2 py-2 ">
           <div className="flex items-center justify-between w-full">
-            <span className="relative group cursor-pointer">
+            <span className="relative group">
               <span className="group-hover:text-primary-300">
                 {document.name}
               </span>
-              <span className="absolute -bottom-1 right-0 w-0 h-0.5 bg-primary-300 transition-all duration-300 ease-in-out group-hover:w-full group-hover:left-0"></span>
+              <span className="absolute -bottom-1 right-0 w-0 h-0.5 bg-primary-300"></span>
             </span>
             {isMine && (
               <FontAwesomeIcon
