@@ -27,6 +27,7 @@ export type MessageType = {
   id: string;
   input: string;
   output: string;
+  stopped?: boolean;
   timestamp: Date;
   documents: Document[];
   answer?: string;
@@ -83,6 +84,7 @@ export type ChaMessageType = {
   name: string;
   timestamp: Date;
   user_id: string;
+  stopped?: boolean;
   messages: MessageType[];
 };
 

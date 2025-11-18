@@ -27,6 +27,9 @@ import { useParams } from "react-router-dom";
 import { abortCurrentStream } from "@/services/streaming";
 import { stopConversation as stopConversationApi } from "@/services/stopConversation";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { useQueryClient } from "@tanstack/react-query";
+import { QUERY_KEYS } from "@/services/keys";
+import type { ChaMessageType, MessageType } from "@/types";
 const isStaging = (import.meta.env.VITE_IS_STAGING ?? "false") === "true";
 
 export type MessageInputProps = {
@@ -78,10 +81,27 @@ export const MessageInput = ({
   );
   const [isAnimatingOut, setIsAnimatingOut] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const queryClient = useQueryClient();
 
   const handleStop = async () => {
     try {
       abortCurrentStream();
+      // Immediately mark the last temp message as stopped to suppress error UI
+      if (conversationId) {
+        queryClient.setQueryData<ChaMessageType>(
+          [QUERY_KEYS.conversation, conversationId],
+          (old) => {
+            if (!old || !old.messages?.length) return old;
+            const lastIndex = old.messages.length - 1;
+            const last = old.messages[lastIndex] as MessageType;
+            if (!last?.id?.startsWith("temp-")) return old;
+            const updated = { ...last, stopped: true } as MessageType;
+            const newMessages = [...old.messages];
+            newMessages[lastIndex] = updated;
+            return { ...old, messages: newMessages };
+          }
+        );
+      }
       if (conversationId) {
         await stopConversationApi({ conversationId });
       }

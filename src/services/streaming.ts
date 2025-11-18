@@ -18,9 +18,23 @@ export type PostStreamOptions<TPayload> = {
 };
 
 let currentStreamAbortController: AbortController | null = null;
+// Flag to inform downstream error handlers that the next error was caused by a user stop action.
+let nextErrorShouldSuppressToast = false;
+
+export function markNextErrorAsUserCanceled() {
+  nextErrorShouldSuppressToast = true;
+}
+
+export function consumeSuppressToastFlag(): boolean {
+  const shouldSuppress = nextErrorShouldSuppressToast;
+  nextErrorShouldSuppressToast = false;
+  return shouldSuppress;
+}
 
 export function abortCurrentStream() {
   if (currentStreamAbortController) {
+    // Mark that the next error is a deliberate user cancellation
+    nextErrorShouldSuppressToast = true;
     currentStreamAbortController.abort();
     currentStreamAbortController = null;
   }

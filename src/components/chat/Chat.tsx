@@ -131,7 +131,9 @@ export const Chat = () => {
     conversationId,
   });
 
-  const isRetry = !messages?.[messages.length - 1]?.output;
+  const lastMessage = messages?.[messages.length - 1];
+  const isStopped = Boolean(data?.stopped || lastMessage?.stopped);
+  const isRetry = !lastMessage?.output && !isStopped;
   const isLoading = isMutating || isLoadingMessages || isFetchingMessages;
 
   return (

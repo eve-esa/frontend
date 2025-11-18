@@ -159,7 +159,7 @@ export const Message = ({
               <Skeleton className="w-full max-w-[87%] h-2" />
               <Skeleton className="w-full max-w-[40%] h-2" />
             </div>
-          ) : (
+          ) : message.stopped ? null : (
             <p className="text-danger-400">
               Something went wrong! Retry please your request.
             </p>

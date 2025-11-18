@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import type { AdvancedSettingsValidation } from "@/components/chat/SettingsForm";
 import type { LLMType } from "@/types";
 import api from "./axios";
-import { postStream } from "./streaming";
+import { postStream, consumeSuppressToastFlag } from "./streaming";
 import type { ApiError, ChaMessageType, MessageType } from "@/types";
 import { handleApiError } from "@/utilities/helpers";
 import { LOCAL_STORAGE_PUBLIC_COLLECTIONS } from "@/utilities/localStorage";
@@ -38,6 +38,7 @@ export const sendRequest = async ({
 
 export const useSendRequest = (conversationId?: string) => {
   const queryClient = useQueryClient();
+  let lastWasCanceled = false;
 
   return useMutation({
     mutationKey: [MUTATION_KEYS.sendRequest, conversationId],
@@ -219,17 +220,49 @@ export const useSendRequest = (conversationId?: string) => {
       return { previousData };
     },
     onError: (error: ApiError, _, context) => {
-      // Remove the optimistic message by restoring previous data
-      const errorMessage = handleApiError(error);
+      // Treat user-initiated cancellations (abort) as a graceful stop:
+      // - Keep the partial output already streamed
+      // - Mark the temp message as stopped to suppress error UI
+      // - Do not toast an error
+      const code = (error as any)?.code;
+      const name = (error as any)?.name;
+      const msg = String((error as any)?.message || "").toLowerCase();
+      const isCanceled =
+        consumeSuppressToastFlag() ||
+        name === "CanceledError" ||
+        code === "ERR_CANCELED" ||
+        code === "ECONNABORTED" ||
+        msg.includes("canceled") ||
+        msg.includes("cancelled") ||
+        msg.includes("aborted");
 
-      if (error.code === "ECONNABORTED") {
-        queryClient.invalidateQueries({
-          queryKey: [QUERY_KEYS.conversationsList],
-        });
-      } else {
-        console.error("Other error:", error);
+      if (isCanceled) {
+        lastWasCanceled = true;
+        // Mark the last temp message as stopped and keep its partial output
+        queryClient.setQueryData<ChaMessageType>(
+          [QUERY_KEYS.conversation, conversationId],
+          (old) => {
+            if (!old || !old.messages?.length) return old;
+            const lastIndex = old.messages.length - 1;
+            const last = old.messages[lastIndex] as MessageType;
+            if (!last?.id?.startsWith("temp-")) return old;
+            const updated = {
+              ...last,
+              stopped: true,
+            } as MessageType;
+            const newMessages = [...old.messages];
+            newMessages[lastIndex] = updated;
+            return { ...old, messages: newMessages };
+          }
+        );
+
+        // Do not invalidate any queries on cancel
+        return;
       }
 
+      // Non-cancel errors: rollback and notify
+      const errorMessage = handleApiError(error);
+      console.error("Streaming error:", error);
       toast.error(errorMessage);
       if (context?.previousData) {
         queryClient.setQueryData(
@@ -273,7 +306,12 @@ export const useSendRequest = (conversationId?: string) => {
       );
     },
     onSettled: () => {
-      // Always refetch after error or success:
+      // Skip refetch after user-initiated Stop/cancel
+      if (lastWasCanceled) {
+        lastWasCanceled = false;
+        return;
+      }
+      // Refetch after non-cancel error or success
       queryClient.invalidateQueries({
         queryKey: [QUERY_KEYS.conversation, conversationId],
       });
