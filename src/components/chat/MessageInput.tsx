@@ -244,19 +244,21 @@ export const MessageInput = ({
               </div>
               <div className="pointer-events-auto">
                 {isLoading ? (
-                  <Button
-                    type="button"
-                    variant="icon"
-                    size="sm"
-                    className="h-8 w-8 p-0 cursor-pointer"
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      handleStop();
-                    }}
-                  >
-                    <FontAwesomeIcon icon={faStop} className="size-4" />
-                  </Button>
+                  isStaging && (
+                    <Button
+                      type="button"
+                      variant="icon"
+                      size="sm"
+                      className="h-8 w-8 p-0 cursor-pointer"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleStop();
+                      }}
+                    >
+                      <FontAwesomeIcon icon={faStop} className="size-4" />
+                    </Button>
+                  )
                 ) : (
                   <Button
                     type="submit"
