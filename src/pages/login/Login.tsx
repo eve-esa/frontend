@@ -8,7 +8,7 @@ import { z } from "zod";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
 import { routes } from "@/utilities/routes";
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Spinner } from "@/components/ui/Spinner";
 import { LOCAL_STORAGE_LOGIN_EMAIL } from "@/utilities/localStorage";
@@ -45,14 +45,7 @@ export const Login = () => {
   };
 
   const [showPassword, setShowPassword] = useState(false);
-  const submitButtonRef = useRef<HTMLButtonElement>(null);
   const watchedEmail = watch("email");
-
-  useEffect(() => {
-    if (isValid && !isPending) {
-      submitButtonRef.current?.focus();
-    }
-  }, [isValid, isPending]);
 
   // Store email in localStorage when user types
   useEffect(() => {
@@ -62,7 +55,7 @@ export const Login = () => {
   }, [watchedEmail]);
 
   return (
-    <>
+    <form onSubmit={handleSubmit(onSubmit)}>
       <p className="text-natural-50 text-2xl">Log in</p>
 
       {/* EMAIL */}
@@ -151,12 +144,10 @@ export const Login = () => {
       {/* SUBMIT BUTTON */}
 
       <Button
-        ref={submitButtonRef}
         type="submit"
         size="lg"
         variant="outline"
         className="w-full"
-        onClick={handleSubmit(onSubmit)}
         disabled={!isValid || isPending}
       >
         {isPending ? <Spinner variant="white" size="sm" /> : "LOGIN NOW"}
@@ -170,7 +161,7 @@ export const Login = () => {
             Don't have an account?
           </AnimatedLink> */}
       </div>
-    </>
+    </form>
   );
 };
 
