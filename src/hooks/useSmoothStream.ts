@@ -3,6 +3,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 type UseSmoothStreamOptions = {
   ratePerSecond?: number; // characters per second
   chunkSize?: number; // characters per tick
+  // When true, immediately stop revealing further characters and drop any queued text
+  stopImmediately?: boolean;
 };
 
 /**
@@ -27,6 +29,7 @@ export const useSmoothStream = (
 ) => {
   const ratePerSecond = options?.ratePerSecond ?? 40; // default ~40 cps
   const chunkSize = Math.max(1, Math.floor(options?.chunkSize ?? 1));
+  const stopImmediately = options?.stopImmediately === true;
 
   const intervalMs = useMemo(() => {
     const ms = 1000 / Math.max(1, ratePerSecond);
@@ -46,6 +49,29 @@ export const useSmoothStream = (
       (typeof performance !== "undefined" ? performance.now() : Date.now())
   );
   const budgetRef = useRef<number>(persisted?.budget ?? 0);
+  const stoppedRef = useRef<boolean>(false);
+
+  // Reset stopped state when persist key changes (new message/instance)
+  useEffect(() => {
+    stoppedRef.current = false;
+  }, [persistKey]);
+
+  // Apply hard stop: drop any queued characters and freeze display
+  useEffect(() => {
+    if (!stopImmediately) return;
+    stoppedRef.current = true;
+    queueRef.current = "";
+    budgetRef.current = 0;
+    if (persistKey) {
+      PERSIST_STORE.set(persistKey, {
+        displayed,
+        sourceLen: sourceLenRef.current,
+        queue: queueRef.current,
+        lastTickMs: lastTickRef.current,
+        budget: budgetRef.current,
+      });
+    }
+  }, [stopImmediately, persistKey, displayed]);
 
   useEffect(() => {
     if (!persistKey) return;
@@ -66,6 +92,10 @@ export const useSmoothStream = (
 
   // Whenever source grows, enqueue only the delta (even if inactive) so final chunks animate.
   useEffect(() => {
+    if (stoppedRef.current) {
+      // If hard-stopped, ignore any new source text
+      return;
+    }
     const prevLen = sourceLenRef.current;
     const newLen = sourceText.length;
     if (newLen > prevLen) {
@@ -103,6 +133,7 @@ export const useSmoothStream = (
     // On (re)mount, catch up by elapsed time since last tick so it looks continuous
     const elapsedOnMount = Math.max(0, nowInit - lastTickRef.current);
     const drainWithElapsed = (elapsedMs: number) => {
+      if (stoppedRef.current) return;
       if (queueRef.current.length === 0) return;
       budgetRef.current += (ratePerSecond * elapsedMs) / 1000;
       const maxBurst = Math.max(chunkSize * 50, 200);
@@ -131,6 +162,7 @@ export const useSmoothStream = (
     lastTickRef.current = nowInit;
 
     const timer = setInterval(() => {
+      if (stoppedRef.current) return;
       const now = typeof performance !== "undefined" ? performance.now() : Date.now();
       const elapsed = Math.max(0, now - lastTickRef.current);
       lastTickRef.current = now;

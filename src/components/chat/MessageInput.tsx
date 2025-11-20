@@ -86,24 +86,48 @@ export const MessageInput = ({
   const handleStop = async () => {
     try {
       abortCurrentStream();
-      // Immediately mark the last temp message as stopped to suppress error UI
+      // Immediately mark the last message as stopped to halt smoothing UI
       if (conversationId) {
         queryClient.setQueryData<ChaMessageType>(
           [QUERY_KEYS.conversation, conversationId],
           (old) => {
             if (!old || !old.messages?.length) return old;
-            const lastIndex = old.messages.length - 1;
-            const last = old.messages[lastIndex] as MessageType;
-            if (!last?.id?.startsWith("temp-")) return old;
-            const updated = { ...last, stopped: true } as MessageType;
             const newMessages = [...old.messages];
-            newMessages[lastIndex] = updated;
+            const lastIndex = newMessages.length - 1;
+            if (lastIndex >= 0) {
+              const last = newMessages[lastIndex] as MessageType;
+              newMessages[lastIndex] = {
+                ...last,
+                stopped: true,
+              } as MessageType;
+            }
             return { ...old, messages: newMessages };
           }
         );
       }
       if (conversationId) {
-        await stopConversationApi({ conversationId });
+        const result = await stopConversationApi({ conversationId });
+        const stoppedId = (result && (result as any).message_id) as
+          | string
+          | undefined;
+        if (stoppedId) {
+          queryClient.setQueryData<ChaMessageType>(
+            [QUERY_KEYS.conversation, conversationId],
+            (old) => {
+              if (!old || !old.messages?.length) return old;
+              const newMessages = old.messages.map((m) => {
+                if ((m as MessageType).id === stoppedId) {
+                  return {
+                    ...(m as MessageType),
+                    stopped: true,
+                  } as MessageType;
+                }
+                return m as MessageType;
+              });
+              return { ...old, messages: newMessages };
+            }
+          );
+        }
       }
     } catch (_e) {
       console.error("Error stopping conversation", _e);

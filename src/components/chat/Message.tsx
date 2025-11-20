@@ -38,6 +38,7 @@ export const Message = ({
     {
       ratePerSecond: 100,
       chunkSize: 1,
+      stopImmediately: Boolean(message.stopped),
     },
     persistKey
   );
