@@ -17,5 +17,5 @@ Private collections are your own document sets stored in the vector database (Qd
 - Keep uploads focused on the topics you’ll query for better retrieval quality.
 - After uploading, send a new message to allow the assistant to use the fresh context.
 
-![image](../images/private_collection.png)
-![image](../images/private_collection_1.png)
+![image](../assets/private_collection.png)
+![image](../assets/private_collection_1.png)

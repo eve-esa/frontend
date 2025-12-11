@@ -27,5 +27,3 @@ Follow these steps to run the EVE frontend locally.
 - Build: `yarn build`
 - Preview production build: `yarn preview`
 - Lint: `yarn lint`
-
-> Screenshot placeholder: environment setup or dev server running.

@@ -16,4 +16,4 @@ The Control Panel lets you adjust how the assistant retrieves and generates answ
 - Click **Save values** to persist changes.
 - Use **Reset filters to default values** to restore the defaults.
 
-![image](../images/control_panel.png)
+![image](../assets/control_panel.png)

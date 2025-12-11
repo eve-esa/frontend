@@ -11,4 +11,4 @@ Shared collections are curated document sets provided to all users. When enabled
 - Enabled collections are considered during retrieval when you send a prompt.
 - Descriptions in the list explain the scope of each collection to help you choose the right ones.
 
-![image](../images/shared_collection.png)
+![image](../assets/shared_collection.png)

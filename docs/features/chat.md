@@ -21,5 +21,5 @@ EVE’s chat is a multi-turn assistant focused on Earth Observation topics. Mess
 - Open **Control Panel** from the sliders button beside the input to tune RAG and generation settings.
 - Open **Shared collections** or **My collections** from the Knowledge Base menu in the sidebar to control which documents inform answers.
 
-![image](../images/chat_2.png)
-![image](../images/chat_1.png)
+![image](../assets/chat_2.png)
+![image](../assets/chat_1.png)
