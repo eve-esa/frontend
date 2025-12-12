@@ -268,7 +268,6 @@ export const MessageInput = ({
               </div>
               <div className="pointer-events-auto">
                 {isLoading ? (
-                  isStaging && (
                     <Button
                       type="button"
                       variant="icon"
@@ -282,8 +281,7 @@ export const MessageInput = ({
                     >
                       <FontAwesomeIcon icon={faStop} className="size-4" />
                     </Button>
-                  )
-                ) : (
+                  ) : (
                   <Button
                     type="submit"
                     disabled={
