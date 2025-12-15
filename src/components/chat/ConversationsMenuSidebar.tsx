@@ -11,7 +11,12 @@ import { useGetConversationsList } from "@/services/useGetConversationsList";
 import { cn } from "@/lib/utils";
 import { useTour } from "@/components/onboarding/TourContext";
 import { useState } from "react";
-import { Dialog, DialogContent, DialogDescription } from "@/components/ui/Dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+} from "@/components/ui/Dialog";
+import avatarIcon from "@/assets/images/EVE_SCIENTIST_AVATAR_.png";
 
 export const ConversationsMenuSidebar = () => {
   const [isDiscoverDialogOpen, setIsDiscoverDialogOpen] =
@@ -124,126 +129,114 @@ export const ConversationsMenuSidebar = () => {
           open={isDiscoverDialogOpen}
           onOpenChange={setIsDiscoverDialogOpen}
         >
-          <DialogContent className="max-w-4xl md:!max-w-[800px] h-full md:h-fit">
+          <DialogContent className="max-w-5xl w-full md:!max-w-[960px] h-full md:h-fit py-12">
             <DialogDescription asChild>
-              <div className="space-y-6 text-primary-100 smarttext max-h-[80vh] overflow-y-auto overflow-x-auto">
-                <section className="space-y-2">
-                  <h3 className="font-bold text-natural-50 text-lg">
-                    What EVE Can Do
-                  </h3>
-                  <p>
-                    EVE is your AI companion for exploring Earth Observation and
-                    Earth Science.
-                  </p>
-                  <ul className="list-disc space-y-2 pl-5">
-                    <li>
-                      ✔️{" "}
-                      <span className="font-bold">
-                        Ask domain-specific questions
-                      </span>{" "}
-                      — from “What is Sentinel-2 used for?” to “How do SAR
-                      backscatter changes relate to flooding?”
-                    </li>
-                    <li>
-                      ✔️{" "}
-                      <span className="font-bold">
-                        Discover relevant documents
-                      </span>{" "}
-                      — papers, datasets, definitions, methods.
-                    </li>
-                    <li>
-                      ✔️{" "}
-                      <span className="font-bold">
-                        Get grounded answers
-                      </span>{" "}
-                      backed by EVE’s curated RAG system (ESA, NASA, Copernicus,
-                      peer-reviewed sources).
-                    </li>
-                    <li>
-                      ✔️{" "}
-                      <span className="font-bold">
-                        Check the exact sources behind an answer
-                      </span>{" "}
-                      — every response includes the documents EVE used to
-                      produce it, so you can inspect the evidence yourself.
-                    </li>
-                    <li>
-                      ✔️{" "}
-                      <span className="font-bold">
-                        Explore concepts in natural language
-                      </span>{" "}
-                      just like talking to an EO expert.
-                    </li>
-                  </ul>
-                </section>
+              <div className="smarttext max-h-full overflow-y-auto">
+                <div className="flex flex-col md:flex-row items-start">
+                  <section className="space-y-10 px-10 md:max-w-[380px] lg:max-w-[400px] flex-shrink-0">
+                    <div className="flex flex-col items-center text-center gap-4">
+                      <div className="rounded-full border-[3px] border-success-100 flex items-center justify-center">
+                        <img
+                          src={avatarIcon}
+                          alt="EVE – your EO/ES AI companion"
+                          className="h-[250px] w-[250px] rounded-full object-cover"
+                        />
+                      </div>
+                    </div>
 
-                <section className="space-y-2">
-                  <h3 className="font-bold text-natural-50 text-lg">
-                    What EVE Cannot Do (Yet)
-                  </h3>
-                  <ul className="list-disc space-y-2 pl-5">
-                    <li>
-                      ❌{" "}
-                      <span className="font-bold">
-                        No document-level control.
-                      </span>{" "}
-                      You cannot instruct EVE to “only use this specific PDF” or
-                      “focus on this paragraph” — retrieval is global, not
-                      document-scoped.
-                    </li>
-                    <li>
-                      ❌{" "}
-                      <span className="font-bold">
-                        No live internet or web search.
-                      </span>{" "}
-                      EVE cannot fetch the latest news, newly published papers,
-                      or any up-to-the-minute datasets.
-                    </li>
-                    <li>
-                      ❌{" "}
-                      <span className="font-bold">
-                        No access to proprietary services unless integrated.
-                      </span>{" "}
-                      EVE cannot query external APIs, commercial databases, or
-                      cloud platforms you use at work.
-                    </li>
-                    <li>
-                      ❌{" "}
-                      <span className="font-bold">
-                        No visual understanding (for now).
-                      </span>{" "}
-                      The pilot model is text-only — it cannot read satellite
-                      images or plots yet.
-                    </li>
-                  </ul>
-                </section>
-
-                <section className="space-y-2">
-                  <h3 className="font-bold text-natural-50 text-lg">
-                    Tips for Best Results
-                  </h3>
-                  <ul className="list-disc space-y-2 pl-5">
-                    <li>💡 Ask clear, specific EO/ES questions.</li>
-                    <li>💡 Request examples (e.g. “give me 3 use cases…”).</li>
-                    <li>💡 Use follow-ups to refine answers.</li>
-                    <li>
-                      💡 Ask for definitions, comparisons, workflows, or
-                      high-level summaries.
-                    </li>
-                    <li className="space-y-1">
-                      <span>
-                        💡 Try exploratory questions, for example:
-                      </span>
-                      <ul className="list-[square] pl-5 space-y-1">
+                    <div className="space-y-4 mb-8">
+                      <h3 className="font-semibold text-base tracking-[0.16em] uppercase">
+                        Tips for Best Results
+                      </h3>
+                      <ul className="list-disc space-y-2 pl-5 text-sm">
+                        <li>Ask clear, specific EO/ES questions.</li>
                         <li>
-                          “Show me documents about wildfire monitoring.”
+                          Request examples (e.g. “give me 3 use cases for
+                          methane monitoring…”).
                         </li>
-                        <li>“Explain this concept like I’m new to EO.”</li>
-                        <li>“Give me related terms to …”</li>
+                        <li>Use follow-ups to refine and deepen answers.</li>
+                        <li>
+                          Ask for definitions, comparisons, workflows, or
+                          high-level summaries.
+                        </li>
+                        <li className="space-y-1">
+                          <span>Try exploratory prompts, for example:</span>
+                          <ul className="list-[square] pl-5 space-y-1">
+                            <li>“Show me documents about wildfire monitoring.”</li>
+                            <li>“Explain this concept like I’m new to EO.”</li>
+                            <li>“Give me related terms to air quality indices.”</li>
+                          </ul>
+                        </li>
                       </ul>
-                    </li>
-                  </ul>
-                </section>
+                    </div>
+                  </section>
+
+                  <section className="space-y-8 border-0 md:border-l-2 border-primary-400 px-10 md:flex-1">
+                    <div className="space-y-3">
+                      <h3 className="font-semibold text-base tracking-[0.16em] uppercase">
+                        What EVE Can Do
+                      </h3>
+                      <p className="text-sm">
+                        EVE is your AI companion for exploring Earth Observation
+                        and Earth Science.
+                      </p>
+                      <ul className="list-disc space-y-2 pl-5 text-sm">
+                        <li>
+                          Ask domain-specific questions: from “What is
+                          Sentinel-2 used for?” to “How do SAR backscatter
+                          changes relate to flooding?”.
+                        </li>
+                        <li>
+                          Discover relevant documents: papers, datasets,
+                          definitions, methods.
+                        </li>
+                        <li>
+                          Get grounded answers backed by EVE’s curated RAG
+                          system (ESA, NASA, Copernicus, peer-reviewed
+                          sources).
+                        </li>
+                        <li>
+                          Check the exact sources behind an answer: every
+                          response includes the documents EVE used to produce
+                          it, so you can inspect the evidence yourself.
+                        </li>
+                        <li>
+                          Explore concepts in natural language just like talking
+                          to an EO expert.
+                        </li>
+                      </ul>
+                    </div>
+
+                    <div className="space-y-3">
+                      <h3 className="font-semibold text-base tracking-[0.16em] uppercase">
+                        What EVE Cannot Do (Yet)
+                      </h3>
+                      <ul className="list-disc space-y-2 pl-5 text-sm">
+                        <li>
+                          No document-level control. You cannot instruct EVE to
+                          “only use this specific PDF” or “focus on this
+                          paragraph”: retrieval is global, not
+                          document-scoped.
+                        </li>
+                        <li>
+                          No live internet or web search. EVE cannot fetch the
+                          latest news, newly published papers, or any
+                          up-to-the-minute datasets.
+                        </li>
+                        <li>
+                          No access to proprietary services unless integrated.
+                          EVE cannot query external APIs, commercial databases,
+                          or cloud platforms you use at work.
+                        </li>
+                        <li>
+                          No visual understanding (for now). The pilot model is
+                          text-only: it cannot read satellite images or plots
+                          yet.
+                        </li>
+                      </ul>
+                    </div>
+                  </section>
+                </div>
               </div>
             </DialogDescription>
           </DialogContent>
