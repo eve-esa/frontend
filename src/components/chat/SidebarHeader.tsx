@@ -12,6 +12,7 @@ type SidebarHeaderProps = {
   isMobile: boolean;
   onToggle: () => void;
   handleNewChat: () => void;
+  onDiscoverEve: () => void;
 };
 
 export const SidebarHeader = ({
@@ -19,6 +20,7 @@ export const SidebarHeader = ({
   isMobile,
   onToggle,
   handleNewChat,
+  onDiscoverEve,
 }: SidebarHeaderProps) => {
   return (
     <div className="flex flex-col gap-8 px-4">
@@ -87,22 +89,34 @@ export const SidebarHeader = ({
 
       <div
         className={`flex items-center justify-between px-2 ${
-          isOpen ? "flex-row" : "flex-col gap-4"
+          isOpen ? "flex-col gap-2" : "flex-col gap-4"
         }`}
       >
         {isOpen ? (
-          <Button
-            className="w-full new-chat-button-tour"
-            variant="outline"
-            size="md"
-            onClick={handleNewChat}
-            data-tour="new-chat-button"
-          >
-            <FontAwesomeIcon icon={faPlus} className="w-4 h-4" />
-            <span className="whitespace-nowrap mt-[2px] overflow-hidden text-ellipsis font-['NotesESA']">
-              NEW CHAT
-            </span>
-          </Button>
+          <div className="w-full flex flex-col gap-2">
+            <Button
+              className="w-full bg-success-100 border-2 border-success-200"
+              variant="primary"
+              size="md"
+              onClick={onDiscoverEve}
+            >
+              <span className="whitespace-nowrap mt-[2px] overflow-hidden text-ellipsis font-['NotesESA']">
+                DISCOVER EVE
+              </span>
+            </Button>
+            <Button
+              className="w-full new-chat-button-tour"
+              variant="outline"
+              size="md"
+              onClick={handleNewChat}
+              data-tour="new-chat-button"
+            >
+              <FontAwesomeIcon icon={faPlus} className="w-4 h-4" />
+              <span className="whitespace-nowrap mt-[2px] overflow-hidden text-ellipsis font-['NotesESA']">
+                NEW CHAT
+              </span>
+            </Button>
+          </div>
         ) : (
           <Tooltip
             side="right"
@@ -116,7 +130,7 @@ export const SidebarHeader = ({
             <TooltipTrigger asChild>
               <Button
                 className="w-full"
-                variant="outline"
+                variant="primary"
                 size="sm"
                 onClick={handleNewChat}
               >
