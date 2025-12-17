@@ -107,9 +107,6 @@ Run `yarn lint` before committing to ensure ESLint passes.
 
 This project follows [Semantic Versioning](https://semver.org/). For the versions available, see the [tags on this repository](https://github.com/pischool/eve-fe/tags) and the [CHANGELOG.md](./CHANGELOG.md).
 
-## License
-
-Distributed under the **MIT License**. See [`LICENSE`](./LICENSE) for details.
 
 ## Git Workflow
 
@@ -177,3 +174,22 @@ Follow this checklist to scaffold a new feature while keeping the codebase tidy 
    - Push and open a PR targeting `main`.
 
 ---
+
+
+## Deployment
+
+- Branches: `staging` (pre-production), `main` (production).
+- Staging: open a PR to `staging` and merge. This deploys to the staging environment.
+- Production: after verifying on staging, open a PR from `staging` to `main` and merge. This deploys to production.
+
+## Funding
+
+This project is supported by the European Space Agency (ESA) Φ-lab through the Large Language Model for Earth Observation and Earth Science project, as part of the Foresight Element within FutureEO Block 4 programme.
+
+## Citation 
+
+If you use this project in academic or research settings, please cite:
+
+## License
+
+This project is released under the Apache 2.0 License - see the [LICENSE](LICENSE) file for more details.
