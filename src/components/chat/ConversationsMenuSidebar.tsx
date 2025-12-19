@@ -10,7 +10,7 @@ import { useSidebar } from "./DynamicSidebarProvider";
 import { useGetConversationsList } from "@/services/useGetConversationsList";
 import { cn } from "@/lib/utils";
 import { useTour } from "@/components/onboarding/TourContext";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -64,6 +64,21 @@ export const ConversationsMenuSidebar = () => {
   const handleOpenDiscoverDialog = () => {
     setIsDiscoverDialogOpen(true);
   };
+
+  // Prefetch the avatar image when component mounts to improve modal open speed
+  useEffect(() => {
+    const link = document.createElement("link");
+    link.rel = "prefetch";
+    link.as = "image";
+    link.href = avatarIcon;
+    document.head.appendChild(link);
+
+    return () => {
+      if (document.head.contains(link)) {
+        document.head.removeChild(link);
+      }
+    };
+  }, []);
 
   return (
     <Sidebar
