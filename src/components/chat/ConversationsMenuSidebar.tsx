@@ -16,7 +16,7 @@ import {
   DialogContent,
   DialogDescription,
 } from "@/components/ui/Dialog";
-import avatarIcon from "@/assets/images/EVE_SCIENTIST_AVATAR_.png";
+import avatarIcon from "@/assets/images/EVE_SCIENTIST_AVATAR.jpg";
 
 export const ConversationsMenuSidebar = () => {
   const [isDiscoverDialogOpen, setIsDiscoverDialogOpen] =
