@@ -121,4 +121,5 @@ export enum LLMType {
   Mistral = "mistral",
   Satcom_Small = "satcom_small",
   Satcom_Large = "satcom_large",
+  Ship = "ship"
 }
