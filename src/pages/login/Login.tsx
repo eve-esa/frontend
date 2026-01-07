@@ -55,7 +55,7 @@ export const Login = () => {
   }, [watchedEmail]);
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
+    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-3">
       <p className="text-natural-50 text-2xl">Log in</p>
 
       {/* EMAIL */}
@@ -120,7 +120,7 @@ export const Login = () => {
 
       {/* REMEMBER ME */}
 
-      <div className="flex items-center gap-2 mt-6">
+      <div className="flex items-center gap-2 mt-2">
         <Controller
           name="rememberMe"
           control={control}
