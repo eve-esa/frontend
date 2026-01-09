@@ -32,16 +32,15 @@ export const CO2eqDialog = ({ isOpen, onOpenChange }: CO2eqDialogProps) => {
   const CO2_PER_TOKEN_GRAM = 0.000078;
   const GRAM_PER_KG = 1000;
 
-  const totalCO2eqKg =
+  const totalCO2eqKgValue =
     typeof totalCharacters === "number" && totalCharacters > 0
-      ? Intl.NumberFormat("en-US", {
-          style: "decimal",
-          maximumFractionDigits: 2,
-        }).format(
-          (totalCharacters / CHARS_PER_TOKEN) *
-            (CO2_PER_TOKEN_GRAM / GRAM_PER_KG)
-        )
-      : "0";
+      ? (totalCharacters / CHARS_PER_TOKEN) * (CO2_PER_TOKEN_GRAM / GRAM_PER_KG)
+      : 0;
+
+  const totalCO2eqKg = Intl.NumberFormat("en-US", {
+    style: "decimal",
+    maximumFractionDigits: 2,
+  }).format(totalCO2eqKgValue);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -53,8 +52,8 @@ export const CO2eqDialog = ({ isOpen, onOpenChange }: CO2eqDialogProps) => {
           This is a pilot estimation based on your interaction stats.
         </DialogDescription>
 
-        <div className="flex flex-col gap-4 mt-4">
-          <div className="rounded-lg border border-primary-400 p-4 bg-primary-700/30">
+        <div className="flex flex-col gap-4 mt-2">
+          <div className="flex flex-col gap-2 rounded-lg border border-primary-400 p-4 bg-primary-700/30">
             <div className="text-3xl font-semibold text-natural-50">
               {shouldFetch
                 ? isFetching
@@ -62,6 +61,13 @@ export const CO2eqDialog = ({ isOpen, onOpenChange }: CO2eqDialogProps) => {
                   : `${totalCO2eqKg} Kg`
                 : "—"}
             </div>
+            {shouldFetch && !isFetching && data && (
+              <div className="text-lg font-semibold text-natural-50">
+                {`This is equivalent to: ${Intl.NumberFormat("en-US").format(
+                  Math.floor(totalCO2eqKgValue / 0.01)
+                )} full smartphone charge(s)`}
+              </div>
+            )}
           </div>
 
           {shouldFetch && !isFetching && data && (
