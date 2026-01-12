@@ -23,20 +23,7 @@ export const CO2eqDialog = ({ isOpen, onOpenChange }: CO2eqDialogProps) => {
     await refetch();
   };
 
-  const totalCharacters = data?.total_characters;
-  // Assumptions:
-  // - Roughly 4 characters per token
-  // - ~3mg CO2 per token
-  // - Convert mg to kg
-  const CHARS_PER_TOKEN = 4;
-  const CO2_PER_TOKEN_GRAM = 0.000078;
-  const GRAM_PER_KG = 1000;
-
-  const totalCO2eqKgValue =
-    typeof totalCharacters === "number" && totalCharacters > 0
-      ? (totalCharacters / CHARS_PER_TOKEN) * (CO2_PER_TOKEN_GRAM / GRAM_PER_KG)
-      : 0;
-
+  const totalCO2eqKgValue = data?.co2eq_kg ?? 0;
   const totalCO2eqKg = Intl.NumberFormat("en-US", {
     style: "decimal",
     maximumFractionDigits: 2,
@@ -63,9 +50,7 @@ export const CO2eqDialog = ({ isOpen, onOpenChange }: CO2eqDialogProps) => {
             </div>
             {shouldFetch && !isFetching && data && (
               <div className="text-lg font-semibold text-natural-50">
-                {`This is equivalent to: ${Intl.NumberFormat("en-US").format(
-                  Math.floor(totalCO2eqKgValue / 0.01)
-                )} full smartphone charge(s)`}
+                {data.text}
               </div>
             )}
           </div>

@@ -7,6 +7,8 @@ export type UserMessageStats = {
   input_characters: number;
   output_characters: number;
   total_characters: number;
+  co2eq_kg: number;
+  text: string;
 };
 
 export const httpGetUserMessageStats = async (): Promise<UserMessageStats> => {
@@ -22,5 +24,3 @@ export const useGetUserMessageStats = (enabled: boolean = true) => {
     staleTime: 5 * 60 * 1000,
   });
 };
-
-
