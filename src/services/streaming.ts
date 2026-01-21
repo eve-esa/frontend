@@ -48,19 +48,58 @@ export async function postStream<TPayload>({
 }: PostStreamOptions<TPayload>): Promise<void> {
   let buffer = "";
   let lastIndex = 0;
+  let lastProgressTime = Date.now();
+  const PROGRESS_TIMEOUT = 60000;
 
   const controller = new AbortController();
   currentStreamAbortController = controller;
+
+  const separator = url.includes("?") ? "&" : "?";
+  const uniqueUrl = `${url}${separator}_nocache=${Date.now()}&_r=${Math.random().toString(36).substring(7)}`;
+
+  const progressTimeout = setInterval(() => {
+    const timeSinceLastProgress = Date.now() - lastProgressTime;
+    if (timeSinceLastProgress > PROGRESS_TIMEOUT) {
+      console.error(
+        "Stream timeout: no progress for",
+        timeSinceLastProgress,
+        "ms"
+      );
+      controller.abort();
+      clearInterval(progressTimeout);
+    }
+  }, 5000);
+
   try {
-    await api.post(url, payload, {
+    await api.post(uniqueUrl, payload, {
       responseType: "text",
       signal: controller.signal,
+      headers: {
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Pragma": "no-cache",
+        "Expires": "0",
+      },
       onDownloadProgress: (e: AxiosProgressEvent) => {
+        lastProgressTime = Date.now();
+
         const xhr = (e.event?.target || e.event?.currentTarget) as
           | XMLHttpRequest
           | undefined;
-        const text = (xhr && (xhr.responseText as string)) || "";
+
+        if (!xhr) return;
+
+        const text = xhr.responseText as string;
         if (!text) return;
+
+        if (text.length <= lastIndex) {
+          console.log("Stream appears frozen: no new data", {
+            currentLength: text.length,
+            lastIndex,
+            readyState: xhr.readyState,
+          });
+          return;
+        }
+
         const newText = text.slice(lastIndex);
         lastIndex = text.length;
         buffer += newText;
@@ -82,6 +121,10 @@ export async function postStream<TPayload>({
         }
       },
     });
+    clearInterval(progressTimeout);
+  } catch (error) {
+    clearInterval(progressTimeout);
+    throw error;
   } finally {
     currentStreamAbortController = null;
   }
