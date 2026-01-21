@@ -144,11 +144,11 @@ export const ConversationsMenuSidebar = () => {
           open={isDiscoverDialogOpen}
           onOpenChange={setIsDiscoverDialogOpen}
         >
-          <DialogContent className="max-w-5xl w-full md:!max-w-[960px] h-full md:h-fit py-12">
+          <DialogContent className="max-w-5xl w-full md:max-w-[960px] 3xl:max-w-[1400px] h-full md:h-fit py-12">
             <DialogDescription asChild>
               <div className="smarttext max-h-full overflow-y-auto">
                 <div className="flex flex-col md:flex-row items-start">
-                  <section className="space-y-10 px-10 md:max-w-[380px] lg:max-w-[400px] flex-shrink-0">
+                  <section className="space-y-10 px-10 md:max-w-[380px] 3xl:max-w-[530px] flex-shrink-0">
                     <div className="flex flex-col items-center text-center gap-4">
                       <div className="rounded-full border-[3px] border-success-100 flex items-center justify-center">
                         <img
@@ -191,7 +191,7 @@ export const ConversationsMenuSidebar = () => {
                       <h3 className="font-semibold text-base tracking-[0.16em] uppercase">
                         What EVE Can Do
                       </h3>
-                      <p className="text-sm">
+                      <p className="text-base">
                         EVE is your AI companion for exploring Earth Observation
                         and Earth Science.
                       </p>
