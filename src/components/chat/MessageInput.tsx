@@ -342,8 +342,9 @@ export const MessageInput = ({
           </div>
         </form>
 
-        <p className="text-sm text-natural-200 text-center">
-          EVE could make errors. Always check the content.
+        <p className={`text-sm text-natural-200 text-center ${className || ""} overflow-visible`}>
+          EVE outputs represent an automated synthesis and do not constitute statements by, or endorsements from, the original data providers or authors.{' '}
+          <span className="text-sm text-natural-200 text-center whitespace-nowrap">EVE could make errors. Always check the content.</span>
         </p>
       </div>
     </div>
