@@ -236,7 +236,7 @@ export const MessageInput = ({
                       </SelectTrigger>
                       <SelectContent className="bg-primary-900/60 border-primary-400/60 backdrop-blur-[2px]">
                         <SelectItem value={LLMType.Runpod}>EVE</SelectItem>
-                        <SelectItem value={LLMType.Ship}>Ship</SelectItem>
+                        <SelectItem value={LLMType.Ship}>EVE v04</SelectItem>
                         <SelectItem value={LLMType.Mistral}>
                           Mistral Medium
                         </SelectItem>
