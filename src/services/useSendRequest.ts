@@ -8,6 +8,7 @@ import { postStream, consumeSuppressToastFlag } from "./streaming";
 import type { ApiError, ChaMessageType, MessageType } from "@/types";
 import { handleApiError } from "@/utilities/helpers";
 import { LOCAL_STORAGE_PUBLIC_COLLECTIONS } from "@/utilities/localStorage";
+import { logError } from "./errorLogging";
 
 type SendRequestProps = {
   query: string;
@@ -169,7 +170,16 @@ export const useSendRequest = (conversationId?: string) => {
 
         return finalMessage;
       } catch (e) {
-        console.log("streaming error", e);
+        console.error("streaming error", e);
+        logError({
+          error_message: String(e || "Unknown error"),
+          error_stack: new Error().stack,
+          error_type: "StreamError",
+          url: window.location.href,
+          user_agent: navigator.userAgent,
+          component: "useSendRequest",
+          description: `stream error in useSendRequest: ${String(e)}`,
+        });
         return null as unknown as MessageType;
       }
     },
