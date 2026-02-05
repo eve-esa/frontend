@@ -2,7 +2,11 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Button } from "@/components/ui/Button";
 import { faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
 
-export const ErrorMessage = ({ onRetry }: { onRetry: () => void }) => {
+export const ErrorMessage = ({
+  onRetry,
+}: {
+  onRetry?: () => void;
+}) => {
   const contactUrl = import.meta.env.VITE_CONTACT_URL;
 
   const onContactClick = () => {
@@ -26,15 +30,19 @@ export const ErrorMessage = ({ onRetry }: { onRetry: () => void }) => {
       </div>
 
       <div className="flex items-center justify-center gap-4">
-        <div className="flex cursor-pointer relative group transition-all duration-300 ease-in-out hover:text-natural-200">
-          <span onClick={onContactClick} className="whitespace-nowrap">
-            Contact us
-            <span className="absolute -bottom-1 right-0 w-0 h-0.5 bg-natural-200 transition-all duration-300 ease-in-out group-hover:w-full group-hover:left-0"></span>
-          </span>
-        </div>
-        <Button variant="outline" size="md" className="px-4" onClick={onRetry}>
-          Retry
-        </Button>
+        {contactUrl && (
+          <div className="flex cursor-pointer relative group transition-all duration-300 ease-in-out hover:text-natural-200">
+            <span onClick={onContactClick} className="whitespace-nowrap">
+              Contact us
+              <span className="absolute -bottom-1 right-0 w-0 h-0.5 bg-natural-200 transition-all duration-300 ease-in-out group-hover:w-full group-hover:left-0"></span>
+            </span>
+          </div>
+        )}
+        {onRetry && (
+          <Button variant="outline" size="md" className="px-4" onClick={onRetry}>
+            Retry
+          </Button>
+        )}
       </div>
     </div>
   );

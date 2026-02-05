@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { MUTATION_KEYS } from "./keys";
 import api from "./axios";
+import { logError } from "./errorLogging";
 
 const httpUploadDocument = async (file: File[], collectionId: string) => {
   const url = `/collections/${collectionId}/documents`;
@@ -40,6 +41,15 @@ export const useUploadDocument = (onSuccess?: () => void) => {
     }) => httpUploadDocument(file, collectionId),
     onError: (error) => {
       toast.error(error.message);
+      logError({
+        error_message: error.message,
+        error_stack: error.stack,
+        error_type: "UploadDocumentError",
+        url: window.location.href,
+        user_agent: navigator.userAgent,
+        component: "useUploadDocument",
+        description: "Error uploading document",
+      });
     },
     onSuccess: () => {
       onSuccess?.();
