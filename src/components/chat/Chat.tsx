@@ -34,7 +34,7 @@ export const Chat = () => {
   const isMutating = Boolean(
     useIsMutating({
       mutationKey: [MUTATION_KEYS.sendRequest, conversationId],
-    })
+    }),
   );
 
   const { mutate: sendRequest } = useSendRequest(conversationId);
@@ -101,11 +101,11 @@ export const Chat = () => {
       if (!conversationId) return;
 
       const settings = JSON.parse(
-        localStorage.getItem(LOCAL_STORAGE_SETTINGS) ?? "{}"
+        localStorage.getItem(LOCAL_STORAGE_SETTINGS) ?? "{}",
       );
       const llm_type =
         (localStorage.getItem(LOCAL_STORAGE_LLM_TYPE) as LLMType) ||
-        LLMType.Mistral;
+        LLMType.Ship;
 
       sendRequest({
         query: input,
@@ -114,7 +114,7 @@ export const Chat = () => {
         llm_type,
       });
     },
-    [sendRequest, conversationId]
+    [sendRequest, conversationId],
   );
 
   useEffect(() => {
