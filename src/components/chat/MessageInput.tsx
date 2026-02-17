@@ -237,6 +237,7 @@ export const MessageInput = ({
                       <SelectContent className="bg-primary-900/60 border-primary-400/60 backdrop-blur-[2px]">
                         <SelectItem value={LLMType.Runpod}>EVE</SelectItem>
                         <SelectItem value={LLMType.Ship}>EVE Instruct</SelectItem>
+                        <SelectItem value={LLMType.Eve_V05}>EVE v05</SelectItem>
                         <SelectItem value={LLMType.Mistral}>
                           Mistral Medium
                         </SelectItem>
