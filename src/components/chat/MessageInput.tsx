@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/Select";
 import { LOCAL_STORAGE_LLM_TYPE } from "@/utilities/localStorage";
-import { LLMType } from "@/types";
+import { LLMType, LLMTypeLabel } from "@/types";
 import { useParams } from "react-router-dom";
 import { abortCurrentStream } from "@/services/streaming";
 import { stopConversation as stopConversationApi } from "@/services/stopConversation";
@@ -77,7 +77,7 @@ export const MessageInput = ({
 
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [llmType, setLlmType] = useState<string>(
-    (localStorage.getItem(LOCAL_STORAGE_LLM_TYPE) as LLMType) || LLMType.Runpod
+    (localStorage.getItem(LOCAL_STORAGE_LLM_TYPE) as LLMType) || LLMType.Runpod,
   );
   const [isAnimatingOut, setIsAnimatingOut] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -102,7 +102,7 @@ export const MessageInput = ({
               } as MessageType;
             }
             return { ...old, messages: newMessages };
-          }
+          },
         );
       }
       if (conversationId) {
@@ -125,7 +125,7 @@ export const MessageInput = ({
                 return m as MessageType;
               });
               return { ...old, messages: newMessages };
-            }
+            },
           );
         }
       }
@@ -166,7 +166,7 @@ export const MessageInput = ({
       className={cn(
         `flex flex-col gap-6 mx-auto h-full w-full overflow-hidden ${
           variant === "secondary" ? "pb-40" : ""
-        }`
+        }`,
       )}
     >
       {suggestions && (
@@ -235,17 +235,23 @@ export const MessageInput = ({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="bg-primary-900/60 border-primary-400/60 backdrop-blur-[2px]">
-                        <SelectItem value={LLMType.Runpod}>EVE</SelectItem>
-                        <SelectItem value={LLMType.Ship}>EVE Instruct</SelectItem>
-                        <SelectItem value={LLMType.Eve_V05}>EVE v05</SelectItem>
+                        <SelectItem value={LLMType.Runpod}>
+                          {LLMTypeLabel.Runpod}
+                        </SelectItem>
+                        <SelectItem value={LLMType.Ship}>
+                          {LLMTypeLabel.Ship}
+                        </SelectItem>
+                        <SelectItem value={LLMType.Eve_V05}>
+                          {LLMTypeLabel.Eve_V05}
+                        </SelectItem>
                         <SelectItem value={LLMType.Mistral}>
-                          Mistral Medium
+                          {LLMTypeLabel.Mistral}
                         </SelectItem>
                         <SelectItem value={LLMType.Satcom_Small}>
-                          SatcomLLM - Small
+                          {LLMTypeLabel.Satcom_Small}
                         </SelectItem>
                         <SelectItem value={LLMType.Satcom_Large}>
-                          SatcomLLM - Large
+                          {LLMTypeLabel.Satcom_Large}
                         </SelectItem>
                       </SelectContent>
                     </Select>
@@ -270,20 +276,20 @@ export const MessageInput = ({
               </div>
               <div className="pointer-events-auto">
                 {isLoading ? (
-                    <Button
-                      type="button"
-                      variant="icon"
-                      size="sm"
-                      className="h-8 w-8 p-0 cursor-pointer"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handleStop();
-                      }}
-                    >
-                      <FontAwesomeIcon icon={faStop} className="size-4" />
-                    </Button>
-                  ) : (
+                  <Button
+                    type="button"
+                    variant="icon"
+                    size="sm"
+                    className="h-8 w-8 p-0 cursor-pointer"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleStop();
+                    }}
+                  >
+                    <FontAwesomeIcon icon={faStop} className="size-4" />
+                  </Button>
+                ) : (
                   <Button
                     type="submit"
                     disabled={
@@ -343,9 +349,15 @@ export const MessageInput = ({
           </div>
         </form>
 
-        <p className={`text-sm text-natural-200 text-center ${className || ""} overflow-visible`}>
-          EVE outputs represent an automated synthesis and do not constitute statements by, or endorsements from, the original data providers or authors.{' '}
-          <span className="text-sm text-natural-200 text-center whitespace-nowrap">EVE could make errors. Always check the content.</span>
+        <p
+          className={`text-sm text-natural-200 text-center ${className || ""} overflow-visible`}
+        >
+          EVE outputs represent an automated synthesis and do not constitute
+          statements by, or endorsements from, the original data providers or
+          authors.{" "}
+          <span className="text-sm text-natural-200 text-center whitespace-nowrap">
+            EVE could make errors. Always check the content.
+          </span>
         </p>
       </div>
     </div>

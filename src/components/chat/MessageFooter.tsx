@@ -13,6 +13,16 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Button } from "@/components/ui/Button";
 import SmartText from "@/components/ui/SmartText";
 import type { MessageType, ChaMessageType, Document } from "@/types";
+import { LLMTypeLabel, LLMType } from "@/types";
+
+const LLM_TYPE_TO_LABEL: Record<string, LLMTypeLabel> = {
+  [LLMType.Runpod]: LLMTypeLabel.Runpod,
+  [LLMType.Mistral]: LLMTypeLabel.Mistral,
+  [LLMType.Satcom_Small]: LLMTypeLabel.Satcom_Small,
+  [LLMType.Satcom_Large]: LLMTypeLabel.Satcom_Large,
+  [LLMType.Ship]: LLMTypeLabel.Ship,
+  [LLMType.Eve_V05]: LLMTypeLabel.Eve_V05,
+};
 import { useSidebar } from "./DynamicSidebarProvider";
 import { useClipboard } from "@/hooks/useClipboard";
 import { useState } from "react";
@@ -23,6 +33,7 @@ import { useParams } from "react-router-dom";
 import { SendFeedbackDialog } from "./SendFeedbackDialog";
 import { useQueryClient } from "@tanstack/react-query";
 import { QUERY_KEYS } from "@/services/keys";
+const isStaging = (import.meta.env.VITE_IS_STAGING ?? "false") === "true";
 
 type MessageFooterProps = {
   message: MessageType;
@@ -45,10 +56,10 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
   const [wasCopied, setWasCopied] = useState(message?.was_copied);
 
   const [isThumbsUp, setIsThumbsUp] = useState(
-    message?.feedback === FeedbackEnum.GOOD
+    message?.feedback === FeedbackEnum.GOOD,
   );
   const [isThumbsDown, setIsThumbsDown] = useState(
-    message?.feedback === FeedbackEnum.BAD
+    message?.feedback === FeedbackEnum.BAD,
   );
 
   const [isSendFeedbackDialogOpen, setIsSendFeedbackDialogOpen] =
@@ -58,13 +69,13 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
 
   // Hallucination feedback local state
   const [hallucWasCopied, setHallucWasCopied] = useState(
-    message?.hallucination?.was_copied
+    message?.hallucination?.was_copied,
   );
   const [hallucIsThumbsUp, setHallucIsThumbsUp] = useState(
-    message?.hallucination?.feedback === FeedbackEnum.GOOD
+    message?.hallucination?.feedback === FeedbackEnum.GOOD,
   );
   const [hallucIsThumbsDown, setHallucIsThumbsDown] = useState(
-    message?.hallucination?.feedback === FeedbackEnum.BAD
+    message?.hallucination?.feedback === FeedbackEnum.BAD,
   );
   const [isHallucSendFeedbackDialogOpen, setIsHallucSendFeedbackDialogOpen] =
     useState(false);
@@ -92,7 +103,7 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
               } as MessageType;
             });
             return { ...old, messages: newMessages };
-          }
+          },
         );
       }
     }
@@ -127,44 +138,44 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
               } as MessageType;
             });
             return { ...old, messages: newMessages };
-          }
+          },
         );
       }
     }
   };
 
   const [hallucinationRaw, setHallucinationRaw] = useState<string>(
-    message?.hallucination?.reason ?? ""
+    message?.hallucination?.reason ?? "",
   );
   const [isHallucinationStreaming, setIsHallucinationStreaming] =
     useState(false);
   const [hallucinationStatus, setHallucinationStatus] = useState<string>("");
   const [hallucinationSources, setHallucinationSources] = useState<Document[]>(
-    message?.hallucination?.top_k_retrieved_docs ?? []
+    message?.hallucination?.top_k_retrieved_docs ?? [],
   );
   const [hallucinationLabel, setHallucinationLabel] = useState<number | null>(
     typeof message?.hallucination?.label === "number"
       ? message?.hallucination?.label
-      : null
+      : null,
   );
   const [rewrittenQuery, setRewrittenQuery] = useState<string>(
-    message?.hallucination?.rewritten_question ?? ""
+    message?.hallucination?.rewritten_question ?? "",
   );
   const [alternativeRaw, setAlternativeRaw] = useState<string>(
-    message?.hallucination?.final_answer ?? ""
+    message?.hallucination?.final_answer ?? "",
   );
 
   const hallucinationDisplay = useSmoothStream(
     hallucinationRaw,
     isHallucinationStreaming,
     { ratePerSecond: 100, chunkSize: 1 },
-    `${conversationId ?? ""}:${message?.id ?? ""}:hallucination`
+    `${conversationId ?? ""}:${message?.id ?? ""}:hallucination`,
   );
   const alternativeDisplay = useSmoothStream(
     alternativeRaw,
     isHallucinationStreaming,
     { ratePerSecond: 100, chunkSize: 1 },
-    `${conversationId ?? ""}:${message?.id ?? ""}:hallucination:alt`
+    `${conversationId ?? ""}:${message?.id ?? ""}:hallucination:alt`,
   );
 
   const handleHallucinationDetect = async () => {
@@ -225,8 +236,8 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
             const docs: Document[] = Array.isArray(anyEvt?.top_k_retrieved_docs)
               ? (anyEvt.top_k_retrieved_docs as Document[])
               : Array.isArray(anyEvt?.documents)
-              ? (anyEvt.documents as Document[])
-              : [];
+                ? (anyEvt.documents as Document[])
+                : [];
             if (docs.length > 0) {
               setHallucinationSources(docs);
             }
@@ -262,19 +273,19 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
                     reason:
                       typeof anyEvt?.reason === "string" && anyEvt.reason.length
                         ? anyEvt.reason
-                        : (m as MessageType).hallucination?.reason ??
-                          (hallucinationRaw || null),
+                        : ((m as MessageType).hallucination?.reason ??
+                          (hallucinationRaw || null)),
                     rewritten_question: rewritten || null,
                     label:
                       typeof anyEvt?.label === "number"
                         ? anyEvt.label
                         : typeof hallucinationLabel === "number"
-                        ? hallucinationLabel
-                        : existingHallucination?.label ?? null,
+                          ? hallucinationLabel
+                          : (existingHallucination?.label ?? null),
                     top_k_retrieved_docs:
                       docs.length > 0
                         ? docs
-                        : existingHallucination?.top_k_retrieved_docs ?? null,
+                        : (existingHallucination?.top_k_retrieved_docs ?? null),
                   } as any;
                   return {
                     ...(m as MessageType),
@@ -282,7 +293,7 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
                   } as MessageType;
                 });
                 return { ...old, messages: newMessages };
-              }
+              },
             );
           }
         },
@@ -339,16 +350,26 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
                   The message was generated without using sources
                 </span>
               </div>
-              )}
-              <Button
-                variant="outline"
-                onClick={handleHallucinationDetect}
-                disabled={isHallucinationStreaming}
-              >
-                <span className="font-['NotesESA']">
-                  Hallucination Detector
-                </span>
-              </Button>
+            )}
+            <Button
+              variant="outline"
+              onClick={handleHallucinationDetect}
+              disabled={isHallucinationStreaming}
+            >
+              <span className="font-['NotesESA']">Hallucination Detector</span>
+            </Button>
+            {isStaging && (
+              <div className="text-sm text-natural-500">
+                Answered by:{" "}
+                {message?.metadata?.latencies?.base_generation_latency
+                  ? message?.request_input?.llm_type &&
+                    LLM_TYPE_TO_LABEL[
+                      message.request_input
+                        .llm_type as keyof typeof LLMTypeLabel
+                    ]
+                  : "Fallback"}
+              </div>
+            )}
           </div>
         </div>
         <div className="self-end cursor-pointer flex items-center">
@@ -408,7 +429,7 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
                     } as MessageType;
                   });
                   return { ...old, messages: newMessages };
-                }
+                },
               );
             }
           }}
@@ -431,8 +452,8 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
                   {hallucinationLabel === 1
                     ? "Yes"
                     : hallucinationLabel === 0
-                    ? "No"
-                    : ""}
+                      ? "No"
+                      : ""}
                 </span>
                 {Boolean(hallucinationDisplay) && (
                   <>
@@ -527,7 +548,7 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
                               } as MessageType;
                             });
                             return { ...old, messages: newMessages };
-                          }
+                          },
                         );
                       }
                     }
@@ -583,7 +604,7 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
                               } as MessageType;
                             });
                             return { ...old, messages: newMessages };
-                          }
+                          },
                         );
                       }
                     }
@@ -635,7 +656,7 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
                       } as MessageType;
                     });
                     return { ...old, messages: newMessages };
-                  }
+                  },
                 );
               }
             }}
