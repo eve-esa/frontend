@@ -30,9 +30,9 @@ export const sendRequest = async ({
       ...settings,
       ...(llm_type ? { llm_type } : {}),
       public_collections: JSON.parse(
-        localStorage.getItem(LOCAL_STORAGE_PUBLIC_COLLECTIONS) ?? "[]"
+        localStorage.getItem(LOCAL_STORAGE_PUBLIC_COLLECTIONS) ?? "[]",
       ),
-    }
+    },
   );
   return response.data;
 };
@@ -57,7 +57,7 @@ export const useSendRequest = (conversationId?: string) => {
         ...settings,
         ...(llm_type ? { llm_type } : {}),
         public_collections: JSON.parse(
-          localStorage.getItem(LOCAL_STORAGE_PUBLIC_COLLECTIONS) ?? "[]"
+          localStorage.getItem(LOCAL_STORAGE_PUBLIC_COLLECTIONS) ?? "[]",
         ),
       };
 
@@ -81,7 +81,7 @@ export const useSendRequest = (conversationId?: string) => {
               const newMessages = [...old.messages];
               newMessages[lastIndex] = updated;
               return { ...old, messages: newMessages };
-            }
+            },
           );
         };
 
@@ -97,7 +97,7 @@ export const useSendRequest = (conversationId?: string) => {
               const newMessages = [...old.messages];
               newMessages[lastIndex] = updated;
               return { ...old, messages: newMessages };
-            }
+            },
           );
         };
 
@@ -119,7 +119,7 @@ export const useSendRequest = (conversationId?: string) => {
               const newMessages = [...old.messages];
               newMessages[lastIndex] = updated;
               return { ...old, messages: newMessages };
-            }
+            },
           );
         };
 
@@ -263,7 +263,7 @@ export const useSendRequest = (conversationId?: string) => {
             const newMessages = [...old.messages];
             newMessages[lastIndex] = updated;
             return { ...old, messages: newMessages };
-          }
+          },
         );
 
         // Do not invalidate any queries on cancel
@@ -277,7 +277,7 @@ export const useSendRequest = (conversationId?: string) => {
       if (context?.previousData) {
         queryClient.setQueryData(
           [QUERY_KEYS.conversation, conversationId],
-          context.previousData
+          context.previousData,
         );
       } else {
         queryClient.removeQueries({
@@ -295,7 +295,7 @@ export const useSendRequest = (conversationId?: string) => {
           if (!oldData) return undefined;
 
           const filteredMessages = (oldData.messages ?? []).filter(
-            (msg: MessageType) => !msg.id?.startsWith("temp-")
+            (msg: MessageType) => !msg.id?.startsWith("temp-"),
           );
 
           const newMessage = {
@@ -306,13 +306,14 @@ export const useSendRequest = (conversationId?: string) => {
             output: data.answer || data.output || "",
             feedback: null,
             documents: data.documents ?? [],
+            request_input: data.request_input,
           };
 
           return {
             ...oldData,
             messages: [...filteredMessages, newMessage],
           };
-        }
+        },
       );
     },
     onSettled: () => {
