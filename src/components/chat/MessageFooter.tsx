@@ -20,7 +20,6 @@ const LLM_TYPE_TO_LABEL: Record<string, LLMTypeLabel> = {
   [LLMType.Mistral]: LLMTypeLabel.Mistral,
   [LLMType.Satcom_Small]: LLMTypeLabel.Satcom_Small,
   [LLMType.Satcom_Large]: LLMTypeLabel.Satcom_Large,
-  [LLMType.Ship]: LLMTypeLabel.Ship,
   [LLMType.Eve_V05]: LLMTypeLabel.Eve_V05,
 };
 import { useSidebar } from "./DynamicSidebarProvider";
