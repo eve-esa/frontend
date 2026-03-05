@@ -124,7 +124,6 @@ export enum LLMType {
   Mistral = "mistral",
   Satcom_Small = "satcom_small",
   Satcom_Large = "satcom_large",
-  Ship = "ship",
   Eve_V05 = "eve_v05",
 }
 
@@ -133,6 +132,5 @@ export enum LLMTypeLabel {
   Mistral = "Mistral Medium",
   Satcom_Small = "SatcomLLM - Small",
   Satcom_Large = "SatcomLLM - Large",
-  Ship = "EVE Instruct",
   Eve_V05 = "EVE v05",
 }

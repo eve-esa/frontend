@@ -238,9 +238,6 @@ export const MessageInput = ({
                         <SelectItem value={LLMType.Runpod}>
                           {LLMTypeLabel.Runpod}
                         </SelectItem>
-                        <SelectItem value={LLMType.Ship}>
-                          {LLMTypeLabel.Ship}
-                        </SelectItem>
                         <SelectItem value={LLMType.Eve_V05}>
                           {LLMTypeLabel.Eve_V05}
                         </SelectItem>
