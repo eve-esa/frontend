@@ -1,6 +1,6 @@
 # EVE Frontend Application
 
-This repository contains the **frontend application** for the EVE project - a modern, accessible web interface that enables users to interact with the EVE Large Language Model through an intuitive chat interface.
+This repository contains the **frontend application** for the Earth Virtual Expert (EVE) initiative — an open-science program funded by the European Space Agency’s Φ-lab and developed by Pi School, in collaboration with Imperative Space and Mistral AI.
 
 ## Frontend Features
 
