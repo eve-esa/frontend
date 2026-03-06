@@ -77,8 +77,7 @@ export const MessageInput = ({
 
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [llmType, setLlmType] = useState<string>(
-    (localStorage.getItem(LOCAL_STORAGE_LLM_TYPE) as LLMType) ||
-      LLMType.Eve_V05,
+    (localStorage.getItem(LOCAL_STORAGE_LLM_TYPE) as LLMType) || LLMType.Main,
   );
   const [isAnimatingOut, setIsAnimatingOut] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -236,11 +235,8 @@ export const MessageInput = ({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="bg-primary-900/60 border-primary-400/60 backdrop-blur-[2px]">
-                        <SelectItem value={LLMType.Runpod}>
-                          {LLMTypeLabel.Runpod}
-                        </SelectItem>
-                        <SelectItem value={LLMType.Eve_V05}>
-                          {LLMTypeLabel.Eve_V05}
+                        <SelectItem value={LLMType.Main}>
+                          {LLMTypeLabel.Main}
                         </SelectItem>
                         <SelectItem value={LLMType.Mistral}>
                           {LLMTypeLabel.Mistral}

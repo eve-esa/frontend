@@ -16,11 +16,10 @@ import type { MessageType, ChaMessageType, Document } from "@/types";
 import { LLMTypeLabel, LLMType } from "@/types";
 
 const LLM_TYPE_TO_LABEL: Record<string, LLMTypeLabel> = {
-  [LLMType.Runpod]: LLMTypeLabel.Runpod,
+  [LLMType.Main]: LLMTypeLabel.Main,
   [LLMType.Mistral]: LLMTypeLabel.Mistral,
   [LLMType.Satcom_Small]: LLMTypeLabel.Satcom_Small,
   [LLMType.Satcom_Large]: LLMTypeLabel.Satcom_Large,
-  [LLMType.Eve_V05]: LLMTypeLabel.Eve_V05,
 };
 import { useSidebar } from "./DynamicSidebarProvider";
 import { useClipboard } from "@/hooks/useClipboard";
