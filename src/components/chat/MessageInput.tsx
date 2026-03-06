@@ -77,7 +77,8 @@ export const MessageInput = ({
 
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [llmType, setLlmType] = useState<string>(
-    (localStorage.getItem(LOCAL_STORAGE_LLM_TYPE) as LLMType) || LLMType.Runpod,
+    (localStorage.getItem(LOCAL_STORAGE_LLM_TYPE) as LLMType) ||
+      LLMType.Eve_V05,
   );
   const [isAnimatingOut, setIsAnimatingOut] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
