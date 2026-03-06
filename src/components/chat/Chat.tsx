@@ -105,7 +105,7 @@ export const Chat = () => {
       );
       const llm_type =
         (localStorage.getItem(LOCAL_STORAGE_LLM_TYPE) as LLMType) ||
-        LLMType.Eve_V05;
+        LLMType.Main;
 
       sendRequest({
         query: input,
