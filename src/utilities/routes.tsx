@@ -4,6 +4,7 @@ import { Login } from "@/pages/login/Login";
 import { SignUp } from "@/pages/signup/Signup";
 import { ForgotPassword } from "@/pages/forgot-password/ForgotPassword";
 import { ResetPassword } from "@/pages/reset-password/ResetPassword";
+import { Verify } from "@/pages/verify/Verify";
 import { EmptyChat } from "@/pages/empty-chat/EmptyChat";
 import { OnboardingPage } from "@/pages/onboarding/OnboardingPage";
 
@@ -23,6 +24,10 @@ export const routes = {
   RESET_PASSWORD: {
     path: "/reset-password",
     element: <ResetPassword />,
+  },
+  VERIFY: {
+    path: "/verify",
+    element: <Verify />,
   },
   EMPTY_CHAT: {
     path: "/",

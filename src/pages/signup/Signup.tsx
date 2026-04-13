@@ -1,13 +1,17 @@
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { AnimatedLink } from "@/components/ui/AnimatedLink";
-import { useLogin } from "@/services/useLogin";
+import { useSignup } from "@/services/useSignup";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCircleCheck } from "@fortawesome/free-solid-svg-icons";
-import { Login } from "@/pages/login/Login";
+import {
+  faCircleCheck,
+  faEye,
+  faEyeSlash,
+} from "@fortawesome/free-solid-svg-icons";
+import { useState } from "react";
 import { routes } from "@/utilities/routes";
 
 const SignUpSchema = z.object({
@@ -33,10 +37,12 @@ export const SignUp = () => {
   const isEmailValid = !!watchedValues.email && !errors?.email;
   const isPasswordValid = !!watchedValues.password && !errors?.password;
 
-  const { mutate: login } = useLogin();
+  const [showPassword, setShowPassword] = useState(false);
+
+  const { mutate: signup } = useSignup();
 
   const onSubmit = (data: SignUpFormValidation) => {
-    login(data);
+    signup(data);
   };
 
   return (
@@ -82,15 +88,30 @@ export const SignUp = () => {
             className="w-full"
             {...register("password")}
             placeholder="insert your password"
+            autoComplete="new-password"
+            name="password"
             error={!!errors?.password}
             success={isPasswordValid}
+            type={showPassword ? "text" : "password"}
             endSlot={
-              isPasswordValid && (
-                <FontAwesomeIcon
-                  icon={faCircleCheck}
-                  className="text-success-100 h-6"
-                />
-              )
+              <div className="flex items-center gap-2">
+                {isPasswordValid && (
+                  <FontAwesomeIcon
+                    icon={faCircleCheck}
+                    className="text-success-100 h-6"
+                  />
+                )}
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="text-natural-100 hover:text-primary-300 transition-colors duration-200"
+                >
+                  <FontAwesomeIcon
+                    icon={showPassword ? faEyeSlash : faEye}
+                    className="w-5 cursor-pointer"
+                  />
+                </button>
+              </div>
             }
           />
           {errors?.password && (
@@ -121,4 +142,4 @@ export const SignUp = () => {
   );
 };
 
-Login.displayName = "Login";
+SignUp.displayName = "SignUp";

@@ -27,6 +27,7 @@ export const router = createBrowserRouter(
             <Route {...routes.SIGN_UP} />
             <Route {...routes.FORGOT_PASSWORD} />
             <Route {...routes.RESET_PASSWORD} />
+            <Route {...routes.VERIFY} />
           </Route>
         </Route>
       </Route>

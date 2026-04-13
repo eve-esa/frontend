@@ -19,8 +19,7 @@ export const signupSchema = z.object({
 type SignupPayloadType = z.infer<typeof signupSchema>;
 
 const httpSignup = async (values: SignupPayloadType) => {
-  const url = "/auth/login";
-  const { data } = await api.post(url, values);
+  const { data } = await api.post("/signup", values);
   return data;
 };
 

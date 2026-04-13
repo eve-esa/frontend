@@ -157,9 +157,9 @@ export const Login = () => {
         <AnimatedLink href={routes.FORGOT_PASSWORD.path}>
           Forgot password
         </AnimatedLink>
-        {/* <AnimatedLink href={routes.SIGN_UP.path}>
-            Don't have an account?
-          </AnimatedLink> */}
+        <AnimatedLink href={routes.SIGN_UP.path}>
+          Don't have an account?
+        </AnimatedLink>
       </div>
     </form>
   );

@@ -11,6 +11,7 @@ const baseURL = import.meta.env.VITE_API_URL;
 const PUBLIC_ENDPOINTS = [
   "/login",
   "/signup",
+  "/verify",
   "/forgot-password",
   "/reset-password",
   "/refresh",

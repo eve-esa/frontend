@@ -1,6 +1,7 @@
 export const MUTATION_KEYS = {
   signup: "signup",
   login: "login",
+  verify: "verify",
   resetPassword: "resetPassword",
   forgotPassword: "forgotPassword",
   logout: "logout",
