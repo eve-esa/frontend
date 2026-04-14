@@ -36,7 +36,10 @@ export const useSignup = () => {
       void navigate(routes.CHAT.path);
     },
     onError: (error: AxiosError) => {
-      toast.error(error?.message);
+      console.log(error);
+      toast.error(
+        (error?.response?.data as { detail: string })?.detail || error?.message,
+      );
     },
   });
 };
