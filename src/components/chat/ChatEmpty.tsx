@@ -8,17 +8,23 @@ import {
 } from "@/utilities/localStorage";
 import { suggestions } from "@/utilities/suggestions";
 import { ChatHeader } from "./ChatHeader";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { prefetchTokenUsage } from "@/services/useTokenUsage";
 import { WelcomeDialog } from "../onboarding/WelcomeDialog";
 
 export const ChatEmpty = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    void prefetchTokenUsage(queryClient);
+  }, [queryClient]);
   const welcomeDialogViewed = localStorage.getItem(
-    LOCAL_STORAGE_WELCOME_DIALOG_VIEWED
+    LOCAL_STORAGE_WELCOME_DIALOG_VIEWED,
   );
-  const [isOpenWelcomeDialog, setIsOpenWelcomeDialog] = useState(
-    !welcomeDialogViewed
-  );
+  const [isOpenWelcomeDialog, setIsOpenWelcomeDialog] =
+    useState(!welcomeDialogViewed);
 
   const handleWelcomeDialogClose = () => {
     localStorage.setItem(LOCAL_STORAGE_WELCOME_DIALOG_VIEWED, "true");

@@ -23,9 +23,12 @@ import { useSidebar } from "./DynamicSidebarProvider";
 import { useIsMutating } from "@tanstack/react-query";
 import { MUTATION_KEYS } from "@/services/keys";
 import { useRetry } from "@/services/useRetry";
+import { useQueryClient } from "@tanstack/react-query";
+import { prefetchTokenUsage } from "@/services/useTokenUsage";
 
 export const Chat = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { conversationId } = useParams();
   const firstMessageSent = useRef(false);
   const { setPendingConversation, removePendingConversation } = useSidebar();
@@ -95,6 +98,11 @@ export const Chat = () => {
       setDraftMessage(draft);
     }
   }, [conversationId, messages.length]);
+
+  useEffect(() => {
+    if (!conversationId) return;
+    void prefetchTokenUsage(queryClient);
+  }, [conversationId, queryClient]);
 
   const handleSendRequest = useCallback(
     (input: string) => {

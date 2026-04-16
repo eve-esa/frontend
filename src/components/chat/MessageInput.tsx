@@ -30,7 +30,59 @@ import { Tooltip } from "@/components/ui/Tooltip";
 import { useQueryClient } from "@tanstack/react-query";
 import { QUERY_KEYS } from "@/services/keys";
 import type { ChaMessageType, MessageType } from "@/types";
+import { useTokenUsage } from "@/services/useTokenUsage";
 const isStaging = (import.meta.env.VITE_IS_STAGING ?? "false") === "true";
+
+const TOKEN_RING_R = 7;
+const TOKEN_RING_C = 2 * Math.PI * TOKEN_RING_R;
+/** Teal ring accent aligned with ESA branding artwork (~#00BFA5) */
+const TOKEN_RING_TEAL = "#00BFA5";
+
+function TokenUsageRing({
+  usedRatio,
+  unlimited,
+}: {
+  usedRatio: number | null;
+  unlimited: boolean;
+}) {
+  const ratio =
+    unlimited || usedRatio == null ? 0 : Math.min(1, Math.max(0, usedRatio));
+  const dash = ratio * TOKEN_RING_C;
+
+  return (
+    <svg
+      viewBox="0 0 20 20"
+      className="h-6 w-6 shrink-0"
+      aria-hidden
+      focusable="false"
+    >
+      <g transform="rotate(-90 10 10)">
+        <circle
+          cx="10"
+          cy="10"
+          r={TOKEN_RING_R}
+          fill="none"
+          stroke={TOKEN_RING_TEAL}
+          strokeOpacity={0.32}
+          strokeWidth="2.5"
+        />
+        {ratio > 0 && (
+          <circle
+            cx="10"
+            cy="10"
+            r={TOKEN_RING_R}
+            fill="none"
+            stroke={TOKEN_RING_TEAL}
+            strokeOpacity={1}
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeDasharray={`${dash} ${TOKEN_RING_C}`}
+          />
+        )}
+      </g>
+    </svg>
+  );
+}
 
 export type MessageInputProps = {
   variant?: "primary" | "secondary";
@@ -82,6 +134,44 @@ export const MessageInput = ({
   const [isAnimatingOut, setIsAnimatingOut] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const queryClient = useQueryClient();
+  const {
+    data: tokenUsage,
+    isPending: tokenUsagePending,
+    isError: tokenUsageError,
+  } = useTokenUsage();
+
+  const tokenUsageTooltip = tokenUsagePending ? (
+    <>Loading token usage…</>
+  ) : tokenUsageError ? (
+    <>Could not load token usage.</>
+  ) : tokenUsage ? (
+    tokenUsage.unlimited ? (
+      <>No fixed token limit for this window.</>
+    ) : tokenUsage.max_tokens != null ? (
+      <>
+        {tokenUsage.used_tokens.toLocaleString()} /{" "}
+        {tokenUsage.max_tokens.toLocaleString()} tokens used
+      </>
+    ) : (
+      <>Token usage.</>
+    )
+  ) : (
+    <>Token usage</>
+  );
+
+  const tokenRing = (
+    <Tooltip content={tokenUsageTooltip} disableClick={true} side="top">
+      <div
+        className="flex h-8 w-8 cursor-default items-center justify-center"
+        aria-label="Token usage for this billing period"
+      >
+        <TokenUsageRing
+          usedRatio={tokenUsage?.used_ratio ?? null}
+          unlimited={tokenUsage?.unlimited ?? true}
+        />
+      </div>
+    </Tooltip>
+  );
 
   const handleStop = async () => {
     try {
@@ -268,7 +358,8 @@ export const MessageInput = ({
                   </Button>
                 </Tooltip>
               </div>
-              <div className="pointer-events-auto">
+              <div className="pointer-events-auto flex items-center gap-1">
+                {tokenRing}
                 {isLoading ? (
                   <Button
                     type="button"
