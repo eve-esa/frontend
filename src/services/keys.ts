@@ -23,6 +23,7 @@ export const MUTATION_KEYS = {
 
 export const QUERY_KEYS = {
   profile: "profile",
+  tokenUsage: "tokenUsage",
   publicCollections: "publicCollections",
   myCollections: "myCollections",
   conversationsList: "conversationsList",

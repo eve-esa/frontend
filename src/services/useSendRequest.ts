@@ -9,6 +9,7 @@ import type { ApiError, ChaMessageType, MessageType } from "@/types";
 import { handleApiError } from "@/utilities/helpers";
 import { LOCAL_STORAGE_PUBLIC_COLLECTIONS } from "@/utilities/localStorage";
 import { logError } from "./errorLogging";
+import { invalidateTokenUsage } from "./useTokenUsage";
 
 type SendRequestProps = {
   query: string;
@@ -326,6 +327,7 @@ export const useSendRequest = (conversationId?: string) => {
       queryClient.invalidateQueries({
         queryKey: [QUERY_KEYS.conversation, conversationId],
       });
+      void invalidateTokenUsage(queryClient);
     },
   });
 };
