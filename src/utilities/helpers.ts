@@ -11,12 +11,12 @@ export const normalizeDate = (date: Date): Date => {
     12,
     0,
     0,
-    0
+    0,
   );
 };
 
 export const adaptSettingsForRequest = (
-  settings: AdvancedSettingsValidation
+  settings: AdvancedSettingsValidation,
 ) => {
   const {
     year,
@@ -116,6 +116,9 @@ export const adaptSettingsForRequest = (
 };
 
 export const handleApiError = (error: ApiError) => {
+  if (error?.response?.status === 429) {
+    return "You've run out of free credits. Please recharge and try again.";
+  }
   const detail = error?.response?.data?.detail;
   const errorMessage = typeof detail === "string" ? detail : detail?.[0]?.msg;
   return errorMessage ?? "Something went wrong!";

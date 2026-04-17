@@ -30,7 +30,7 @@ export const Message = ({
 
   const isStreamingTarget = isSending && isLastMessage;
   const persistKey = `${message.conversation_id ?? ""}:${String(
-    messageIndex ?? (isLastMessage ? "last" : "")
+    messageIndex ?? (isLastMessage ? "last" : ""),
   )}`;
   const smoothed = useSmoothStream(
     message.output || "",
@@ -40,7 +40,7 @@ export const Message = ({
       chunkSize: 1,
       stopImmediately: Boolean(message.stopped),
     },
-    persistKey
+    persistKey,
   );
   const effectiveOutput =
     smoothed.length >= (message.output?.length || 0)
@@ -110,7 +110,7 @@ export const Message = ({
             }}
             className={cn(
               "md:text-base text-sm 3xl:text-2xl whitespace-pre-wrap break-words overflow-hidden",
-              isExpanded ? "line-clamp-none" : "line-clamp-6"
+              isExpanded ? "line-clamp-none" : "line-clamp-6",
             )}
           >
             {message.input}

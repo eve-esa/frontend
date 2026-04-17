@@ -181,7 +181,7 @@ export const useSendRequest = (conversationId?: string) => {
           component: "useSendRequest",
           description: `stream error in useSendRequest: ${String(e)}`,
         });
-        return null as unknown as MessageType;
+        throw e;
       }
     },
     onMutate: async (newMessage: SendRequestProps) => {
