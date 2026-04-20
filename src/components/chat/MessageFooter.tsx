@@ -366,6 +366,8 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
                         .llm_type as keyof typeof LLMTypeLabel
                     ]
                   : "Fallback"}
+                {message?.metadata?.generated_model_name &&
+                  ` ${message.metadata.generated_model_name}`}
               </div>
             )}
           </div>

@@ -56,6 +56,7 @@ export type MessageType = {
     llm_type: string | null;
   };
   metadata?: {
+    generated_model_name: string | null;
     latencies: {
       guardrail_latency: number | null;
       rag_decision_latency: number | null;
