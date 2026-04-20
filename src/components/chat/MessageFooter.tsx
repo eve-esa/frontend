@@ -367,7 +367,7 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
                     ]
                   : "Fallback"}
                 {message?.metadata?.generated_model_name &&
-                  ` ${message.metadata.generated_model_name}`}
+                  ` (${message.metadata.generated_model_name})`}
               </div>
             )}
           </div>
