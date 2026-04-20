@@ -31,6 +31,9 @@ import { useParams } from "react-router-dom";
 import { SendFeedbackDialog } from "./SendFeedbackDialog";
 import { useQueryClient } from "@tanstack/react-query";
 import { QUERY_KEYS } from "@/services/keys";
+import { toast } from "sonner";
+import type { ApiError } from "@/types";
+import { handleApiError } from "@/utilities/helpers";
 const isStaging = (import.meta.env.VITE_IS_STAGING ?? "false") === "true";
 
 type MessageFooterProps = {
@@ -298,6 +301,8 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
       });
     } catch (e) {
       console.error("hallucination stream error", e);
+      const errorMessage = handleApiError(e as ApiError);
+      toast.error(errorMessage);
     } finally {
       setIsHallucinationStreaming(false);
     }
