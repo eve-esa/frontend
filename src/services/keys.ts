@@ -25,6 +25,8 @@ export const QUERY_KEYS = {
   profile: "profile",
   tokenUsage: "tokenUsage",
   publicCollections: "publicCollections",
+  mcpServers: "mcpServers",
+  mcpServer: "mcpServer",
   myCollections: "myCollections",
   conversationsList: "conversationsList",
   conversation: "conversation",
