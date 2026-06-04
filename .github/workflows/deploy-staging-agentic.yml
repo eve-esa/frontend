@@ -27,7 +27,7 @@ jobs:
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::686812424034:role/gh-eve-esa-fe-staging
+          role-to-assume: arn:aws:iam::686812424034:role/gh-eve-esa-fe-staging-agentic
           role-session-name: github-action-${{ github.run_id }}
           aws-region: eu-west-1
 
