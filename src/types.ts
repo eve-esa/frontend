@@ -1,6 +1,8 @@
 import type { AxiosError } from "axios";
 import { z } from "zod";
 
+export type AgenticTraceStep = Record<string, unknown>;
+
 export type Document = {
   id: string | number;
   text: string;
@@ -52,6 +54,7 @@ export type MessageType = {
   } | null;
   // Transient notices to show before the final answer while streaming
   pre_answer_notices?: string[];
+  trace?: AgenticTraceStep[] | null;
   request_input: {
     llm_type: string | null;
   };
