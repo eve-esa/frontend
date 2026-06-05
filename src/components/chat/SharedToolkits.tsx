@@ -9,16 +9,17 @@ type SharedToolkitsProps = {
 
 export const SharedToolkits = ({ onToggle }: SharedToolkitsProps) => {
   const {
-    data: servers,
+    data,
     isLoading,
-    isFetching,
+    isFetchingNextPage,
     fetchNextPage,
     hasNextPage,
   } = useGetMcpServers();
 
-  const serversList = servers?.pages.flatMap((page) => page.data);
-  const emptyServers = serversList?.length === 0;
-  const loading = isLoading || isFetching;
+  const serversList =
+    data?.pages.flatMap((page) => page.data).filter((server) => server.enabled) ??
+    [];
+  const isEmpty = !isLoading && serversList.length === 0;
 
   return (
     <div className="flex flex-col h-full py-6 gap-6 md:gap-10">
@@ -44,7 +45,7 @@ export const SharedToolkits = ({ onToggle }: SharedToolkitsProps) => {
 
       <div className="flex-1 overflow-y-auto min-w-0 flex flex-col gap-8 py-2 px-6">
         <div className="flex h-full flex-col gap-4 ">
-          {emptyServers ? (
+          {isEmpty ? (
             <div className="flex flex-1 flex-col gap-4 items-center justify-center">
               <p className="text-sm text-natural-200">
                 No shared toolkits found
@@ -52,8 +53,9 @@ export const SharedToolkits = ({ onToggle }: SharedToolkitsProps) => {
             </div>
           ) : (
             <SharedToolkitsList
-              loading={loading}
-              serversList={serversList || []}
+              isLoading={isLoading}
+              isFetchingNextPage={isFetchingNextPage}
+              serversList={serversList}
               fetchNextPage={fetchNextPage}
               hasNextPage={hasNextPage}
             />

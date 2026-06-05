@@ -12,6 +12,10 @@ export type McpServerDetail = McpServerPublic & {
   tools: McpTool[];
 };
 
+type UseGetMcpServerOptions = {
+  enabled?: boolean;
+};
+
 const getMcpServer = async (serverId: string): Promise<McpServerDetail> => {
   const { data } = await api.get(`/mcp-servers/${serverId}`);
   return data;
@@ -19,7 +23,7 @@ const getMcpServer = async (serverId: string): Promise<McpServerDetail> => {
 
 export const useGetMcpServer = (
   serverId: string | null | undefined,
-  enabled: boolean
+  { enabled = false }: UseGetMcpServerOptions = {}
 ) => {
   return useQuery({
     queryKey: [QUERY_KEYS.mcpServer, serverId],

@@ -10,6 +10,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useSidebar } from "./DynamicSidebarProvider";
 import { Tooltip } from "../ui/Tooltip";
 import { useTour } from "@/components/onboarding/TourContext";
+import { cn } from "@/lib/utils";
 
 type ToolkitsMenuBarProps = {
   isOpen: boolean;
@@ -65,9 +66,9 @@ export const ToolkitsMenuBar = ({
         <MenubarContent side="bottom" className="flex flex-col gap-1">
           <MenubarItem
             onClick={() => openDynamicSidebar({ type: "toolkits" })}
-            className={
-              content?.type === "toolkits" ? "bg-primary-500 text-white" : ""
-            }
+            className={cn(
+              content?.type === "toolkits" && "bg-primary-500 text-white"
+            )}
           >
             <span>Shared toolkits</span>
           </MenubarItem>
