@@ -3,9 +3,13 @@ import type { AxiosProgressEvent } from "axios";
 
 export type StreamEvent =
   | { type: "token"; content: string }
-  | { type: "final"; answer: string }
+  | { type: "final"; answer: string; trace?: Record<string, unknown>[] | null }
   | { type: "status"; content: string }
   | { type: "requery"; content: string }
+  | { type: "tool_call"; content?: string; [key: string]: unknown }
+  | { type: "tool_result"; content?: string; preview?: string; [key: string]: unknown }
+  | { type: "stopped" }
+  | { type: "error"; content?: string; [key: string]: unknown }
   | { type: "label"; content: number | string }
   | { type: "reason"; content: string }
   | { type: "rewritten_question"; content: string }
