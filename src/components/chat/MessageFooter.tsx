@@ -1,6 +1,7 @@
 import {
   faBullseye,
   faCheck,
+  faListUl,
   faThumbsDown as faThumbsDownSolid,
   faThumbsUp as faThumbsUpSolid,
 } from "@fortawesome/free-solid-svg-icons";
@@ -21,7 +22,7 @@ const LLM_TYPE_TO_LABEL: Record<string, LLMTypeLabel> = {
   [LLMType.Satcom_Small]: LLMTypeLabel.Satcom_Small,
   [LLMType.Satcom_Large]: LLMTypeLabel.Satcom_Large,
 };
-import { useSidebar } from "./DynamicSidebarProvider";
+import { useSidebar, type SidebarContent } from "./DynamicSidebarProvider";
 import { useClipboard } from "@/hooks/useClipboard";
 import { useState } from "react";
 import { FeedbackEnum, useSendFeedback } from "@/services/useSendFeedback";
@@ -309,6 +310,24 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
   };
 
   const hasSources = message?.documents?.length;
+  const hasTrace = message?.trace?.length;
+
+  const toggleMessageSidebar = (
+    panelType: Extract<SidebarContent["type"], "sources" | "trace">,
+    props: SidebarContent["props"],
+  ) => {
+    const isOpen =
+      isOpenDynamicSidebar &&
+      content?.type === panelType &&
+      content?.props?.messageId === message?.id;
+
+    if (isOpen) {
+      closeDynamicSidebar();
+      return;
+    }
+
+    openDynamicSidebar({ type: panelType, props });
+  };
 
   return (
     <div>
@@ -322,23 +341,12 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
             {hasSources ? (
               <Button
                 variant="primary"
-                onClick={() => {
-                  const isSourcesOpen =
-                    isOpenDynamicSidebar && content?.type === "sources";
-                  const currentMessageId = content?.props?.messageId;
-
-                  if (isSourcesOpen && currentMessageId === message?.id) {
-                    closeDynamicSidebar();
-                  } else {
-                    openDynamicSidebar({
-                      type: "sources",
-                      props: {
-                        sources: message?.documents || [],
-                        messageId: message?.id,
-                      },
-                    });
-                  }
-                }}
+                onClick={() =>
+                  toggleMessageSidebar("sources", {
+                    sources: message?.documents || [],
+                    messageId: message?.id,
+                  })
+                }
               >
                 <FontAwesomeIcon icon={faBullseye} className="size-4" />
                 <span className="font-['NotesESA']">Sources</span>
@@ -354,6 +362,23 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
                 </span>
               </div>
             )}
+            {hasTrace ? (
+              <Button
+                variant="primary"
+                onClick={() =>
+                  toggleMessageSidebar("trace", {
+                    trace: message?.trace || [],
+                    messageId: message?.id,
+                  })
+                }
+              >
+                <FontAwesomeIcon icon={faListUl} className="size-4" />
+                <span className="font-['NotesESA']">Trace</span>
+                <span className="font-['NotesESA']">
+                  ({message?.trace?.length})
+                </span>
+              </Button>
+            ) : null}
             <Button
               variant="outline"
               onClick={handleHallucinationDetect}
