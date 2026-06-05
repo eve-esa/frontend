@@ -11,12 +11,14 @@ import { SettingsForm } from "./SettingsForm";
 import { Sources } from "./Sources";
 import { SharedCollections } from "./SharedCollections";
 import { MyCollections } from "./MyCollections";
+import { SharedToolkits } from "./SharedToolkits";
 
 export type SidebarContentType =
   | "settings"
   | "sources"
   | "shared-collections"
-  | "my-collections";
+  | "my-collections"
+  | "toolkits";
 
 export type SidebarContent = {
   type: SidebarContentType;
@@ -125,6 +127,8 @@ export const DynamicSidebarProvider = ({ children }: SidebarProviderProps) => {
         return <SharedCollections onToggle={closeDynamicSidebar} />;
       case "my-collections":
         return <MyCollections onToggle={closeDynamicSidebar} />;
+      case "toolkits":
+        return <SharedToolkits onToggle={closeDynamicSidebar} />;
       default:
         return null;
     }
