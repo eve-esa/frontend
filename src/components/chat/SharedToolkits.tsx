@@ -37,8 +37,9 @@ export const SharedToolkits = ({ onToggle }: SharedToolkitsProps) => {
         <div>
           <p className="text-sm 3xl:text-xl text-natural-200 font-['NotesESA'] leading-6 pt-2">
             MCP servers expose tools the assistant can call during a
-            conversation. Browse each toolkit to see its available tools and
-            what they do.
+            conversation. Toggle the switch next to each toolkit to include it
+            when you send a prompt. Browse each toolkit to see its available
+            tools and what they do.
           </p>
         </div>
       </div>

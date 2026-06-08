@@ -3,68 +3,41 @@ import { ConversationsMenuSidebar } from "@/components/chat/ConversationsMenuSid
 import { DynamicSidebar } from "@/components/chat/DynamicSidebar";
 import { Outlet } from "react-router-dom";
 import { messageDefaultSettings } from "@/utilities/messageDefaultSettings";
+import { LOCAL_STORAGE_SETTINGS } from "@/utilities/localStorage";
 import {
-  LOCAL_STORAGE_PUBLIC_COLLECTIONS,
-  LOCAL_STORAGE_SETTINGS,
-} from "@/utilities/localStorage";
+  initializePublicCollectionsStorage,
+  initializePublicMcpServersStorage,
+} from "@/utilities/initializeChatStorage";
 import { useEffect } from "react";
 import Joyride from "react-joyride";
 import { TourProvider } from "@/components/onboarding/TourContext";
 import { steps } from "@/utilities/onboardingSteps";
 import { useJoyride } from "@/hooks/useJoyride";
 import { useGetSharedCollection } from "@/services/useGetSharedCollection";
+import { useGetMcpServers } from "@/services/useGetMcpServers";
 
 export const ChatLayout = () => {
   const { run, stepIndex, handleJoyrideCallback } = useJoyride();
-  const storedPublicCollections = localStorage.getItem(
-    LOCAL_STORAGE_PUBLIC_COLLECTIONS
-  );
   const { data: publicCollections } = useGetSharedCollection();
+  const { data: mcpServers } = useGetMcpServers();
 
   useEffect(() => {
     if (!publicCollections) return;
 
     const allCollections = publicCollections.pages.flatMap((page) => page.data);
-
-    // If nothing stored yet, initialize with all IDs
-    if (!storedPublicCollections) {
-      localStorage.setItem(
-        LOCAL_STORAGE_PUBLIC_COLLECTIONS,
-        JSON.stringify(allCollections.map((c) => c.id))
-      );
-      return;
-    }
-
-    // Migration: if stored values look like names, map to IDs
-    try {
-      const parsed = JSON.parse(storedPublicCollections) as string[];
-      const containsId = parsed.some((v) =>
-        allCollections.some((c) => c.id === v)
-      );
-      const containsName = parsed.some((v) =>
-        allCollections.some((c) => c.name === v)
-      );
-
-      if (!containsId && containsName) {
-        const nameToId = new Map(
-          allCollections.map((c) => [c.name, c.id] as const)
-        );
-        const migrated = parsed
-          .map((name) => nameToId.get(name))
-          .filter((id): id is string => Boolean(id));
-        localStorage.setItem(
-          LOCAL_STORAGE_PUBLIC_COLLECTIONS,
-          JSON.stringify(migrated)
-        );
-      }
-    } catch (_) {
-      // If parsing fails, reset to all IDs
-      localStorage.setItem(
-        LOCAL_STORAGE_PUBLIC_COLLECTIONS,
-        JSON.stringify(allCollections.map((c) => c.id))
-      );
-    }
+    initializePublicCollectionsStorage(allCollections);
   }, [publicCollections]);
+
+  useEffect(() => {
+    if (!mcpServers) return;
+
+    const enabledServerNames = mcpServers.pages
+      .flatMap((page) => page.data)
+      .filter((server) => server.enabled)
+      .map((server) => server.name);
+
+    initializePublicMcpServersStorage(enabledServerNames);
+  }, [mcpServers]);
 
   useEffect(() => {
     const settings = localStorage.getItem(LOCAL_STORAGE_SETTINGS);

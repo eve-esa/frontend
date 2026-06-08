@@ -1,7 +1,11 @@
 import type { QueryClient } from "@tanstack/react-query";
 import type { AdvancedSettingsValidation } from "@/components/chat/SettingsForm";
 import type { AgenticTraceStep, ChaMessageType, LLMType, MessageType } from "@/types";
-import { LOCAL_STORAGE_PUBLIC_COLLECTIONS } from "@/utilities/localStorage";
+import {
+  LOCAL_STORAGE_PUBLIC_COLLECTIONS,
+  LOCAL_STORAGE_PUBLIC_MCP_SERVERS,
+} from "@/utilities/localStorage";
+import { getStoredStringArray } from "@/utilities/storedStringArray";
 import { QUERY_KEYS } from "./keys";
 import type { StreamEvent } from "./streaming";
 
@@ -31,9 +35,8 @@ export const buildGenerationPayload = ({
   query,
   ...settings,
   ...(llm_type ? { llm_type } : {}),
-  public_collections: JSON.parse(
-    localStorage.getItem(LOCAL_STORAGE_PUBLIC_COLLECTIONS) ?? "[]",
-  ),
+  public_collections: getStoredStringArray(LOCAL_STORAGE_PUBLIC_COLLECTIONS),
+  public_mcp_servers: getStoredStringArray(LOCAL_STORAGE_PUBLIC_MCP_SERVERS),
 });
 
 export const mapCreateMessageResponse = (

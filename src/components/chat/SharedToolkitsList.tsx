@@ -1,6 +1,9 @@
 import { Skeleton } from "@/components/ui/Skeleton";
+import { Switch } from "@/components/ui/Switch";
 import useInfinityLoading from "@/hooks/useInfinityLoading";
+import { useStoredSelection } from "@/hooks/useStoredSelection";
 import type { McpServerPublic } from "@/services/useGetMcpServers";
+import { LOCAL_STORAGE_PUBLIC_MCP_SERVERS } from "@/utilities/localStorage";
 import { McpServerTools } from "./McpServerTools";
 
 type SharedToolkitsListProps = {
@@ -22,6 +25,9 @@ export const SharedToolkitsList = ({
     fetchFunction: fetchNextPage,
     dependencies: [hasNextPage],
   });
+  const { isSelected, setSelected } = useStoredSelection(
+    LOCAL_STORAGE_PUBLIC_MCP_SERVERS,
+  );
 
   if (isLoading) {
     return (
@@ -37,9 +43,15 @@ export const SharedToolkitsList = ({
     <div className="flex flex-col gap-8 pr-2">
       {serversList.map((server) => (
         <div className="flex flex-col gap-4" key={server.id ?? server.name}>
-          <span className="leading-none 3xl:text-3xl text-natural-50">
-            {server.name}
-          </span>
+          <div className="flex items-center gap-2">
+            <Switch
+              checked={isSelected(server.name)}
+              onCheckedChange={(checked) => setSelected(server.name, checked)}
+            />
+            <span className="leading-none 3xl:text-3xl font-semibold text-natural-50">
+              {server.name}
+            </span>
+          </div>
           {server.description && (
             <p className="text-xs 3xl:text-xl text-natural-200">
               {server.description}

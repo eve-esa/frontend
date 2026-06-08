@@ -32,7 +32,7 @@ export const sendRequest = async ({
   llm_type,
 }: SendRequestProps) => {
   const response = await api.post<CreateMessageResponse>(
-    `/conversations/${conversationId}/generate-agentic`,
+    `/conversations/${conversationId}/stream-generate-agentic`,
     buildGenerationPayload({ query, settings, llm_type }),
   );
   return mapCreateMessageResponse(response.data);
