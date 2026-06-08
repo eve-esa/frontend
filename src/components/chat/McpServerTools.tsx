@@ -39,7 +39,7 @@ export const McpServerTools = ({ server }: McpServerToolsProps) => {
       <button
         type="button"
         onClick={() => setIsToolsOpen((open) => !open)}
-        className="flex items-center gap-2 text-sm 3xl:text-lg text-natural-100 hover:text-natural-50 cursor-pointer w-fit"
+        className="flex items-center gap-2 text-xs 3xl:text-sm text-natural-200 cursor-pointer w-fit"
       >
         <FontAwesomeIcon
           icon={isToolsOpen ? faChevronDown : faChevronRight}
