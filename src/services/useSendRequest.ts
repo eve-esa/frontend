@@ -5,13 +5,12 @@ import type { AdvancedSettingsValidation } from "@/components/chat/SettingsForm"
 import type { LLMType } from "@/types";
 import api from "./axios";
 import { postStream, consumeSuppressToastFlag } from "./streaming";
-import type { ApiError, AgenticTraceStep, ChaMessageType, MessageType } from "@/types";
+import type { ApiError, ChaMessageType, MessageType } from "@/types";
 import { handleApiError } from "@/utilities/helpers";
 import { logError } from "./errorLogging";
 import { invalidateTokenUsage } from "./useTokenUsage";
 import {
   buildGenerationPayload,
-  handleAgenticStreamEvent,
   mapCreateMessageResponse,
   mapToConversationMessage,
   updateLastTempMessage,
@@ -59,45 +58,45 @@ export const useSendRequest = (conversationId?: string) => {
           return sendRequest({ query, conversationId, settings, llm_type });
         }
 
-        const updateTemp = (updater: (message: MessageType) => MessageType) =>
+        const updateTemp = (updater: (msg: MessageType) => MessageType) =>
           updateLastTempMessage(queryClient, conversationId, updater);
 
+        const addNotice = (notice: string) =>
+          updateTemp((msg) => ({
+            ...msg,
+            pre_answer_notices: [...(msg.pre_answer_notices ?? []), notice],
+          }));
+
+        const truncate = (s: string, max: number) =>
+          s.length > max ? s.slice(0, max) + "…" : s;
+
         let finalAnswer: string | null = null;
-        let finalTrace: AgenticTraceStep[] | null = null;
 
         await postStream({
           url: `/conversations/${conversationId}/stream-generate-agentic`,
           payload,
-          onEvent: (evt) =>
-            handleAgenticStreamEvent(evt, {
-              onToken: (token) =>
-                updateTemp((message) => ({
-                  ...message,
-                  output: (message.output || "") + token,
-                })),
-              onFinal: (answer, trace) => {
-                finalAnswer = answer;
-                finalTrace = trace;
-                updateTemp((message) => ({
-                  ...message,
-                  output: answer,
-                  trace: trace ?? message.trace ?? null,
-                }));
-              },
-              onNotice: (notice) =>
-                updateTemp((message) => ({
-                  ...message,
-                  pre_answer_notices: [
-                    ...(message.pre_answer_notices ?? []),
-                    notice,
-                  ],
-                })),
-              onTraceStep: (step) =>
-                updateTemp((message) => ({
-                  ...message,
-                  trace: [...(message.trace ?? []), step],
-                })),
-            }),
+          onEvent: (evt) => {
+            const { type, content, answer } = evt as Record<string, unknown>;
+
+            if (type === "token" && typeof content === "string") {
+              updateTemp((msg) => ({
+                ...msg,
+                output: (msg.output || "") + content,
+              }));
+            } else if (type === "final" && typeof answer === "string") {
+              finalAnswer = answer;
+              updateTemp((msg) => ({ ...msg, output: answer }));
+            } else if (
+              (type === "status" || type === "requery") &&
+              typeof content === "string"
+            ) {
+              addNotice(content);
+            } else if (type === "tool_call" && typeof content === "string") {
+              addNotice(`${truncate(content, 100)}`);
+            } else if (type === "tool_result" && typeof content === "string") {
+              addNotice(`${truncate(content, 100)}`);
+            }
+          },
         });
 
         const now = new Date();
@@ -111,7 +110,6 @@ export const useSendRequest = (conversationId?: string) => {
           documents: [],
           answer: finalAnswer || "",
           query: payload.query,
-          trace: finalTrace,
           request_input: { llm_type: llm_type ?? null },
         });
       } catch (e) {
@@ -149,7 +147,6 @@ export const useSendRequest = (conversationId?: string) => {
         documents: [],
         use_rag: false,
         metadata: {},
-        trace: [],
       };
 
       if (previousData) {

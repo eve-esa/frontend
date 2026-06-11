@@ -5,8 +5,6 @@ import type { MessageType } from "@/types";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { cn } from "@/lib/utils";
 import { useSmoothStream } from "@/hooks/useSmoothStream";
-import { formatAgenticTraceStepLabel } from "@/utilities/formatAgenticTraceStep";
-
 type MessageProps = {
   message: MessageType;
   isSending: boolean;
@@ -27,7 +25,10 @@ export const Message = ({
   const messageRef = useRef<HTMLDivElement | null>(null);
   const textRef = useRef<HTMLDivElement | null>(null);
 
-  const showLoading = isSending && isLastMessage && !message?.output;
+  const awaitingOutput = isLastMessage && !message?.output;
+  const showLoading =
+    awaitingOutput &&
+    (isSending || Boolean(message.pre_answer_notices?.length));
 
   const isStreamingTarget = isSending && isLastMessage;
   const persistKey = `${message.conversation_id ?? ""}:${String(
@@ -46,7 +47,11 @@ export const Message = ({
   const effectiveOutput =
     smoothed.length >= (message.output?.length || 0)
       ? message.output
-      : smoothed;
+      : smoothed.length > 0
+        ? smoothed
+        : !isStreamingTarget && message.output
+          ? message.output
+          : smoothed;
 
   // Track whether the user is near the bottom of the scroll container
   const [isUserNearBottom, setIsUserNearBottom] = useState(true);
@@ -142,17 +147,9 @@ export const Message = ({
             <SmartText text={`${isRequery ? requery : ""}${effectiveOutput}`} />
           ) : showLoading ? (
             <div className="flex flex-col gap-2 text-natural-600">
-              {(message.trace?.length || message.pre_answer_notices?.length) ? (
+              {message.pre_answer_notices?.length ? (
                 <div className="mb-2 space-y-1">
-                  {message.trace?.map((step, idx) => (
-                    <div
-                      key={`trace-${idx}`}
-                      className="text-sm text-natural-200 animate-pulse"
-                    >
-                      {formatAgenticTraceStepLabel(step)}
-                    </div>
-                  ))}
-                  {message.pre_answer_notices?.map((notice, idx) => (
+                  {message.pre_answer_notices.map((notice, idx) => (
                     <div
                       key={`notice-${idx}`}
                       className="text-base font-bold text-natural-50 animate-pulse"
@@ -162,17 +159,23 @@ export const Message = ({
                   ))}
                 </div>
               ) : null}
-              <Skeleton className="w-full h-2 max-w-[98%]" />
-              <Skeleton className="w-full h-2 max-w-[100%]" />
-              <Skeleton className="w-full h-2 max-w-[97%]" />
-              <Skeleton className="w-full max-w-[87%] h-2" />
-              <Skeleton className="w-full max-w-[40%] h-2" />
+              {!message.pre_answer_notices?.length && (
+                <>
+                  <Skeleton className="w-full h-2 max-w-[98%]" />
+                  <Skeleton className="w-full h-2 max-w-[100%]" />
+                  <Skeleton className="w-full h-2 max-w-[97%]" />
+                  <Skeleton className="w-full max-w-[87%] h-2" />
+                  <Skeleton className="w-full max-w-[40%] h-2" />
+                </>
+              )}
             </div>
-          ) : message.stopped ? null : (
+          ) : message.stopped ? null : awaitingOutput &&
+            !isSending &&
+            !message.pre_answer_notices?.length ? (
             <p className="text-danger-400">
               Something went wrong! Retry please your request.
             </p>
-          )}
+          ) : null}
         </div>
 
         {/* FOOTER SECTION */}
