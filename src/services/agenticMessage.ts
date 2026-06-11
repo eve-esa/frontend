@@ -2,7 +2,6 @@ import type { QueryClient } from "@tanstack/react-query";
 import type { AdvancedSettingsValidation } from "@/components/chat/SettingsForm";
 import type { AgenticTraceStep, ChaMessageType, LLMType, MessageType } from "@/types";
 import { QUERY_KEYS } from "./keys";
-import type { StreamEvent } from "./streaming";
 import { getMessageCollectionPayload } from "@/utilities/collections";
 
 export type CreateMessageResponse = {
@@ -102,44 +101,4 @@ export const updateLastTempMessage = (
       return { ...old, messages: newMessages };
     },
   );
-};
-
-type AgenticStreamHandlers = {
-  onToken: (token: string) => void;
-  onFinal: (answer: string, trace: AgenticTraceStep[] | null) => void;
-  onNotice: (notice: string) => void;
-  onTraceStep: (step: AgenticTraceStep) => void;
-};
-
-export const handleAgenticStreamEvent = (
-  evt: StreamEvent,
-  handlers: AgenticStreamHandlers,
-) => {
-  const event = evt as Record<string, unknown>;
-  const type = event.type;
-
-  if (type === "token" && typeof event.content === "string") {
-    handlers.onToken(event.content);
-    return;
-  }
-
-  if (type === "final" && typeof event.answer === "string") {
-    handlers.onFinal(
-      event.answer,
-      Array.isArray(event.trace) ? (event.trace as AgenticTraceStep[]) : null,
-    );
-    return;
-  }
-
-  if (type === "tool_call" || type === "tool_result") {
-    handlers.onTraceStep(event as AgenticTraceStep);
-    return;
-  }
-
-  if (
-    (type === "status" || type === "requery") &&
-    typeof event.content === "string"
-  ) {
-    handlers.onNotice(event.content);
-  }
 };
