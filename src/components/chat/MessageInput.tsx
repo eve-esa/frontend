@@ -337,6 +337,9 @@ export const MessageInput = ({
                         <SelectItem value={LLMType.Satcom_Large}>
                           {LLMTypeLabel.Satcom_Large}
                         </SelectItem>
+                        <SelectItem value={LLMType.EVE_JSC}>
+                          {LLMTypeLabel.EVE_JSC}
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
