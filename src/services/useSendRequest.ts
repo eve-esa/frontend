@@ -7,7 +7,7 @@ import api from "./axios";
 import { postStream, consumeSuppressToastFlag } from "./streaming";
 import type { ApiError, ChaMessageType, MessageType } from "@/types";
 import { handleApiError } from "@/utilities/helpers";
-import { LOCAL_STORAGE_PUBLIC_COLLECTIONS } from "@/utilities/localStorage";
+import { getMessageCollectionPayload } from "@/utilities/collections";
 import { logError } from "./errorLogging";
 import { invalidateTokenUsage } from "./useTokenUsage";
 
@@ -30,9 +30,7 @@ export const sendRequest = async ({
       query,
       ...settings,
       ...(llm_type ? { llm_type } : {}),
-      public_collections: JSON.parse(
-        localStorage.getItem(LOCAL_STORAGE_PUBLIC_COLLECTIONS) ?? "[]",
-      ),
+      ...getMessageCollectionPayload(),
     },
   );
   return response.data;
@@ -57,9 +55,7 @@ export const useSendRequest = (conversationId?: string) => {
         query,
         ...settings,
         ...(llm_type ? { llm_type } : {}),
-        public_collections: JSON.parse(
-          localStorage.getItem(LOCAL_STORAGE_PUBLIC_COLLECTIONS) ?? "[]",
-        ),
+        ...getMessageCollectionPayload(),
       };
 
       try {

@@ -4,6 +4,10 @@ import type { SharedCollectionType } from "@/services/useGetSharedCollection";
 import { Switch } from "@/components/ui/Switch";
 import { useState } from "react";
 import { LOCAL_STORAGE_PUBLIC_COLLECTIONS } from "@/utilities/localStorage";
+import {
+  getEnabledCollectionIds,
+  toggleCollectionInStorage,
+} from "@/utilities/collections";
 
 type CollectionsListProps = {
   loading: boolean;
@@ -23,28 +27,18 @@ export const SharedCollectionsList = ({
     dependencies: [hasNextPage],
   });
 
-  const storedCollections = localStorage.getItem(
-    LOCAL_STORAGE_PUBLIC_COLLECTIONS
-  );
-
   const [enabledPublicCollections, setEnabledPublicCollections] = useState<
     string[]
-  >(storedCollections ? JSON.parse(storedCollections) : []);
+  >(() => getEnabledCollectionIds(LOCAL_STORAGE_PUBLIC_COLLECTIONS));
 
   const toggleCollection = (collectionId: string) => {
-    setEnabledPublicCollections((prev) => {
-      const isCurrentlyEnabled = prev.includes(collectionId);
-      const newEnabledCollections = isCurrentlyEnabled
-        ? prev.filter((id) => id !== collectionId)
-        : [...prev, collectionId];
-
-      localStorage.setItem(
+    setEnabledPublicCollections((prev) =>
+      toggleCollectionInStorage(
         LOCAL_STORAGE_PUBLIC_COLLECTIONS,
-        JSON.stringify(newEnabledCollections)
-      );
-
-      return newEnabledCollections;
-    });
+        prev,
+        collectionId,
+      ),
+    );
   };
 
   return (

@@ -1,8 +1,15 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronRight } from "@fortawesome/free-solid-svg-icons";
+import { useState } from "react";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { Switch } from "@/components/ui/Switch";
 import type { CollectionType } from "@/services/useGetMyCollections";
 import useInfinityLoading from "@/hooks/useInfinityLoading";
+import {
+  getEnabledCollectionIds,
+  toggleCollectionInStorage,
+} from "@/utilities/collections";
+import { LOCAL_STORAGE_PRIVATE_COLLECTIONS } from "@/utilities/localStorage";
 
 type CollectionsListProps = {
   onSelectCollection: (collection: CollectionType) => void;
@@ -24,6 +31,20 @@ export const CollectionsList = ({
     dependencies: [hasNextPage],
   });
 
+  const [enabledPrivateCollections, setEnabledPrivateCollections] = useState<
+    string[]
+  >(() => getEnabledCollectionIds(LOCAL_STORAGE_PRIVATE_COLLECTIONS));
+
+  const toggleCollection = (collectionId: string) => {
+    setEnabledPrivateCollections((prev) =>
+      toggleCollectionInStorage(
+        LOCAL_STORAGE_PRIVATE_COLLECTIONS,
+        prev,
+        collectionId,
+      ),
+    );
+  };
+
   return (
     <>
       {loading ? (
@@ -37,17 +58,26 @@ export const CollectionsList = ({
         <div className="flex flex-col gap-4">
           {collectionsList?.map((collection) => (
             <div
-              className="flex items-center justify-between gap-2 cursor-pointer p-2 group"
+              className="flex items-center justify-between gap-2 p-2 group"
               key={collection.id}
-              onClick={() => onSelectCollection(collection)}
             >
-              <span className=" relative group-hover:text-primary-300">
-                {collection.name}
-                <span className="absolute -bottom-1 right-0 w-0 h-0.5 bg-primary-300 transition-all duration-300 ease-in-out group-hover:w-full group-hover:left-0"></span>
-              </span>
+              <div className="flex min-w-0 flex-1 items-center gap-2">
+                <Switch
+                  checked={enabledPrivateCollections.includes(collection.id)}
+                  onCheckedChange={() => toggleCollection(collection.id)}
+                />
+                <span
+                  className="relative cursor-pointer group-hover:text-primary-300"
+                  onClick={() => onSelectCollection(collection)}
+                >
+                  {collection.name}
+                  <span className="absolute -bottom-1 right-0 h-0.5 w-0 bg-primary-300 transition-all duration-300 ease-in-out group-hover:left-0 group-hover:w-full"></span>
+                </span>
+              </div>
               <FontAwesomeIcon
                 icon={faChevronRight}
-                className="group-hover:text-primary-300 h-6 w-6"
+                className="h-6 w-6 cursor-pointer group-hover:text-primary-300"
+                onClick={() => onSelectCollection(collection)}
               />
             </div>
           ))}
