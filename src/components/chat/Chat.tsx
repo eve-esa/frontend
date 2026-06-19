@@ -53,7 +53,7 @@ export const Chat = () => {
     isError,
   } = useGetConversation({
     conversationId,
-    enabled: !draftMessage || firstMessageSent.current,
+    enabled: (!draftMessage || firstMessageSent.current) && !isMutating,
   });
 
   const messages = data?.messages || [];
