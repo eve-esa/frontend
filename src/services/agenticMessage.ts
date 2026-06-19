@@ -2,7 +2,10 @@ import type { QueryClient } from "@tanstack/react-query";
 import type { AdvancedSettingsValidation } from "@/components/chat/SettingsForm";
 import type { AgenticTraceStep, ChaMessageType, LLMType, MessageType } from "@/types";
 import { QUERY_KEYS } from "./keys";
-import { getMessageCollectionPayload } from "@/utilities/collections";
+import {
+  getMessageCollectionPayload,
+  getMessageMcpServerPayload,
+} from "@/utilities/collections";
 
 export type CreateMessageResponse = {
   id: string;
@@ -31,6 +34,7 @@ export const buildGenerationPayload = ({
   ...settings,
   ...(llm_type ? { llm_type } : {}),
   ...getMessageCollectionPayload(),
+  ...getMessageMcpServerPayload(),
 });
 
 export const mapCreateMessageResponse = (
