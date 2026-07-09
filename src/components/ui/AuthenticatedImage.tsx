@@ -4,17 +4,22 @@ import { faImage } from "@fortawesome/free-solid-svg-icons";
 import { useImageBlob } from "@/services/useImageBlob";
 import { Skeleton } from "./Skeleton";
 import { cn } from "@/lib/utils";
+import { isTrustedRequestUrl, resolveApiOrigin } from "@/utilities/sameOrigin";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "";
+const PAGE_ORIGIN =
+  typeof window !== "undefined" ? window.location.origin : "";
+const API_ORIGIN = resolveApiOrigin(API_BASE, PAGE_ORIGIN);
 
 /**
- * Returns true when `src` points at our own backend and therefore needs a
- * JWT-authenticated fetch. Relative URLs (`/images/...`) and URLs prefixed with
- * `VITE_API_URL` are served by us; other absolute http(s) URLs are loaded
- * directly by the browser.
+ * Returns true only when `src` resolves to our own app origin or the configured
+ * API origin, in which case it is fetched through the JWT-authenticated client.
+ * Everything else — cross-origin absolute URLs and protocol-relative `//host`
+ * URLs — is loaded as a plain, tokenless `<img>` so the bearer token can never
+ * leak off-origin (see utilities/sameOrigin).
  */
 const needsAuthenticatedFetch = (src: string): boolean =>
-  src.startsWith("/") || (API_BASE !== "" && src.startsWith(API_BASE));
+  isTrustedRequestUrl(src, API_BASE, PAGE_ORIGIN, API_ORIGIN);
 
 type AuthenticatedImageProps = {
   src: string;
