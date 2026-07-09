@@ -12,6 +12,7 @@ import rehypeSanitize, { defaultSchema, type Options as SanitizeSchema } from "r
 import type { Element as HastElement } from "hast";
 import { cn } from "@/lib/utils";
 import { prepareLatexContent } from "@/utilities/prepareLatexContent";
+import { stripArtifactMetadata } from "@/utilities/stripArtifactMetadata";
 import { AuthenticatedImage } from "./AuthenticatedImage";
 import { ImageLightbox } from "./ImageLightbox";
 import {
@@ -398,7 +399,7 @@ const SmartText: React.FC<SmartTextProps> = ({ text, className }) => {
   };
 
   // Prepare content to handle LaTeX delimiters
-  const preparedText = prepareLatexContent(text);
+  const preparedText = prepareLatexContent(stripArtifactMetadata(text));
 
   return (
     <div className={cn(baseText, "smarttext", className)}>
