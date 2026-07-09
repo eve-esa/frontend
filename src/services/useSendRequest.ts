@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { MUTATION_KEYS, QUERY_KEYS } from "./keys";
 import { toast } from "sonner";
 import type { AdvancedSettingsValidation } from "@/components/chat/SettingsForm";
-import type { LLMType } from "@/types";
+import type { ImageAttachment, LLMType } from "@/types";
 import api from "./axios";
 import { postStream, consumeSuppressToastFlag } from "./streaming";
 import type { ApiError, ChaMessageType, MessageType } from "@/types";
@@ -16,6 +16,7 @@ type SendRequestProps = {
   conversationId?: string;
   settings: AdvancedSettingsValidation;
   llm_type?: LLMType;
+  attachments?: ImageAttachment[];
 };
 
 export const sendRequest = async ({
@@ -23,6 +24,7 @@ export const sendRequest = async ({
   conversationId,
   settings,
   llm_type,
+  attachments,
 }: SendRequestProps) => {
   const response = await api.post<MessageType>(
     `/conversations/${conversationId}/messages`,
@@ -31,6 +33,9 @@ export const sendRequest = async ({
       ...settings,
       ...(llm_type ? { llm_type } : {}),
       ...getMessageCollectionPayload(),
+      ...(attachments?.length
+        ? { image_ids: attachments.map((a) => a.id) }
+        : {}),
     },
   );
   return response.data;
@@ -47,6 +52,7 @@ export const useSendRequest = (conversationId?: string) => {
       conversationId,
       settings,
       llm_type,
+      attachments,
     }: SendRequestProps) => {
       const enableStreaming =
         (import.meta.env.VITE_ENABLE_STREAMING ?? "false") === "true";
@@ -56,11 +62,20 @@ export const useSendRequest = (conversationId?: string) => {
         ...settings,
         ...(llm_type ? { llm_type } : {}),
         ...getMessageCollectionPayload(),
+        ...(attachments?.length
+          ? { image_ids: attachments.map((a) => a.id) }
+          : {}),
       };
 
       try {
         if (!enableStreaming) {
-          return sendRequest({ query, conversationId, settings, llm_type });
+          return sendRequest({
+            query,
+            conversationId,
+            settings,
+            llm_type,
+            attachments,
+          });
         }
 
         const applyTokenToOptimisticMessage = (tokenChunk: string) => {
@@ -163,6 +178,7 @@ export const useSendRequest = (conversationId?: string) => {
           documents: [],
           answer: finalAnswer || "",
           query: payload.query,
+          attachments,
         } as unknown as MessageType;
 
         return finalMessage;
@@ -206,6 +222,7 @@ export const useSendRequest = (conversationId?: string) => {
         documents: [],
         use_rag: false,
         metadata: {},
+        attachments: newMessage.attachments,
       };
 
       if (previousData) {
@@ -304,6 +321,10 @@ export const useSendRequest = (conversationId?: string) => {
             feedback: null,
             documents: data.documents ?? [],
             request_input: data.request_input,
+            // Explicitly carry attachments over: this rebuilds the message from
+            // scratch and would otherwise drop them, making the images vanish
+            // between send and the refetch that follows onSettled.
+            attachments: data.attachments,
           };
 
           return {
