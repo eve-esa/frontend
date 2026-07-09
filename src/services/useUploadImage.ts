@@ -13,7 +13,7 @@ const httpUploadImage = async (
   const formData = new FormData();
   formData.append("file", file);
 
-  const { data } = await api.post<ImageUploadResponse>("/images", formData, {
+  const { data } = await api.post<ImageUploadResponse>("/artifacts", formData, {
     headers: {
       "Content-Type": "multipart/form-data",
     },
@@ -23,7 +23,7 @@ const httpUploadImage = async (
 };
 
 /**
- * Uploads a single image to POST /images (multipart field "file"). Success is
+ * Uploads a single image to POST /artifacts (multipart field "file"). Success is
  * surfaced visually by the attachment preview, so — unlike `useUploadDocument`
  * — no success toast is fired; only failures are toasted and logged. Exposes
  * axios `onUploadProgress` so callers can drive per-item progress UI.

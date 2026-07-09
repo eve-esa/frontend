@@ -167,7 +167,7 @@ export type RawMessageAttachment = {
   size_bytes?: number;
 };
 
-// Response of POST /images.
+// Response of POST /artifacts.
 export type ImageUploadResponse = {
   id: string;
   url: string;
@@ -177,7 +177,16 @@ export type ImageUploadResponse = {
   size_bytes: number;
 };
 
-// Item returned by the paginated GET /images (Artifacts gallery).
+// How an artifact came to exist: uploaded directly by the user, or produced by
+// an MCP tool call. Deletion is only allowed for "upload" (backend 403s
+// otherwise), so the UI hides the delete button for "mcp_tool" items.
+export type ArtifactSource = {
+  type: "mcp_tool" | "upload";
+  mcp_server?: string;
+  tool_name?: string;
+};
+
+// Item returned by the paginated GET /artifacts (Artifacts gallery).
 export type ImageAsset = {
   id: string;
   url?: string;
@@ -186,6 +195,7 @@ export type ImageAsset = {
   size_bytes: number;
   conversation_id?: string | null;
   timestamp?: string;
+  source?: ArtifactSource;
 };
 
 export const ACCEPTED_IMAGE_TYPES = [

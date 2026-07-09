@@ -15,7 +15,7 @@ const TABS = [{ id: "images", label: "Images", enabled: true }] as const;
 type TabId = (typeof TABS)[number]["id"];
 
 const assetUrl = (asset: ImageAsset): string =>
-  asset.url ?? `/images/${asset.id}`;
+  asset.url ?? `/artifacts/${asset.id}`;
 
 export const ArtifactsPage = () => {
   const [activeTab, setActiveTab] = useState<TabId>("images");

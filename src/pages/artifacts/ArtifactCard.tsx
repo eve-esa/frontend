@@ -18,7 +18,12 @@ type ArtifactCardProps = {
 // The stable serving route never expires and is environment-independent, so it
 // is safe to build client-side when the list endpoint omits an explicit `url`.
 const assetUrl = (asset: ImageAsset): string =>
-  asset.url ?? `/images/${asset.id}`;
+  asset.url ?? `/artifacts/${asset.id}`;
+
+const sourceLabel = (asset: ImageAsset): string | null => {
+  if (!asset.source) return null;
+  return asset.source.type === "mcp_tool" ? "MCP" : "Upload";
+};
 
 export const ArtifactCard = ({
   asset,
@@ -38,20 +43,27 @@ export const ArtifactCard = ({
           onClick={onOpen}
           className="h-full w-full object-cover cursor-zoom-in"
         />
-        <button
-          type="button"
-          data-testid="artifact-delete"
-          onClick={onDelete}
-          disabled={isDeleting}
-          aria-label="Delete image"
-          className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full border border-primary-400 bg-natural-1000/60 text-natural-50 hover:bg-danger-400/70 disabled:opacity-60 cursor-pointer"
-        >
-          {isDeleting ? (
-            <Spinner size="xs" />
-          ) : (
-            <FontAwesomeIcon icon={faTrash} className="w-3 h-3" />
-          )}
-        </button>
+        {sourceLabel(asset) && (
+          <span className="absolute left-2 top-2 rounded-full border border-primary-400 bg-natural-1000/60 px-2 py-0.5 text-[10px] uppercase tracking-wide text-natural-50">
+            {sourceLabel(asset)}
+          </span>
+        )}
+        {asset.source?.type !== "mcp_tool" && (
+          <button
+            type="button"
+            data-testid="artifact-delete"
+            onClick={onDelete}
+            disabled={isDeleting}
+            aria-label="Delete image"
+            className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full border border-primary-400 bg-natural-1000/60 text-natural-50 hover:bg-danger-400/70 disabled:opacity-60 cursor-pointer"
+          >
+            {isDeleting ? (
+              <Spinner size="xs" />
+            ) : (
+              <FontAwesomeIcon icon={faTrash} className="w-3 h-3" />
+            )}
+          </button>
+        )}
       </div>
 
       <div className="flex flex-col gap-1 p-3">

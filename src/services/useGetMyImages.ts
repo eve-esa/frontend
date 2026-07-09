@@ -22,7 +22,7 @@ const getMyImages = async ({
     page,
   });
 
-  const { data } = await api.get(`/images?${params.toString()}`);
+  const { data } = await api.get(`/artifacts?${params.toString()}`);
   return data;
 };
 

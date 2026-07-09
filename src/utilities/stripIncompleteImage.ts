@@ -1,6 +1,6 @@
 /**
  * While the assistant output is still streaming, the final characters may hold a
- * half-typed image token (e.g. `![alt](/images/ab`). Rendering it would flash raw
+ * half-typed image token (e.g. `![alt](/artifacts/ab`). Rendering it would flash raw
  * markdown and trigger a fetch of an incomplete URL. This removes a trailing image
  * token that hasn't been fully closed yet, leaving any earlier complete images and
  * text untouched. Apply it only to the actively-streaming message.

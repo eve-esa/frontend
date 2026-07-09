@@ -11,7 +11,7 @@ export type PendingAttachmentStatus = "uploading" | "done" | "error";
 
 // A locally-selected image being uploaded before the message is sent. The
 // thumbnail is a local object URL (no network), while `uploaded` holds the
-// server-side attachment once POST /images resolves.
+// server-side attachment once POST /artifacts resolves.
 export type PendingAttachment = {
   localId: string;
   file: File;

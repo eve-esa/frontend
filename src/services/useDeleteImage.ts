@@ -4,7 +4,7 @@ import { MUTATION_KEYS, QUERY_KEYS } from "./keys";
 import api from "./axios";
 
 const httpDeleteImage = async (imageId: string) => {
-  const { data } = await api.delete(`/images/${imageId}`);
+  const { data } = await api.delete(`/artifacts/${imageId}`);
   return data;
 };
 
