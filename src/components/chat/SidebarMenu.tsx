@@ -1,10 +1,15 @@
 import { LogoutDialog } from "@/components/auth/LogoutDialog";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faImages } from "@fortawesome/free-solid-svg-icons";
 import { ProfileMenubar } from "./ProfileMenubar";
 import { ProfileDialog } from "@/components/profile/ProfileDialog";
 import { CO2eqDialog } from "@/components/profile/CO2eqDialog";
 import { useGetProfile } from "@/services/useMe";
 import { KnowledgeBaseMenuBar } from "./KnowledgeBaseMenuBar";
+import { Tooltip } from "@/components/ui/Tooltip";
+import { routes } from "@/utilities/routes";
 
 type SidebarMenuProps = {
   isOpen: boolean;
@@ -16,6 +21,7 @@ export const SidebarMenu = ({ isOpen }: SidebarMenuProps) => {
   const [isOpenCO2eqDialog, setIsOpenCO2eqDialog] = useState(false);
 
   const { data: profile, isLoading: isLoadingProfile } = useGetProfile();
+  const navigate = useNavigate();
 
   const email = profile?.email;
 
@@ -26,12 +32,37 @@ export const SidebarMenu = ({ isOpen }: SidebarMenuProps) => {
     ? "grid-cols-[auto_1fr]"
     : "grid-cols-1 justify-items-center";
 
+  const artifactsItem = (
+    <button
+      type="button"
+      onClick={() => navigate(routes.ARTIFACTS.path)}
+      className={`${baseStyles} ${layoutStyles} text-natural-50 hover:text-white`}
+    >
+      <FontAwesomeIcon icon={faImages} className="w-4 h-4" />
+      {isOpen && (
+        <span className="text-lg truncate tracking-wider min-w-0 text-left">
+          <span className="whitespace-nowrap mt-[2px] overflow-hidden text-ellipsis">
+            Artifacts
+          </span>
+        </span>
+      )}
+    </button>
+  );
+
   return (
     <div className="flex flex-col gap-4">
       <KnowledgeBaseMenuBar
         isOpen={isOpen}
         className={`${baseStyles} ${layoutStyles} text-natural-50 hover:text-white`}
       />
+
+      {isOpen ? (
+        artifactsItem
+      ) : (
+        <Tooltip side="right" disableClick={true} content={<>Artifacts</>}>
+          <div className="inline-block w-full">{artifactsItem}</div>
+        </Tooltip>
+      )}
 
       <ProfileMenubar
         isLoadingProfile={isLoadingProfile}

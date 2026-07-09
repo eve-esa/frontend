@@ -7,6 +7,7 @@ import { ResetPassword } from "@/pages/reset-password/ResetPassword";
 import { Verify } from "@/pages/verify/Verify";
 import { EmptyChat } from "@/pages/empty-chat/EmptyChat";
 import { OnboardingPage } from "@/pages/onboarding/OnboardingPage";
+import { ArtifactsPage } from "@/pages/artifacts/ArtifactsPage";
 
 export const routes = {
   SIGN_UP: {
@@ -36,6 +37,10 @@ export const routes = {
   CHAT: {
     path: "/chat/:conversationId",
     element: <ChatPage />,
+  },
+  ARTIFACTS: {
+    path: "/artifacts",
+    element: <ArtifactsPage />,
   },
   ONBOARDING: {
     path: "/onboarding",
