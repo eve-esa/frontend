@@ -14,6 +14,10 @@ import { cn } from "@/lib/utils";
 import { prepareLatexContent } from "@/utilities/prepareLatexContent";
 import { AuthenticatedImage } from "./AuthenticatedImage";
 import { ImageLightbox } from "./ImageLightbox";
+import {
+  ArtifactDownloadChip,
+  isArtifactDownloadLink,
+} from "./ArtifactDownloadChip";
 import "katex/dist/katex.min.css";
 
 type SmartTextProps = {
@@ -193,17 +197,31 @@ const SmartText: React.FC<SmartTextProps> = ({ text, className }) => {
   const baseHeading = cn(baseText, "font-bold");
 
   const components: Components = {
-    a: (p) => (
-      <a
-        {...p}
-        target="_blank"
-        rel="noreferrer"
-        className={cn(
-          baseText,
-          "text-success-200 hover:text-success-300 underline transition-colors"
-        )}
-      />
-    ),
+    a: ({ href, children }) => {
+      if (isArtifactDownloadLink(href)) {
+        return (
+          <ArtifactDownloadChip
+            href={href!}
+            filename={
+              typeof children === "string" ? children : undefined
+            }
+          />
+        );
+      }
+      return (
+        <a
+          href={href}
+          target="_blank"
+          rel="noreferrer"
+          className={cn(
+            baseText,
+            "text-success-200 hover:text-success-300 underline transition-colors"
+          )}
+        >
+          {children}
+        </a>
+      );
+    },
     img: ({ src, alt }) => (
       <MarkdownImage
         src={typeof src === "string" ? src : undefined}
