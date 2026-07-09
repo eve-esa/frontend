@@ -30,6 +30,11 @@ export type MessageType = {
   stopped?: boolean;
   timestamp: Date;
   documents: Document[];
+  // Images attached to the user turn. Stored in the canonical frontend shape
+  // (`ImageAttachment`) for optimistic messages, but the backend persists them
+  // with different keys (`image_id`/`size_bytes`) — see `RawMessageAttachment`
+  // and `toImageAttachment` in `utilities/attachments.ts`.
+  attachments?: RawMessageAttachment[];
   answer?: string;
   was_copied?: boolean;
   query?: string;
@@ -135,3 +140,61 @@ export enum LLMTypeLabel {
   Satcom_Large = "SatcomLLM - Large",
   EVE_JSC = "EVE-JSC"
 }
+
+// ─── Image attachments ───────────────────────────────────────────────────────
+
+// Canonical attachment shape used throughout the frontend UI.
+export type ImageAttachment = {
+  id: string;
+  url: string;
+  filename: string;
+  content_type: string;
+  size?: number;
+};
+
+// Raw attachment as persisted / returned by the backend on GET /conversations.
+// Backend keys differ from `ImageAttachment` (image_id -> id, size_bytes -> size),
+// so message attachments may arrive in either shape. `toImageAttachment` in
+// `utilities/attachments.ts` normalizes both. `ImageAttachment` is assignable to
+// this type, which is why optimistic messages can carry the canonical shape.
+export type RawMessageAttachment = {
+  id?: string;
+  image_id?: string;
+  url: string;
+  filename: string;
+  content_type: string;
+  size?: number;
+  size_bytes?: number;
+};
+
+// Response of POST /images.
+export type ImageUploadResponse = {
+  id: string;
+  url: string;
+  markdown: string;
+  filename: string;
+  content_type: string;
+  size_bytes: number;
+};
+
+// Item returned by the paginated GET /images (Artifacts gallery).
+export type ImageAsset = {
+  id: string;
+  url?: string;
+  filename: string;
+  content_type: string;
+  size_bytes: number;
+  conversation_id?: string | null;
+  timestamp?: string;
+};
+
+export const ACCEPTED_IMAGE_TYPES = [
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/gif",
+];
+
+export const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
+
+export const MAX_ATTACHMENTS_PER_MESSAGE = 4;

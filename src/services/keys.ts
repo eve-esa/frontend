@@ -19,6 +19,8 @@ export const MUTATION_KEYS = {
   sendRequest: "sendRequest",
   retryRequest: "retryRequest",
   sourceLog: "sourceLog",
+  uploadImage: "uploadImage",
+  deleteImage: "deleteImage",
 };
 
 export const QUERY_KEYS = {
@@ -31,4 +33,6 @@ export const QUERY_KEYS = {
   documents: "documents",
   getDocument: "getDocument",
   userMessageStats: "userMessageStats",
+  imageBlob: "imageBlob",
+  myImages: "myImages",
 };
