@@ -38,7 +38,10 @@ export const ImageLightbox = ({
 }: ImageLightboxProps) => {
   const [transform, setTransform] = useState<Transform>(INITIAL_TRANSFORM);
   const [isDragging, setIsDragging] = useState(false);
-  const viewportRef = useRef<HTMLDivElement>(null);
+  // Held in state (not just a ref) because Radix mounts the dialog content a
+  // commit after `open` flips true; the wheel-listener effect must re-run once
+  // the viewport element actually exists.
+  const [viewportEl, setViewportEl] = useState<HTMLDivElement | null>(null);
   // Pointer position of the drag start, in image-offset coordinates.
   const dragOriginRef = useRef({ x: 0, y: 0 });
 
@@ -46,17 +49,20 @@ export const ImageLightbox = ({
 
   // Soft clamp: the pan offset can never push the image fully out of the
   // viewport (translate happens before scale, so limits are in layout pixels).
-  const clampTransform = useCallback((next: Transform): Transform => {
-    const viewport = viewportRef.current;
-    if (!viewport || next.zoom <= MIN_ZOOM) return { ...next, x: 0, y: 0 };
-    const maxX = (viewport.clientWidth * (next.zoom - 1)) / 2;
-    const maxY = (viewport.clientHeight * (next.zoom - 1)) / 2;
-    return {
-      ...next,
-      x: Math.min(maxX, Math.max(-maxX, next.x)),
-      y: Math.min(maxY, Math.max(-maxY, next.y)),
-    };
-  }, []);
+  const clampTransform = useCallback(
+    (next: Transform): Transform => {
+      if (!viewportEl || next.zoom <= MIN_ZOOM)
+        return { ...next, x: 0, y: 0 };
+      const maxX = (viewportEl.clientWidth * (next.zoom - 1)) / 2;
+      const maxY = (viewportEl.clientHeight * (next.zoom - 1)) / 2;
+      return {
+        ...next,
+        x: Math.min(maxX, Math.max(-maxX, next.x)),
+        y: Math.min(maxY, Math.max(-maxY, next.y)),
+      };
+    },
+    [viewportEl],
+  );
 
   const zoomBy = useCallback(
     (delta: number) => {
@@ -81,15 +87,14 @@ export const ImageLightbox = ({
   // no-op; attach a native non-passive listener so zooming never scrolls the
   // page behind the dialog.
   useEffect(() => {
-    const viewport = viewportRef.current;
-    if (!open || !viewport) return;
+    if (!viewportEl) return;
     const handleWheel = (event: WheelEvent) => {
       event.preventDefault();
       zoomBy(event.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP);
     };
-    viewport.addEventListener("wheel", handleWheel, { passive: false });
-    return () => viewport.removeEventListener("wheel", handleWheel);
-  }, [open, zoomBy]);
+    viewportEl.addEventListener("wheel", handleWheel, { passive: false });
+    return () => viewportEl.removeEventListener("wheel", handleWheel);
+  }, [viewportEl, zoomBy]);
 
   const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     event.stopPropagation();
@@ -125,7 +130,7 @@ export const ImageLightbox = ({
       >
         <DialogTitle className="sr-only">{alt || "Image preview"}</DialogTitle>
         <div
-          ref={viewportRef}
+          ref={setViewportEl}
           className={cn(
             "overflow-hidden rounded-lg touch-none select-none",
             isZoomed
