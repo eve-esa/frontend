@@ -9,6 +9,7 @@ import { faCheck } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize, { defaultSchema, type Options as SanitizeSchema } from "rehype-sanitize";
+import type { Element as HastElement } from "hast";
 import { cn } from "@/lib/utils";
 import { prepareLatexContent } from "@/utilities/prepareLatexContent";
 import { AuthenticatedImage } from "./AuthenticatedImage";
@@ -100,8 +101,18 @@ const sanitizeSchema: SanitizeSchema = {
 // Renders both `![]()` markdown images and raw `<img>` (rehype-raw routes both
 // through the `img` override). Memoized on src+alt so it doesn't re-render — and
 // re-fetch its blob — on every streamed token. Clicking opens a lightbox.
+// The `tile` variant is used inside the gallery grid: uniform cropped
+// thumbnails instead of the free-flowing inline size.
 const MarkdownImage = React.memo(
-  ({ src, alt }: { src?: string; alt?: string }) => {
+  ({
+    src,
+    alt,
+    variant = "inline",
+  }: {
+    src?: string;
+    alt?: string;
+    variant?: "inline" | "tile";
+  }) => {
     const [isLightboxOpen, setIsLightboxOpen] = useState(false);
     if (!src) return null;
 
@@ -112,7 +123,11 @@ const MarkdownImage = React.memo(
           alt={alt}
           onClick={() => setIsLightboxOpen(true)}
           data-testid="markdown-image"
-          className="my-2 max-h-[400px] max-w-[480px] w-auto rounded-lg object-contain cursor-zoom-in"
+          className={
+            variant === "tile"
+              ? "aspect-[4/3] w-full rounded-lg object-cover cursor-zoom-in"
+              : "my-2 max-h-[400px] max-w-[480px] w-auto rounded-lg object-contain cursor-zoom-in"
+          }
         />
         <ImageLightbox
           src={src}
@@ -123,9 +138,50 @@ const MarkdownImage = React.memo(
       </>
     );
   },
-  (prev, next) => prev.src === next.src && prev.alt === next.alt,
+  (prev, next) =>
+    prev.src === next.src &&
+    prev.alt === next.alt &&
+    prev.variant === next.variant,
 );
 MarkdownImage.displayName = "MarkdownImage";
+
+type GalleryImage = { src: string; alt?: string };
+
+// When a paragraph contains only images (whitespace and <br> aside), returns
+// their src/alt so they can be laid out as a gallery grid. Any meaningful text
+// or fewer than two images returns null and the paragraph renders as usual.
+// Reading the hast node (rather than sniffing React children) keeps detection
+// stable while the answer streams in token by token.
+const extractGalleryImages = (
+  node: HastElement | undefined,
+): GalleryImage[] | null => {
+  if (!node) return null;
+  const images: GalleryImage[] = [];
+  for (const child of node.children) {
+    if (child.type === "text") {
+      if (child.value.trim() !== "") return null;
+      continue;
+    }
+    if (child.type === "element") {
+      if (child.tagName === "br") continue;
+      if (
+        child.tagName === "img" &&
+        typeof child.properties?.src === "string"
+      ) {
+        images.push({
+          src: child.properties.src,
+          alt:
+            typeof child.properties.alt === "string"
+              ? child.properties.alt
+              : undefined,
+        });
+        continue;
+      }
+      return null;
+    }
+  }
+  return images.length >= 2 ? images : null;
+};
 
 const SmartText: React.FC<SmartTextProps> = ({ text, className }) => {
   const { copyToClipboard } = useClipboard();
@@ -221,7 +277,7 @@ const SmartText: React.FC<SmartTextProps> = ({ text, className }) => {
         </code>
       );
     },
-    p: ({ children }) => {
+    p: ({ node, children }) => {
       const content = React.Children.toArray(children);
       if (
         content.length === 1 &&
@@ -229,6 +285,28 @@ const SmartText: React.FC<SmartTextProps> = ({ text, className }) => {
         content[0].type === "pre"
       ) {
         return <>{content[0]}</>;
+      }
+      const galleryImages = extractGalleryImages(node);
+      if (galleryImages) {
+        return (
+          <div
+            data-testid="markdown-image-gallery"
+            className={cn(
+              baseBlock,
+              "grid max-w-[720px] grid-cols-2 gap-2",
+              galleryImages.length > 2 && "sm:grid-cols-3"
+            )}
+          >
+            {galleryImages.map((image, index) => (
+              <MarkdownImage
+                key={`${image.src}-${index}`}
+                src={image.src}
+                alt={image.alt}
+                variant="tile"
+              />
+            ))}
+          </div>
+        );
       }
       return <p className={cn(baseBlock, "whitespace-pre-wrap")}>{children}</p>;
     },
