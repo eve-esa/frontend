@@ -10,12 +10,44 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import rehypeRaw from "rehype-raw";
 import { cn } from "@/lib/utils";
 import { prepareLatexContent } from "@/utilities/prepareLatexContent";
+import { AuthenticatedImage } from "./AuthenticatedImage";
+import { ImageLightbox } from "./ImageLightbox";
 import "katex/dist/katex.min.css";
 
 type SmartTextProps = {
   text: string;
   className?: string;
 };
+
+// Renders both `![]()` markdown images and raw `<img>` (rehype-raw routes both
+// through the `img` override). Memoized on src+alt so it doesn't re-render — and
+// re-fetch its blob — on every streamed token. Clicking opens a lightbox.
+const MarkdownImage = React.memo(
+  ({ src, alt }: { src?: string; alt?: string }) => {
+    const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+    if (!src) return null;
+
+    return (
+      <>
+        <AuthenticatedImage
+          src={src}
+          alt={alt}
+          onClick={() => setIsLightboxOpen(true)}
+          data-testid="markdown-image"
+          className="my-2 max-h-[400px] max-w-[480px] w-auto rounded-lg object-contain cursor-zoom-in"
+        />
+        <ImageLightbox
+          src={src}
+          alt={alt}
+          open={isLightboxOpen}
+          onOpenChange={setIsLightboxOpen}
+        />
+      </>
+    );
+  },
+  (prev, next) => prev.src === next.src && prev.alt === next.alt,
+);
+MarkdownImage.displayName = "MarkdownImage";
 
 const SmartText: React.FC<SmartTextProps> = ({ text, className }) => {
   const { copyToClipboard } = useClipboard();
@@ -36,6 +68,12 @@ const SmartText: React.FC<SmartTextProps> = ({ text, className }) => {
           baseText,
           "text-success-200 hover:text-success-300 underline transition-colors"
         )}
+      />
+    ),
+    img: ({ src, alt }) => (
+      <MarkdownImage
+        src={typeof src === "string" ? src : undefined}
+        alt={typeof alt === "string" ? alt : undefined}
       />
     ),
     em: ({ children }) => (
