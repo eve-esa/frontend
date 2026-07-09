@@ -10,13 +10,13 @@ import { useNavigate, useParams } from "react-router-dom";
 import {
   LOCAL_STORAGE_SETTINGS,
   LOCAL_STORAGE_DRAFT_NEW_CONVERSATION,
+  LOCAL_STORAGE_LLM_TYPE,
 } from "@/utilities/localStorage";
 import { useScrollToBottom } from "@/hooks/useScrollToBottom";
 import { useNavigationBlocker } from "@/hooks/useNavigationBlocker";
 import { MessageSkeleton } from "./MessageSkeleton";
 import { routes } from "@/utilities/routes";
 import { adaptSettingsForRequest } from "@/utilities/helpers";
-import { LOCAL_STORAGE_LLM_TYPE } from "@/utilities/localStorage";
 import { LLMType, type ImageAttachment } from "@/types";
 import {
   parseDraftNewConversation,
@@ -24,10 +24,9 @@ import {
 } from "@/utilities/draftNewConversation";
 import { StopRequestWarningDialog } from "./StopRequestWarningDialog";
 import { useSidebar } from "./DynamicSidebarProvider";
-import { useIsMutating } from "@tanstack/react-query";
+import { useIsMutating, useQueryClient } from "@tanstack/react-query";
 import { MUTATION_KEYS } from "@/services/keys";
 import { useRetry } from "@/services/useRetry";
-import { useQueryClient } from "@tanstack/react-query";
 import { prefetchTokenUsage } from "@/services/useTokenUsage";
 
 export const Chat = () => {
