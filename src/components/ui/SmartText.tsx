@@ -8,6 +8,7 @@ import { faCopy } from "@fortawesome/free-regular-svg-icons";
 import { faCheck } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import rehypeRaw from "rehype-raw";
+import rehypeSanitize, { defaultSchema, type Options as SanitizeSchema } from "rehype-sanitize";
 import { cn } from "@/lib/utils";
 import { prepareLatexContent } from "@/utilities/prepareLatexContent";
 import { AuthenticatedImage } from "./AuthenticatedImage";
@@ -17,6 +18,83 @@ import "katex/dist/katex.min.css";
 type SmartTextProps = {
   text: string;
   className?: string;
+};
+
+// Elements/attributes rehype-katex emits (via its rendered HTML, parsed back
+// into hast) that aren't part of GitHub's default sanitize schema. Needed so
+// rehype-sanitize (which runs after rehype-raw) doesn't strip KaTeX markup.
+const katexTagNames = [
+  "svg",
+  "path",
+  "math",
+  "semantics",
+  "annotation",
+  "mrow",
+  "mi",
+  "mo",
+  "mn",
+  "msup",
+  "msub",
+  "mfrac",
+  "mroot",
+  "msqrt",
+  "mtext",
+  "mspace",
+  "munder",
+  "mover",
+  "munderover",
+  "mtable",
+  "mtr",
+  "mtd",
+  "line",
+  "g",
+  "defs",
+  "use",
+];
+
+// Presentational SVG/MathML attributes: safe to allow anywhere, they can't
+// trigger navigation or script execution.
+const katexAttributes = [
+  "className",
+  "ariaHidden",
+  "viewBox",
+  "xmlns",
+  "xmlnsXLink",
+  "d",
+  "fill",
+  "stroke",
+  "preserveAspectRatio",
+  "focusable",
+  "role",
+  "encoding",
+  "mathvariant",
+];
+
+// `style` is excluded from the default schema (raw CSS is an XSS/clickjacking
+// vector), but KaTeX relies on inline `style` for spacing/sizing. Only allow
+// it on the tags KaTeX actually renders, not on links/images/etc.
+const katexStyleTagNames = ["span", ...katexTagNames];
+
+// Extends GitHub's default sanitize schema (which already covers GFM tables,
+// lists, code blocks, images, etc.) with what KaTeX needs, and locks link
+// protocols down to kill `javascript:`/`data:` hrefs (SEC-5).
+const sanitizeSchema: SanitizeSchema = {
+  ...defaultSchema,
+  tagNames: [...(defaultSchema.tagNames ?? []), ...katexTagNames],
+  attributes: {
+    ...defaultSchema.attributes,
+    "*": [...(defaultSchema.attributes?.["*"] ?? []), ...katexAttributes],
+    ...Object.fromEntries(
+      katexStyleTagNames.map((tag) => [
+        tag,
+        [...(defaultSchema.attributes?.[tag] ?? []), "style"],
+      ])
+    ),
+  },
+  protocols: {
+    ...defaultSchema.protocols,
+    href: ["http", "https", "mailto"],
+  },
 };
 
 // Renders both `![]()` markdown images and raw `<img>` (rehype-raw routes both
@@ -230,7 +308,7 @@ const SmartText: React.FC<SmartTextProps> = ({ text, className }) => {
     <div className={cn(baseText, "smarttext", className)}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath]}
-        rehypePlugins={[rehypeKatex, rehypeRaw]}
+        rehypePlugins={[rehypeKatex, rehypeRaw, [rehypeSanitize, sanitizeSchema]]}
         components={components}
       >
         {preparedText}
