@@ -19,6 +19,7 @@ export const MUTATION_KEYS = {
   sendRequest: "sendRequest",
   retryRequest: "retryRequest",
   sourceLog: "sourceLog",
+  customModels: "customModels",
 };
 
 export const QUERY_KEYS = {
@@ -33,4 +34,5 @@ export const QUERY_KEYS = {
   documents: "documents",
   getDocument: "getDocument",
   userMessageStats: "userMessageStats",
+  models: "models",
 };
