@@ -4,6 +4,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPaperPlane } from "@fortawesome/free-regular-svg-icons";
 import {
   faArrowRight,
+  faPlus,
   faSearch,
   faSliders,
   faStop,
@@ -377,11 +378,13 @@ export const MessageInput = ({
                 <Tooltip content={<>Manage custom models</>} disableClick={true}>
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="icon"
                     size="sm"
+                    className="h-8 w-8 p-0 cursor-pointer"
                     onClick={() => setCustomModelsOpen(true)}
+                    aria-label="Manage custom models"
                   >
-                    Models
+                    <FontAwesomeIcon icon={faPlus} className="size-4" />
                   </Button>
                 </Tooltip>
                 <CustomModelsDialog

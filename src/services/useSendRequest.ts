@@ -19,6 +19,7 @@ import {
 import {
   getStoredModelSelection,
   modelSelectionToPayload,
+  reconcileModelSelection,
 } from "@/utilities/modelSelection";
 
 type SendRequestProps = {
@@ -38,7 +39,12 @@ export const sendRequest = async ({
 }: SendRequestProps) => {
   const response = await api.post<CreateMessageResponse>(
     `/conversations/${conversationId}/stream-generate-agentic`,
-    buildGenerationPayload({ query, settings, modelSelection, models }),
+    buildGenerationPayload({
+      query,
+      settings,
+      modelSelection,
+      models,
+    }),
   );
   return mapCreateMessageResponse(response.data);
 };
@@ -58,11 +64,14 @@ export const useSendRequest = (conversationId?: string) => {
     }: SendRequestProps) => {
       const enableStreaming =
         (import.meta.env.VITE_ENABLE_STREAMING ?? "false") === "true";
+      const cachedModels =
+        models ??
+        queryClient.getQueryData<ModelListResponse>([QUERY_KEYS.models]);
       const payload = buildGenerationPayload({
         query,
         settings,
         modelSelection,
-        models,
+        models: cachedModels,
       });
 
       try {
@@ -72,7 +81,7 @@ export const useSendRequest = (conversationId?: string) => {
             conversationId,
             settings,
             modelSelection,
-            models,
+            models: cachedModels,
           });
         }
 
@@ -119,8 +128,11 @@ export const useSendRequest = (conversationId?: string) => {
 
         const now = new Date();
         const payloadFields = modelSelectionToPayload(
-          modelSelection ?? getStoredModelSelection(),
-          models,
+          reconcileModelSelection(
+            modelSelection ?? getStoredModelSelection(),
+            cachedModels,
+          ),
+          cachedModels,
         );
         return mapToConversationMessage({
           id: `srv-${now.getTime()}`,

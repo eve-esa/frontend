@@ -1,11 +1,22 @@
 import type { QueryClient } from "@tanstack/react-query";
 import type { AdvancedSettingsValidation } from "@/components/chat/SettingsForm";
-import type { AgenticTraceStep, ChaMessageType, LLMType, MessageType } from "@/types";
+import type {
+  AgenticTraceStep,
+  ChaMessageType,
+  MessageType,
+  ModelListResponse,
+  ModelSelection,
+} from "@/types";
 import { QUERY_KEYS } from "./keys";
 import {
   getMessageCollectionPayload,
   getMessageMcpServerPayload,
 } from "@/utilities/collections";
+import {
+  getStoredModelSelection,
+  modelSelectionToPayload,
+  reconcileModelSelection,
+} from "@/utilities/modelSelection";
 
 export type CreateMessageResponse = {
   id: string;
@@ -22,20 +33,30 @@ export type CreateMessageResponse = {
 type GenerationInput = {
   query: string;
   settings: AdvancedSettingsValidation;
-  llm_type?: LLMType;
+  modelSelection?: ModelSelection;
+  models?: ModelListResponse;
 };
 
 export const buildGenerationPayload = ({
   query,
   settings,
-  llm_type,
-}: GenerationInput) => ({
-  query,
-  ...settings,
-  ...(llm_type ? { llm_type } : {}),
-  ...getMessageCollectionPayload(),
-  ...getMessageMcpServerPayload(),
-});
+  modelSelection,
+  models,
+}: GenerationInput) => {
+  const selection = reconcileModelSelection(
+    modelSelection ?? getStoredModelSelection(),
+    models,
+  );
+  const modelFields = modelSelectionToPayload(selection, models);
+
+  return {
+    query,
+    ...settings,
+    ...modelFields,
+    ...getMessageCollectionPayload(),
+    ...getMessageMcpServerPayload(),
+  };
+};
 
 export const mapCreateMessageResponse = (
   data: CreateMessageResponse,

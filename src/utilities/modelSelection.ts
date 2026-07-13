@@ -83,6 +83,16 @@ export function modelSelectionToPayload(
   };
 }
 
+export function resolveCustomModelDisplayName(
+  customModelId: string,
+  models?: ModelListResponse,
+): string | null {
+  return (
+    models?.custom.find((model) => model.id === customModelId)?.display_name ??
+    null
+  );
+}
+
 export function reconcileModelSelection(
   selection: ModelSelection,
   models?: ModelListResponse,

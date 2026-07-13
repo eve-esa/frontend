@@ -86,6 +86,7 @@ export type MessageType = {
       custom_model_display_name?: string | null;
       custom_model_name?: string | null;
       agentic_llm_resolved?: string | null;
+      used_fallback_llm?: boolean | null;
     };
   };
 };

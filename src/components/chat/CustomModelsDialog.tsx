@@ -49,6 +49,9 @@ export const CustomModelsDialog = ({
   const { data: models } = useListModels();
   const [editing, setEditing] = useState<CustomModel | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
+  const [providerSelectOpen, setProviderSelectOpen] = useState(false);
+  const [catalogSelectOpen, setCatalogSelectOpen] = useState(false);
+  const isSelectOpen = providerSelectOpen || catalogSelectOpen;
 
   const providers = models?.providers ?? [];
 
@@ -115,7 +118,15 @@ export const CustomModelsDialog = ({
         onOpenChange(open);
       }}
     >
-      <DialogContent className="max-w-2xl">
+      <DialogContent
+        className="max-w-2xl"
+        onPointerDownOutside={(event) => {
+          if (isSelectOpen) event.preventDefault();
+        }}
+        onInteractOutside={(event) => {
+          if (isSelectOpen) event.preventDefault();
+        }}
+      >
         <DialogHeader>
           <DialogTitle>Custom models</DialogTitle>
           <DialogDescription>
@@ -178,6 +189,8 @@ export const CustomModelsDialog = ({
               required
             />
             <Select
+              open={providerSelectOpen}
+              onOpenChange={setProviderSelectOpen}
               value={form.provider_id}
               onValueChange={(providerId) => {
                 const provider = providers.find((item) => item.id === providerId);
@@ -192,7 +205,7 @@ export const CustomModelsDialog = ({
               <SelectTrigger>
                 <SelectValue placeholder="Provider" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent portalled={false}>
                 {providers.map((provider) => (
                   <SelectItem key={provider.id} value={provider.id}>
                     {provider.display_name}
@@ -201,6 +214,8 @@ export const CustomModelsDialog = ({
               </SelectContent>
             </Select>
             <Select
+              open={catalogSelectOpen}
+              onOpenChange={setCatalogSelectOpen}
               value={form.catalog_model_id}
               onValueChange={(catalogModelId) =>
                 setForm((prev) => ({
@@ -212,7 +227,7 @@ export const CustomModelsDialog = ({
               <SelectTrigger>
                 <SelectValue placeholder="Model" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent portalled={false}>
                 {(selectedProvider?.models ?? []).map((model) => (
                   <SelectItem key={model.id} value={model.id}>
                     {model.display_name}
