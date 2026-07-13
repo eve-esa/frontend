@@ -100,7 +100,12 @@ export const ImageLightbox = ({
     event.stopPropagation();
     if (!isZoomed) return;
     event.preventDefault();
-    event.currentTarget.setPointerCapture(event.pointerId);
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch {
+      // Some pointer sequences (stylus/trackpad edge cases) can reference an
+      // already-released pointerId; dragging still works without the capture.
+    }
     dragOriginRef.current = {
       x: event.clientX - transform.x,
       y: event.clientY - transform.y,
