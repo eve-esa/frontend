@@ -122,8 +122,9 @@ export const ArtifactsPage = () => {
 
       {lightboxAsset && (
         <ImageLightbox
-          src={assetUrl(lightboxAsset)}
-          alt={lightboxAsset.filename}
+          images={[
+            { src: assetUrl(lightboxAsset), alt: lightboxAsset.filename },
+          ]}
           open={Boolean(lightboxAsset)}
           onOpenChange={(open) => !open && setLightboxAsset(null)}
         />

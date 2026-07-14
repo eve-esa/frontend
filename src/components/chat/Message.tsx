@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import SmartText from "@/components/ui/SmartText";
 import { MessageFooter } from "./MessageFooter";
-import type { ImageAttachment, MessageType } from "@/types";
+import type { MessageType } from "@/types";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { cn } from "@/lib/utils";
 import { useSmoothStream } from "@/hooks/useSmoothStream";
@@ -27,9 +27,7 @@ export const Message = ({
 }: MessageProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isOverflowing, setIsOverflowing] = useState(false);
-  const [lightboxImage, setLightboxImage] = useState<ImageAttachment | null>(
-    null,
-  );
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const messageRef = useRef<HTMLDivElement | null>(null);
   const textRef = useRef<HTMLDivElement | null>(null);
 
@@ -128,7 +126,7 @@ export const Message = ({
                   key={attachment.id || `${attachment.url}-${index}`}
                   src={attachment.url}
                   alt={attachment.filename}
-                  onClick={() => setLightboxImage(attachment)}
+                  onClick={() => setLightboxIndex(index)}
                   data-testid="message-attachment-image"
                   className="h-28 w-full rounded-lg object-cover cursor-zoom-in"
                 />
@@ -204,12 +202,15 @@ export const Message = ({
         </div>
       </div>
 
-      {lightboxImage && (
+      {lightboxIndex !== null && (
         <ImageLightbox
-          src={lightboxImage.url}
-          alt={lightboxImage.filename}
-          open={Boolean(lightboxImage)}
-          onOpenChange={(open) => !open && setLightboxImage(null)}
+          images={attachments.map((attachment) => ({
+            src: attachment.url,
+            alt: attachment.filename,
+          }))}
+          initialIndex={lightboxIndex}
+          open={lightboxIndex !== null}
+          onOpenChange={(open) => !open && setLightboxIndex(null)}
         />
       )}
     </div>

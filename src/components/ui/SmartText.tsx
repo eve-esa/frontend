@@ -103,54 +103,91 @@ const sanitizeSchema: SanitizeSchema = {
   },
 };
 
+// Markdown title of the form "MCP: {server}/{tool}" (or just "MCP") marks a
+// stub image the backend generated from an MCP tool call, per the backend
+// contract — used to render the provenance pill below.
+const isMcpProvenance = (title: string | undefined): boolean =>
+  Boolean(title?.toLowerCase().startsWith("mcp"));
+
+// Small provenance pill, styled to match ArtifactCard's source label
+// (src/pages/artifacts/ArtifactCard.tsx). Shows "MCP"; the full title (e.g.
+// "MCP: filesystem/read_file") is available as a tooltip.
+const McpBadge = ({ title }: { title: string }) => (
+  <span
+    title={title}
+    className="absolute left-2 top-2 rounded-full border border-primary-400 bg-natural-1000/60 px-2 py-0.5 text-[10px] uppercase tracking-wide text-natural-50"
+  >
+    MCP
+  </span>
+);
+
 // Renders both `![]()` markdown images and raw `<img>` (rehype-raw routes both
-// through the `img` override). Memoized on src+alt so it doesn't re-render — and
-// re-fetch its blob — on every streamed token. Clicking opens a lightbox.
-// The `tile` variant is used inside the gallery grid: uniform cropped
-// thumbnails instead of the free-flowing inline size.
+// through the `img` override). Memoized on src+alt+title so it doesn't
+// re-render — and re-fetch its blob — on every streamed token. The `tile`
+// variant is used inside the gallery grid: uniform cropped thumbnails instead
+// of the free-flowing inline size.
+//
+// Clicking normally opens this image's own lightbox. When `onImageClick` is
+// passed (the gallery-grid case), it defers to the caller instead so a whole
+// paragraph of images can share one lightbox instance with next/prev nav.
 const MarkdownImage = React.memo(
   ({
     src,
     alt,
+    title,
     variant = "inline",
+    onImageClick,
   }: {
     src?: string;
     alt?: string;
+    title?: string;
     variant?: "inline" | "tile";
+    onImageClick?: () => void;
   }) => {
     const [isLightboxOpen, setIsLightboxOpen] = useState(false);
     if (!src) return null;
+    const showMcpBadge = isMcpProvenance(title);
 
     return (
       <>
-        <AuthenticatedImage
-          src={src}
-          alt={alt}
-          onClick={() => setIsLightboxOpen(true)}
-          data-testid="markdown-image"
-          className={
-            variant === "tile"
-              ? "aspect-[4/3] w-full rounded-lg object-cover cursor-zoom-in"
-              : "my-2 max-h-[400px] max-w-[480px] w-auto rounded-lg object-contain cursor-zoom-in"
-          }
-        />
-        <ImageLightbox
-          src={src}
-          alt={alt}
-          open={isLightboxOpen}
-          onOpenChange={setIsLightboxOpen}
-        />
+        <div
+          className={cn(
+            "relative",
+            variant === "tile" ? "w-full" : "inline-block",
+          )}
+        >
+          <AuthenticatedImage
+            src={src}
+            alt={alt}
+            onClick={onImageClick ?? (() => setIsLightboxOpen(true))}
+            data-testid="markdown-image"
+            className={
+              variant === "tile"
+                ? "aspect-[4/3] w-full rounded-lg object-cover cursor-zoom-in"
+                : "my-2 max-h-[400px] max-w-[480px] w-auto rounded-lg object-contain cursor-zoom-in"
+            }
+          />
+          {showMcpBadge && <McpBadge title={title!} />}
+        </div>
+        {!onImageClick && (
+          <ImageLightbox
+            images={[{ src, alt, title }]}
+            open={isLightboxOpen}
+            onOpenChange={setIsLightboxOpen}
+          />
+        )}
       </>
     );
   },
   (prev, next) =>
     prev.src === next.src &&
     prev.alt === next.alt &&
+    prev.title === next.title &&
     prev.variant === next.variant,
 );
 MarkdownImage.displayName = "MarkdownImage";
 
-type GalleryImage = { src: string; alt?: string };
+type GalleryImage = { src: string; alt?: string; title?: string };
 
 // When a paragraph contains only images (whitespace and <br> aside), returns
 // their src/alt so they can be laid out as a gallery grid. Any meaningful text
@@ -179,6 +216,10 @@ const extractGalleryImages = (
             typeof child.properties.alt === "string"
               ? child.properties.alt
               : undefined,
+          title:
+            typeof child.properties.title === "string"
+              ? child.properties.title
+              : undefined,
         });
         continue;
       }
@@ -191,6 +232,13 @@ const extractGalleryImages = (
 const SmartText: React.FC<SmartTextProps> = ({ text, className }) => {
   const { copyToClipboard } = useClipboard();
   const [copiedContent, setCopiedContent] = useState<string | null>(null);
+  // Single shared lightbox for gallery-grid paragraphs (2+ images): clicking
+  // any tile opens the same instance seeded with the full image list and the
+  // clicked index, so prev/next can navigate across the whole gallery.
+  const [galleryLightbox, setGalleryLightbox] = useState<{
+    images: GalleryImage[];
+    index: number;
+  } | null>(null);
 
   // Base styles for all text elements
   const baseText = cn("text-natural-200 leading-6", className);
@@ -223,10 +271,15 @@ const SmartText: React.FC<SmartTextProps> = ({ text, className }) => {
         </a>
       );
     },
-    img: ({ src, alt }) => (
+    img: ({ src, alt, node }) => (
       <MarkdownImage
         src={typeof src === "string" ? src : undefined}
         alt={typeof alt === "string" ? alt : undefined}
+        title={
+          typeof node?.properties?.title === "string"
+            ? node.properties.title
+            : undefined
+        }
       />
     ),
     em: ({ children }) => (
@@ -321,7 +374,11 @@ const SmartText: React.FC<SmartTextProps> = ({ text, className }) => {
                 key={`${image.src}-${index}`}
                 src={image.src}
                 alt={image.alt}
+                title={image.title}
                 variant="tile"
+                onImageClick={() =>
+                  setGalleryLightbox({ images: galleryImages, index })
+                }
               />
             ))}
           </div>
@@ -410,6 +467,14 @@ const SmartText: React.FC<SmartTextProps> = ({ text, className }) => {
       >
         {preparedText}
       </ReactMarkdown>
+      {galleryLightbox && (
+        <ImageLightbox
+          images={galleryLightbox.images}
+          initialIndex={galleryLightbox.index}
+          open={Boolean(galleryLightbox)}
+          onOpenChange={(open) => !open && setGalleryLightbox(null)}
+        />
+      )}
     </div>
   );
 };
