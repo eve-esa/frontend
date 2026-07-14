@@ -150,10 +150,12 @@ const MarkdownImage = React.memo(
 
     return (
       <>
-        <div
+        {/* span, not div: inline images render inside a markdown <p>, where a
+            div would be invalid HTML and trigger React hydration warnings. */}
+        <span
           className={cn(
             "relative",
-            variant === "tile" ? "w-full" : "inline-block",
+            variant === "tile" ? "block w-full" : "inline-block",
           )}
         >
           <AuthenticatedImage
@@ -168,7 +170,7 @@ const MarkdownImage = React.memo(
             }
           />
           {showMcpBadge && <McpBadge title={title!} />}
-        </div>
+        </span>
         {!onImageClick && (
           <ImageLightbox
             images={[{ src, alt, title }]}
