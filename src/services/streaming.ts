@@ -9,6 +9,10 @@ export type StreamEvent =
   | { type: "label"; content: number | string }
   | { type: "reason"; content: string }
   | { type: "rewritten_question"; content: string }
+  // Agentic pipeline only (stream-generate-agentic): emitted when the agent
+  // invokes an MCP tool ("tool_call") or the tool returns ("tool_result").
+  | { type: "tool_call"; content: string }
+  | { type: "tool_result"; content: string }
   | Record<string, unknown>;
 
 export type PostStreamOptions<TPayload> = {

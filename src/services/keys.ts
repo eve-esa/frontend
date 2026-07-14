@@ -35,4 +35,5 @@ export const QUERY_KEYS = {
   userMessageStats: "userMessageStats",
   imageBlob: "imageBlob",
   myImages: "myImages",
+  mcpServers: "mcpServers",
 };

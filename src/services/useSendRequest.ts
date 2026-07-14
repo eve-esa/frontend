@@ -10,6 +10,8 @@ import { handleApiError } from "@/utilities/helpers";
 import { getMessageCollectionPayload } from "@/utilities/collections";
 import { logError } from "./errorLogging";
 import { invalidateTokenUsage } from "./useTokenUsage";
+import { getSelectedMcpServerNames } from "@/utilities/mcpServers";
+import { resolveMessageEndpoint } from "@/utilities/messageEndpoint";
 
 type SendRequestProps = {
   query: string;
@@ -26,18 +28,22 @@ export const sendRequest = async ({
   llm_type,
   attachments,
 }: SendRequestProps) => {
-  const response = await api.post<MessageType>(
-    `/conversations/${conversationId}/messages`,
-    {
-      query,
-      ...settings,
-      ...(llm_type ? { llm_type } : {}),
-      ...getMessageCollectionPayload(),
-      ...(attachments?.length
-        ? { artifact_ids: attachments.map((a) => a.id) }
-        : {}),
-    },
+  const mcpServers = getSelectedMcpServerNames();
+  const { url, extraPayload } = resolveMessageEndpoint(
+    conversationId,
+    mcpServers,
+    "sync",
   );
+  const response = await api.post<MessageType>(url, {
+    query,
+    ...settings,
+    ...(llm_type ? { llm_type } : {}),
+    ...getMessageCollectionPayload(),
+    ...(attachments?.length
+      ? { artifact_ids: attachments.map((a) => a.id) }
+      : {}),
+    ...extraPayload,
+  });
   return response.data;
 };
 
@@ -57,6 +63,10 @@ export const useSendRequest = (conversationId?: string) => {
       const enableStreaming =
         (import.meta.env.VITE_ENABLE_STREAMING ?? "false") === "true";
 
+      const mcpServers = getSelectedMcpServerNames();
+      const { url: streamUrl, extraPayload: mcpPayload } =
+        resolveMessageEndpoint(conversationId, mcpServers, "stream");
+
       const payload = {
         query,
         ...settings,
@@ -65,6 +75,7 @@ export const useSendRequest = (conversationId?: string) => {
         ...(attachments?.length
           ? { artifact_ids: attachments.map((a) => a.id) }
           : {}),
+        ...mcpPayload,
       };
 
       try {
@@ -138,7 +149,7 @@ export const useSendRequest = (conversationId?: string) => {
         let finalAnswer: string | null = null;
         let finalArtifactIds: string[] | undefined;
         await postStream({
-          url: `/conversations/${conversationId}/stream_messages`,
+          url: streamUrl,
           payload,
           onEvent: (evt) => {
             if (
@@ -162,6 +173,18 @@ export const useSendRequest = (conversationId?: string) => {
               addPreAnswerNotice((evt as any).content);
             } else if (
               (evt as any)?.type === "requery" &&
+              typeof (evt as any).content === "string"
+            ) {
+              addPreAnswerNotice((evt as any).content);
+            } else if (
+              (evt as any)?.type === "tool_call" &&
+              typeof (evt as any).content === "string"
+            ) {
+              // Agentic pipeline is invoking an MCP tool; reuse the same
+              // in-stream status mechanism as "status"/"requery" notices.
+              addPreAnswerNotice((evt as any).content);
+            } else if (
+              (evt as any)?.type === "tool_result" &&
               typeof (evt as any).content === "string"
             ) {
               addPreAnswerNotice((evt as any).content);
