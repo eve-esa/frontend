@@ -35,6 +35,11 @@ export type MessageType = {
   // with different keys (`image_id`/`size_bytes`) — see `RawMessageAttachment`
   // and `toImageAttachment` in `utilities/attachments.ts`.
   attachments?: RawMessageAttachment[];
+  // Ids of artifacts (uploads or MCP-generated images) associated with this
+  // message, per the final SSE event / message response. Lets the persisted
+  // message state know about its artifacts without waiting for the
+  // onSettled refetch.
+  artifact_ids?: string[];
   answer?: string;
   was_copied?: boolean;
   query?: string;

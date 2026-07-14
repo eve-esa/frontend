@@ -3,7 +3,7 @@ import type { AxiosProgressEvent } from "axios";
 
 export type StreamEvent =
   | { type: "token"; content: string }
-  | { type: "final"; answer: string }
+  | { type: "final"; answer: string; artifact_ids?: string[] }
   | { type: "status"; content: string }
   | { type: "requery"; content: string }
   | { type: "label"; content: number | string }

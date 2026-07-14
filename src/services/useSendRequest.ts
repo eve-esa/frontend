@@ -34,7 +34,7 @@ export const sendRequest = async ({
       ...(llm_type ? { llm_type } : {}),
       ...getMessageCollectionPayload(),
       ...(attachments?.length
-        ? { image_ids: attachments.map((a) => a.id) }
+        ? { artifact_ids: attachments.map((a) => a.id) }
         : {}),
     },
   );
@@ -63,7 +63,7 @@ export const useSendRequest = (conversationId?: string) => {
         ...(llm_type ? { llm_type } : {}),
         ...getMessageCollectionPayload(),
         ...(attachments?.length
-          ? { image_ids: attachments.map((a) => a.id) }
+          ? { artifact_ids: attachments.map((a) => a.id) }
           : {}),
       };
 
@@ -136,6 +136,7 @@ export const useSendRequest = (conversationId?: string) => {
         };
 
         let finalAnswer: string | null = null;
+        let finalArtifactIds: string[] | undefined;
         await postStream({
           url: `/conversations/${conversationId}/stream_messages`,
           payload,
@@ -150,6 +151,9 @@ export const useSendRequest = (conversationId?: string) => {
               typeof (evt as any).answer === "string"
             ) {
               finalAnswer = (evt as any).answer;
+              if (Array.isArray((evt as any).artifact_ids)) {
+                finalArtifactIds = (evt as any).artifact_ids;
+              }
               setFinalAnswer(finalAnswer ?? "");
             } else if (
               (evt as any)?.type === "status" &&
@@ -179,6 +183,7 @@ export const useSendRequest = (conversationId?: string) => {
           answer: finalAnswer || "",
           query: payload.query,
           attachments,
+          artifact_ids: finalArtifactIds,
         } as unknown as MessageType;
 
         return finalMessage;
@@ -321,10 +326,11 @@ export const useSendRequest = (conversationId?: string) => {
             feedback: null,
             documents: data.documents ?? [],
             request_input: data.request_input,
-            // Explicitly carry attachments over: this rebuilds the message from
-            // scratch and would otherwise drop them, making the images vanish
-            // between send and the refetch that follows onSettled.
+            // Explicitly carry attachments/artifact_ids over: this rebuilds the
+            // message from scratch and would otherwise drop them, making the
+            // images vanish between send and the refetch that follows onSettled.
             attachments: data.attachments,
+            artifact_ids: data.artifact_ids,
           };
 
           return {
