@@ -134,7 +134,7 @@ export const MessageInput = ({
   const inputLengthWithoutNewlines = inputValue.replace(/\n/g, "").length;
   const isOverLimit = inputLengthWithoutNewlines > maxCharacters;
 
-  // ─── Image attachments ─────────────────────────────────────────────────────
+  // ─── File attachments ──────────────────────────────────────────────────────
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
   const { mutateAsync: uploadImage } = useUploadImage();
@@ -572,11 +572,12 @@ export const MessageInput = ({
                     <FontAwesomeIcon icon={faSliders} className="size-4" />
                   </Button>
                 </Tooltip>
-                <Tooltip content={<>Attach images</>} disableClick={true}>
+                <Tooltip content={<>Attach files</>} disableClick={true}>
                   <Button
                     type="button"
                     variant="icon"
                     size="sm"
+                    aria-label="Attach files"
                     data-testid="attach-image-button"
                     onMouseDown={(e) => {
                       e.preventDefault();
