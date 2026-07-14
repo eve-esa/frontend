@@ -145,7 +145,11 @@ const MarkdownImage = React.memo(
     onImageClick?: () => void;
   }) => {
     const [isLightboxOpen, setIsLightboxOpen] = useState(false);
-    if (!src) return null;
+    // The model's prose sometimes embeds invented image URLs that 404 (see
+    // AuthenticatedImage's onError). Collapse the whole wrapper — badge and
+    // lightbox trigger included — rather than leaving an empty husk behind.
+    const [hasError, setHasError] = useState(false);
+    if (!src || hasError) return null;
     const showMcpBadge = isMcpProvenance(title);
 
     return (
@@ -162,6 +166,7 @@ const MarkdownImage = React.memo(
             src={src}
             alt={alt}
             onClick={onImageClick ?? (() => setIsLightboxOpen(true))}
+            onError={() => setHasError(true)}
             data-testid="markdown-image"
             className={
               variant === "tile"
@@ -274,7 +279,15 @@ const SmartText: React.FC<SmartTextProps> = ({ text, className }) => {
       );
     },
     img: ({ src, alt, node }) => (
+      // Keyed by src: react-markdown reparses the whole tree on every
+      // streamed token with no keys of its own, so React falls back to
+      // positional reconciliation. If a sibling earlier in the paragraph
+      // changes shape (e.g. a soft break turns into a paragraph break as
+      // more text streams in), an already-rendered image can get bumped to
+      // a new position and remount — refetching its blob and flashing.
+      // Keying by src lets React match it back up regardless of position.
       <MarkdownImage
+        key={typeof src === "string" ? src : undefined}
         src={typeof src === "string" ? src : undefined}
         alt={typeof alt === "string" ? alt : undefined}
         title={

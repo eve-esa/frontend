@@ -1,9 +1,6 @@
-import { useState } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faImage } from "@fortawesome/free-solid-svg-icons";
+import { useEffect, useState } from "react";
 import { useImageBlob } from "@/services/useImageBlob";
 import { Skeleton } from "./Skeleton";
-import { cn } from "@/lib/utils";
 import { isTrustedRequestUrl, resolveApiOrigin } from "@/utilities/sameOrigin";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "";
@@ -27,12 +24,17 @@ type AuthenticatedImageProps = {
   className?: string;
   onClick?: () => void;
   "data-testid"?: string;
+  // Notifies the caller (e.g. MarkdownImage) that the image failed to load,
+  // so it can collapse its own wrapper (badges, lightbox trigger, ...) too.
+  onError?: () => void;
 };
 
 /**
  * Renders an image that may live behind our authenticated API. Keeps a
  * fixed-size skeleton while loading (no layout shift), shows the image once
- * ready, and falls back to an error box on failure.
+ * ready, and renders nothing on failure — the model's prose sometimes
+ * embeds invented URLs that 404, and a broken-image placeholder box reads
+ * worse than the image simply not being there.
  */
 export const AuthenticatedImage = ({
   src,
@@ -40,6 +42,7 @@ export const AuthenticatedImage = ({
   className,
   onClick,
   "data-testid": dataTestId,
+  onError,
 }: AuthenticatedImageProps) => {
   const authenticated = needsAuthenticatedFetch(src);
   const [directError, setDirectError] = useState(false);
@@ -50,23 +53,12 @@ export const AuthenticatedImage = ({
     isError,
   } = useImageBlob(src, authenticated);
 
-  const errorFallback = (
-    <div
-      data-testid="image-error"
-      className={cn(
-        "flex flex-col items-center justify-center gap-1 bg-primary-800/40 text-natural-400 rounded-md p-2 text-center",
-        className,
-      )}
-    >
-      <FontAwesomeIcon icon={faImage} className="w-5 h-5" />
-      <span className="text-xs break-all line-clamp-2">
-        {alt || "Image unavailable"}
-      </span>
-    </div>
-  );
+  useEffect(() => {
+    if (isError) onError?.();
+  }, [isError, onError]);
 
   if (authenticated) {
-    if (isError) return errorFallback;
+    if (isError) return null;
     if (isLoading || !blobUrl) {
       return <Skeleton className={className} data-testid={dataTestId} />;
     }
@@ -82,7 +74,7 @@ export const AuthenticatedImage = ({
     );
   }
 
-  if (directError) return errorFallback;
+  if (directError) return null;
 
   return (
     <img
@@ -90,7 +82,10 @@ export const AuthenticatedImage = ({
       alt={alt}
       loading="lazy"
       onClick={onClick}
-      onError={() => setDirectError(true)}
+      onError={() => {
+        setDirectError(true);
+        onError?.();
+      }}
       data-testid={dataTestId}
       className={className}
     />

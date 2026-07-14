@@ -9,9 +9,9 @@ import { ArtifactCard } from "./ArtifactCard";
 import { cn } from "@/lib/utils";
 import type { ImageAsset } from "@/types";
 
-// Only "Images" exists today; the tab scaffold is here so future asset kinds
+// Only "Files" exists today; the tab scaffold is here so future asset kinds
 // (uploaded files, model-generated outputs) can slot in without a rewrite.
-const TABS = [{ id: "images", label: "Images", enabled: true }] as const;
+const TABS = [{ id: "images", label: "Files", enabled: true }] as const;
 type TabId = (typeof TABS)[number]["id"];
 
 const assetUrl = (asset: ImageAsset): string =>
@@ -77,13 +77,13 @@ export const ArtifactsPage = () => {
             </div>
           ) : isError ? (
             <p className="text-danger-400">
-              Could not load your images. Please try again.
+              Could not load your files. Please try again.
             </p>
           ) : images.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-2 py-20 text-center">
-              <p className="text-natural-200">No images yet</p>
+              <p className="text-natural-200">No files yet</p>
               <p className="text-sm text-natural-200">
-                Images you attach to a conversation will show up here.
+                Files you attach to a conversation will show up here.
               </p>
             </div>
           ) : (
