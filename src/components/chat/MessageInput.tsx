@@ -33,7 +33,8 @@ import { LOCAL_STORAGE_LLM_TYPE } from "@/utilities/localStorage";
 import {
   LLMType,
   LLMTypeLabel,
-  ACCEPTED_IMAGE_TYPES,
+  ACCEPTED_UPLOAD_EXTENSIONS,
+  ACCEPTED_UPLOAD_MIME_TYPES,
   MAX_ATTACHMENTS_PER_MESSAGE,
   MAX_IMAGE_SIZE_BYTES,
 } from "@/types";
@@ -196,17 +197,21 @@ export const MessageInput = ({
       let slots = MAX_ATTACHMENTS_PER_MESSAGE - attachments.length;
 
       for (const file of files) {
-        if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
-          toast.error(`${file.name}: unsupported image type`);
+        const name = file.name.toLowerCase();
+        const isAccepted =
+          ACCEPTED_UPLOAD_MIME_TYPES.includes(file.type) ||
+          ACCEPTED_UPLOAD_EXTENSIONS.some((ext) => name.endsWith(ext));
+        if (!isAccepted) {
+          toast.error(`${file.name}: unsupported file type`);
           continue;
         }
         if (file.size > MAX_IMAGE_SIZE_BYTES) {
-          toast.error(`${file.name}: image exceeds 10 MB`);
+          toast.error(`${file.name}: file exceeds 10 MB`);
           continue;
         }
         if (slots <= 0) {
           toast.error(
-            `You can attach up to ${MAX_ATTACHMENTS_PER_MESSAGE} images`,
+            `You can attach up to ${MAX_ATTACHMENTS_PER_MESSAGE} files`,
           );
           break;
         }
@@ -219,7 +224,10 @@ export const MessageInput = ({
       const newItems: PendingAttachment[] = accepted.map((file) => ({
         localId: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
         file,
-        previewUrl: URL.createObjectURL(file),
+        // Only images get a thumbnail; other types render as a file chip.
+        previewUrl: file.type.startsWith("image/")
+          ? URL.createObjectURL(file)
+          : "",
         filename: file.name,
         status: "uploading",
         progress: 0,
@@ -295,6 +303,11 @@ export const MessageInput = ({
       "image/jpeg": [".jpg", ".jpeg"],
       "image/webp": [".webp"],
       "image/gif": [".gif"],
+      "application/pdf": [".pdf"],
+      "text/csv": [".csv"],
+      "text/plain": [".txt"],
+      "application/json": [".json"],
+      "application/geo+json": [".geojson"],
     },
     multiple: true,
     noClick: true,
@@ -450,7 +463,7 @@ export const MessageInput = ({
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/png,image/jpeg,image/webp,image/gif"
+              accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,text/csv,text/plain,application/json,.pdf,.csv,.txt,.json,.geojson"
               multiple
               className="hidden"
               data-testid="attach-image-input"

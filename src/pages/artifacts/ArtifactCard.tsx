@@ -1,7 +1,12 @@
 import { Link, generatePath } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTrash, faUpRightFromSquare } from "@fortawesome/free-solid-svg-icons";
+import {
+  faTrash,
+  faUpRightFromSquare,
+  faFile,
+} from "@fortawesome/free-solid-svg-icons";
 import { AuthenticatedImage } from "@/components/ui/AuthenticatedImage";
+import { ArtifactDownloadChip } from "@/components/ui/ArtifactDownloadChip";
 import { Spinner } from "@/components/ui/Spinner";
 import { routes } from "@/utilities/routes";
 import { formatDate } from "@/utilities/dayjs";
@@ -37,12 +42,23 @@ export const ArtifactCard = ({
       className="flex flex-col overflow-hidden rounded-lg border border-primary-400 bg-primary-900"
     >
       <div className="relative aspect-square w-full bg-primary-800/40">
-        <AuthenticatedImage
-          src={assetUrl(asset)}
-          alt={asset.filename}
-          onClick={onOpen}
-          className="h-full w-full object-cover cursor-zoom-in"
-        />
+        {asset.content_type.startsWith("image/") ? (
+          <AuthenticatedImage
+            src={assetUrl(asset)}
+            alt={asset.filename}
+            onClick={onOpen}
+            className="h-full w-full object-cover cursor-zoom-in"
+          />
+        ) : (
+          // Non-image artifacts (pdf, csv, ...) have no thumbnail and no
+          // lightbox: a file placeholder; the chip below downloads them.
+          <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-natural-200">
+            <FontAwesomeIcon icon={faFile} className="h-10 w-10" />
+            <span className="text-xs uppercase">
+              {asset.filename.split(".").pop()}
+            </span>
+          </div>
+        )}
         {sourceLabel(asset) && (
           <span className="absolute left-2 top-2 rounded-full border border-primary-400 bg-natural-1000/60 px-2 py-0.5 text-[10px] uppercase tracking-wide text-natural-50">
             {sourceLabel(asset)}
@@ -73,10 +89,18 @@ export const ArtifactCard = ({
         >
           {asset.filename}
         </span>
-        <div className="flex items-center justify-between text-xs text-natural-300">
+        {/* natural-300 is near-black in this palette — unreadable on the
+            dark card; natural-200 is the light muted tone. */}
+        <div className="flex items-center justify-between text-xs text-natural-200">
           <span>{asset.timestamp ? formatDate(asset.timestamp) : ""}</span>
           <span>{formatBytes(asset.size_bytes)}</span>
         </div>
+        {!asset.content_type.startsWith("image/") && (
+          <ArtifactDownloadChip
+            href={assetUrl(asset)}
+            filename={asset.filename}
+          />
+        )}
         {asset.conversation_id && (
           <Link
             to={generatePath(routes.CHAT.path, {

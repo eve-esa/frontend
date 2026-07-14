@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { useSmoothStream } from "@/hooks/useSmoothStream";
 import { AuthenticatedImage } from "@/components/ui/AuthenticatedImage";
 import { ImageLightbox } from "@/components/ui/ImageLightbox";
+import { ArtifactDownloadChip } from "@/components/ui/ArtifactDownloadChip";
 import { toImageAttachment } from "@/utilities/attachments";
 import { stripIncompleteImage } from "@/utilities/stripIncompleteImage";
 
@@ -32,6 +33,14 @@ export const Message = ({
   const textRef = useRef<HTMLDivElement | null>(null);
 
   const attachments = (message.attachments ?? []).map(toImageAttachment);
+  // Only images join the thumbnail grid + lightbox; other uploads (pdf, csv,
+  // ...) render as download chips. The lightbox indexes the image list only.
+  const imageAttachments = attachments.filter((a) =>
+    (a.content_type ?? "").startsWith("image/"),
+  );
+  const fileAttachments = attachments.filter(
+    (a) => !(a.content_type ?? "").startsWith("image/"),
+  );
 
   const showLoading = isSending && isLastMessage && !message?.output;
 
@@ -119,9 +128,9 @@ export const Message = ({
       {/* USER BUBBLE */}
       <div className="flex justify-end">
         <div className="max-w-[min(1200px,90%)] bg-primary-900 border-2 border-primary-400 text-natural-50 rounded-2xl rounded-br-sm px-4 py-3 shadow-sm">
-          {attachments.length > 0 && (
+          {imageAttachments.length > 0 && (
             <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {attachments.map((attachment, index) => (
+              {imageAttachments.map((attachment, index) => (
                 <AuthenticatedImage
                   key={attachment.id || `${attachment.url}-${index}`}
                   src={attachment.url}
@@ -129,6 +138,17 @@ export const Message = ({
                   onClick={() => setLightboxIndex(index)}
                   data-testid="message-attachment-image"
                   className="h-28 w-full rounded-lg object-cover cursor-zoom-in"
+                />
+              ))}
+            </div>
+          )}
+          {fileAttachments.length > 0 && (
+            <div className="mb-3 flex flex-wrap gap-2">
+              {fileAttachments.map((attachment, index) => (
+                <ArtifactDownloadChip
+                  key={attachment.id || `${attachment.url}-${index}`}
+                  href={attachment.url}
+                  filename={attachment.filename}
                 />
               ))}
             </div>
@@ -204,7 +224,7 @@ export const Message = ({
 
       {lightboxIndex !== null && (
         <ImageLightbox
-          images={attachments.map((attachment) => ({
+          images={imageAttachments.map((attachment) => ({
             src: attachment.url,
             alt: attachment.filename,
           }))}

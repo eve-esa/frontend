@@ -210,6 +210,32 @@ export const ACCEPTED_IMAGE_TYPES = [
   "image/gif",
 ];
 
+// Client-side mirror of the backend's upload allowlist (see
+// ARTIFACT_UPLOAD_ALLOWED_TYPES): images plus pdf/csv/txt/json/geojson.
+// Validation accepts a file by MIME type OR extension because browsers
+// report an empty MIME type for extensions they don't know (e.g. .geojson).
+export const ACCEPTED_UPLOAD_MIME_TYPES = [
+  ...ACCEPTED_IMAGE_TYPES,
+  "application/pdf",
+  "text/csv",
+  "text/plain",
+  "application/json",
+  "application/geo+json",
+];
+
+export const ACCEPTED_UPLOAD_EXTENSIONS = [
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".webp",
+  ".gif",
+  ".pdf",
+  ".csv",
+  ".txt",
+  ".json",
+  ".geojson",
+];
+
 export const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 
 export const MAX_ATTACHMENTS_PER_MESSAGE = 4;

@@ -293,7 +293,16 @@ export const ImageLightbox = ({
         <DialogTitle className="sr-only">
           {current.alt || "Image preview"}
         </DialogTitle>
-        <div ref={setFullscreenRootEl} className="relative">
+        {/* In fullscreen the wrapper is stretched to the whole screen, so it
+            must center its content (otherwise the image sits top-left). */}
+        <div
+          ref={setFullscreenRootEl}
+          className={cn(
+            "relative",
+            isFullscreen &&
+              "flex h-full w-full items-center justify-center bg-natural-1000",
+          )}
+        >
           <div
             ref={setViewportEl}
             className={cn(
@@ -331,7 +340,10 @@ export const ImageLightbox = ({
               <AuthenticatedImage
                 src={current.src}
                 alt={current.alt}
-                className="max-h-[85vh] w-auto max-w-full rounded-lg object-contain"
+                className={cn(
+                  "w-auto max-w-full rounded-lg object-contain",
+                  isFullscreen ? "max-h-screen" : "max-h-[85vh]",
+                )}
               />
             </div>
           </div>

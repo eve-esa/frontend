@@ -56,7 +56,7 @@ export const ArtifactsPage = () => {
                     "px-3 py-2 text-sm transition-colors",
                     activeTab === tab.id
                       ? "border-b-2 border-success-200 text-natural-50"
-                      : "text-natural-300 hover:text-natural-50",
+                      : "text-natural-200 hover:text-natural-50",
                     !tab.enabled && "opacity-40 cursor-not-allowed",
                   )}
                 >
@@ -82,7 +82,7 @@ export const ArtifactsPage = () => {
           ) : images.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-2 py-20 text-center">
               <p className="text-natural-200">No images yet</p>
-              <p className="text-sm text-natural-300">
+              <p className="text-sm text-natural-200">
                 Images you attach to a conversation will show up here.
               </p>
             </div>

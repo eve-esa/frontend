@@ -3,15 +3,17 @@ import {
   faXmark,
   faRotateRight,
   faTriangleExclamation,
+  faFile,
 } from "@fortawesome/free-solid-svg-icons";
 import { Spinner } from "@/components/ui/Spinner";
 import type { ImageAttachment } from "@/types";
 
 export type PendingAttachmentStatus = "uploading" | "done" | "error";
 
-// A locally-selected image being uploaded before the message is sent. The
-// thumbnail is a local object URL (no network), while `uploaded` holds the
-// server-side attachment once POST /artifacts resolves.
+// A locally-selected file being uploaded before the message is sent. For
+// images the thumbnail is a local object URL (no network) — empty for other
+// types — while `uploaded` holds the server-side attachment once
+// POST /artifacts resolves.
 export type PendingAttachment = {
   localId: string;
   file: File;
@@ -43,11 +45,24 @@ export const AttachmentPreviewList = ({
           data-testid="attachment-preview"
           className="relative h-16 w-16 flex-none overflow-hidden rounded-lg border border-primary-400 bg-primary-800/40"
         >
-          <img
-            src={attachment.previewUrl}
-            alt={attachment.filename}
-            className="h-full w-full object-cover"
-          />
+          {attachment.previewUrl ? (
+            <img
+              src={attachment.previewUrl}
+              alt={attachment.filename}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            // Non-image files have no local thumbnail: icon + extension chip.
+            <div
+              title={attachment.filename}
+              className="flex h-full w-full flex-col items-center justify-center gap-0.5 text-natural-200"
+            >
+              <FontAwesomeIcon icon={faFile} className="h-5 w-5" />
+              <span className="text-[9px] uppercase">
+                {attachment.filename.split(".").pop()}
+              </span>
+            </div>
+          )}
 
           {attachment.status === "uploading" && (
             <div className="absolute inset-0 flex items-center justify-center bg-natural-1000/50">
