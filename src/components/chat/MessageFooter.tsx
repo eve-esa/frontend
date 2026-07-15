@@ -13,15 +13,8 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Button } from "@/components/ui/Button";
 import SmartText from "@/components/ui/SmartText";
-import type { MessageType, ChaMessageType, Document } from "@/types";
+import type { MessageType, ChaMessageType, Document, ModelListResponse } from "@/types";
 import { LLMTypeLabel, LLMType } from "@/types";
-
-const LLM_TYPE_TO_LABEL: Record<string, LLMTypeLabel> = {
-  [LLMType.Main]: LLMTypeLabel.Main,
-  [LLMType.Mistral]: LLMTypeLabel.Mistral,
-  [LLMType.Satcom_Small]: LLMTypeLabel.Satcom_Small,
-  [LLMType.Satcom_Large]: LLMTypeLabel.Satcom_Large,
-};
 import { useSidebar, type SidebarContent } from "./DynamicSidebarProvider";
 import { useClipboard } from "@/hooks/useClipboard";
 import { useState } from "react";
@@ -35,7 +28,85 @@ import { QUERY_KEYS } from "@/services/keys";
 import { toast } from "sonner";
 import type { ApiError } from "@/types";
 import { handleApiError } from "@/utilities/helpers";
-const isStaging = (import.meta.env.VITE_IS_STAGING ?? "false") === "true";
+import { useListModels } from "@/services/useListModels";
+import { resolveCustomModelDisplayName } from "@/utilities/modelSelection";
+
+const LLM_TYPE_TO_LABEL: Record<string, string> = {
+  [LLMType.Main]: LLMTypeLabel.Main,
+  [LLMType.Mistral]: LLMTypeLabel.Mistral,
+  [LLMType.Satcom_Small]: LLMTypeLabel.Satcom_Small,
+  [LLMType.Satcom_Large]: LLMTypeLabel.Satcom_Large,
+  [LLMType.EVE_JSC]: LLMTypeLabel.EVE_JSC,
+  fallback: "Fallback",
+};
+
+function resolveLlmTypeLabel(
+  llmType: string,
+  models?: ModelListResponse,
+): string {
+  const platformModel = models?.platform.find((model) => model.llm_type === llmType);
+  return platformModel?.display_name || LLM_TYPE_TO_LABEL[llmType] || llmType;
+}
+
+function getSelectedModelLabel(
+  message: MessageType,
+  models?: ModelListResponse,
+): string | null {
+  if (message.request_input?.custom_model_id) {
+    return (
+      message.metadata?.prompts?.custom_model_display_name ||
+      resolveCustomModelDisplayName(
+        message.request_input.custom_model_id,
+        models,
+      )
+    );
+  }
+  if (message.request_input?.llm_type) {
+    return resolveLlmTypeLabel(message.request_input.llm_type, models);
+  }
+  return null;
+}
+
+function getFallbackModelLabel(
+  message: MessageType,
+  models?: ModelListResponse,
+): string {
+  const resolved = message.metadata?.prompts?.agentic_llm_resolved;
+  if (resolved) {
+    return resolveLlmTypeLabel(resolved, models);
+  }
+  return (
+    models?.platform.find((model) => model.llm_type === "fallback")
+      ?.display_name ||
+    message.metadata?.generated_model_name ||
+    "Fallback"
+  );
+}
+
+function getAnsweredByLabel(
+  message: MessageType,
+  models?: ModelListResponse,
+): string | null {
+  const usedFallback = message.metadata?.prompts?.used_fallback_llm;
+
+  if (usedFallback === true) {
+    return getFallbackModelLabel(message, models);
+  }
+
+  const selected = getSelectedModelLabel(message, models);
+  if (usedFallback === false) {
+    return selected;
+  }
+
+  if (
+    message.metadata?.latencies?.fallback_latency &&
+    !message.metadata?.latencies?.base_generation_latency
+  ) {
+    return getFallbackModelLabel(message, models);
+  }
+
+  return selected;
+}
 
 type MessageFooterProps = {
   message: MessageType;
@@ -44,6 +115,7 @@ type MessageFooterProps = {
 export const MessageFooter = ({ message }: MessageFooterProps) => {
   const { conversationId } = useParams();
   const queryClient = useQueryClient();
+  const { data: models } = useListModels();
   const { copyToClipboard, isCopied } = useClipboard();
   const {
     copyToClipboard: copyToClipboardHallucination,
@@ -386,20 +458,15 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
             >
               <span className="font-['NotesESA']">Hallucination Detector</span>
             </Button>
-            {isStaging && (
-              <div className="text-sm text-natural-500">
-                Answered by:{" "}
-                {message?.metadata?.latencies?.base_generation_latency
-                  ? message?.request_input?.llm_type &&
-                    LLM_TYPE_TO_LABEL[
-                      message.request_input
-                        .llm_type as keyof typeof LLMTypeLabel
-                    ]
-                  : "Fallback"}
-                {message?.metadata?.generated_model_name &&
-                  ` (${message.metadata.generated_model_name})`}
-              </div>
-            )}
+            <div className="text-sm text-natural-500">
+              Answered by:{" "}
+              {getAnsweredByLabel(message, models) || "EVE-Instruct"}
+              {message?.metadata?.generated_model_name &&
+                ` (${message.metadata.generated_model_name})`}
+              {message?.metadata?.prompts?.custom_model_name &&
+                !message?.metadata?.generated_model_name &&
+                ` (${message.metadata.prompts.custom_model_name})`}
+            </div>
           </div>
         </div>
         <div className="self-end cursor-pointer flex items-center">

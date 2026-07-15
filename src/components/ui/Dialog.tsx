@@ -4,6 +4,22 @@ import { cn } from "@/lib/utils";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
 
+let selectWasOpenAtPointerDown = false;
+
+if (typeof document !== "undefined") {
+  document.addEventListener(
+    "pointerdown",
+    () => {
+      selectWasOpenAtPointerDown = Boolean(
+        document.querySelector(
+          '[data-slot="select-content"][data-state="open"]',
+        ),
+      );
+    },
+    true,
+  );
+}
+
 function Dialog({
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Root>) {
@@ -48,10 +64,34 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  onPointerDownOutside,
+  onInteractOutside,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean;
 }) {
+  const preventCloseForOpenSelect = (
+    event: CustomEvent<{ originalEvent: PointerEvent | FocusEvent }>,
+  ) => {
+    if (selectWasOpenAtPointerDown) {
+      selectWasOpenAtPointerDown = false;
+      event.preventDefault();
+      return;
+    }
+
+    const target =
+      (event.detail.originalEvent.target as HTMLElement | null) ??
+      (event.target as HTMLElement | null);
+    if (
+      target?.closest('[data-slot="select-content"]') ||
+      target?.closest('[data-slot="select-trigger"]') ||
+      target?.closest('[data-radix-select-content]') ||
+      target?.closest('[data-radix-popper-content-wrapper]')
+    ) {
+      event.preventDefault();
+    }
+  };
+
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay />
@@ -63,6 +103,14 @@ function DialogContent({
         )}
         style={{ outline: "none", boxShadow: "none" }}
         {...props}
+        onPointerDownOutside={(event) => {
+          preventCloseForOpenSelect(event);
+          onPointerDownOutside?.(event);
+        }}
+        onInteractOutside={(event) => {
+          preventCloseForOpenSelect(event);
+          onInteractOutside?.(event);
+        }}
       >
         {children}
         {showCloseButton && (

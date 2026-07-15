@@ -4,6 +4,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPaperPlane } from "@fortawesome/free-regular-svg-icons";
 import {
   faArrowRight,
+  faPlus,
   faSearch,
   faSliders,
   faStop,
@@ -21,8 +22,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/Select";
-import { LOCAL_STORAGE_LLM_TYPE } from "@/utilities/localStorage";
-import { LLMType, LLMTypeLabel } from "@/types";
+import {
+  getStoredModelSelection,
+  modelSelectionToValue,
+  parseModelSelectionValue,
+  reconcileModelSelection,
+  setStoredModelSelection,
+} from "@/utilities/modelSelection";
+import { useListModels } from "@/services/useListModels";
+import { CustomModelsDialog } from "./CustomModelsDialog";
 import { useParams } from "react-router-dom";
 import { abortCurrentStream } from "@/services/streaming";
 import { stopConversation as stopConversationApi } from "@/services/stopConversation";
@@ -31,7 +39,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { QUERY_KEYS } from "@/services/keys";
 import type { ChaMessageType, MessageType } from "@/types";
 import { useTokenUsage } from "@/services/useTokenUsage";
-const isStaging = (import.meta.env.VITE_IS_STAGING ?? "false") === "true";
 
 const TOKEN_RING_R = 7;
 const TOKEN_RING_C = 2 * Math.PI * TOKEN_RING_R;
@@ -128,10 +135,25 @@ export const MessageInput = ({
   };
 
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [llmType, setLlmType] = useState<string>(
-    (localStorage.getItem(LOCAL_STORAGE_LLM_TYPE) as LLMType) || LLMType.Main,
+  const [modelSelectionValue, setModelSelectionValue] = useState<string>(() =>
+    modelSelectionToValue(getStoredModelSelection()),
   );
+  const [customModelsOpen, setCustomModelsOpen] = useState(false);
+  const { data: models } = useListModels();
   const [isAnimatingOut, setIsAnimatingOut] = useState(false);
+
+  useEffect(() => {
+    if (!models) return;
+    const stored = getStoredModelSelection(models);
+    const reconciled = reconcileModelSelection(stored, models);
+    if (
+      reconciled.type !== stored.type ||
+      reconciled.id !== stored.id
+    ) {
+      setStoredModelSelection(reconciled);
+    }
+    setModelSelectionValue(modelSelectionToValue(reconciled));
+  }, [models]);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const queryClient = useQueryClient();
   const {
@@ -309,41 +331,66 @@ export const MessageInput = ({
 
             <div className="flex items-center justify-between pointer-events-none p-2 md:p-6 pt-0 md:pt-1">
               <div className="pointer-events-auto flex items-center gap-2">
-                {isStaging && (
-                  <div className="min-w-[120px]">
-                    <Select
-                      value={llmType}
-                      onValueChange={(value) => {
-                        setLlmType(value);
-                        localStorage.setItem(LOCAL_STORAGE_LLM_TYPE, value);
-                      }}
+                <div className="min-w-[140px]">
+                  <Select
+                    value={modelSelectionValue}
+                    onValueChange={(value) => {
+                      setModelSelectionValue(value);
+                      setStoredModelSelection(parseModelSelectionValue(value));
+                    }}
+                  >
+                    <SelectTrigger
+                      size="sm"
+                      className="bg-primary-900/60 border border-primary-400/60"
                     >
-                      <SelectTrigger
-                        size="sm"
-                        className="bg-primary-900/60 border border-primary-400/60"
-                      >
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-primary-900/60 border-primary-400/60 backdrop-blur-[2px]">
-                        <SelectItem value={LLMType.Main}>
-                          {LLMTypeLabel.Main}
+                      <SelectValue placeholder="Select model" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-primary-900/60 border-primary-400/60 backdrop-blur-[2px]">
+                      {models?.platform.map((model) => (
+                        <SelectItem
+                          key={model.id}
+                          value={modelSelectionToValue({
+                            type: "platform",
+                            id: model.id,
+                          })}
+                        >
+                          {model.display_name}
                         </SelectItem>
-                        <SelectItem value={LLMType.Mistral}>
-                          {LLMTypeLabel.Mistral}
-                        </SelectItem>
-                        <SelectItem value={LLMType.Satcom_Small}>
-                          {LLMTypeLabel.Satcom_Small}
-                        </SelectItem>
-                        <SelectItem value={LLMType.Satcom_Large}>
-                          {LLMTypeLabel.Satcom_Large}
-                        </SelectItem>
-                        <SelectItem value={LLMType.EVE_JSC}>
-                          {LLMTypeLabel.EVE_JSC}
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
+                      ))}
+                      {(models?.custom?.length ?? 0) > 0 ? (
+                        <>
+                          {models?.custom.map((model) => (
+                            <SelectItem
+                              key={model.id}
+                              value={modelSelectionToValue({
+                                type: "custom",
+                                id: model.id,
+                              })}
+                            >
+                              {model.display_name}
+                            </SelectItem>
+                          ))}
+                        </>
+                      ) : null}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Tooltip content={<>Manage custom models</>} disableClick={true}>
+                  <Button
+                    type="button"
+                    variant="icon"
+                    size="sm"
+                    className="h-8 w-8 p-0 cursor-pointer"
+                    onClick={() => setCustomModelsOpen(true)}
+                    aria-label="Manage custom models"
+                  >
+                    <FontAwesomeIcon icon={faPlus} className="size-4" />
+                  </Button>
+                </Tooltip>
+                <CustomModelsDialog
+                  isOpen={customModelsOpen}
+                  onOpenChange={setCustomModelsOpen}
+                />
                 <Tooltip content={<>Control Panel</>} disableClick={true}>
                   <Button
                     type="button"

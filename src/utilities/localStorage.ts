@@ -9,3 +9,4 @@ export const LOCAL_STORAGE_PRIVATE_COLLECTIONS = "private_collections";
 export const LOCAL_STORAGE_PUBLIC_MCP_SERVERS = "public_mcp_servers";
 export const LOCAL_STORAGE_WELCOME_DIALOG_VIEWED = "welcome_dialog_viewed";
 export const LOCAL_STORAGE_LLM_TYPE = "llm_type";
+export const LOCAL_STORAGE_MODEL_SELECTION = "model_selection";

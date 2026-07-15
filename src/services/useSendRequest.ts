@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { MUTATION_KEYS, QUERY_KEYS } from "./keys";
 import { toast } from "sonner";
 import type { AdvancedSettingsValidation } from "@/components/chat/SettingsForm";
-import type { LLMType } from "@/types";
+import type { ModelListResponse, ModelSelection } from "@/types";
 import api from "./axios";
 import { postStream, consumeSuppressToastFlag } from "./streaming";
 import type { ApiError, ChaMessageType, MessageType } from "@/types";
@@ -16,23 +16,35 @@ import {
   updateLastTempMessage,
   type CreateMessageResponse,
 } from "./agenticMessage";
+import {
+  getStoredModelSelection,
+  modelSelectionToPayload,
+  reconcileModelSelection,
+} from "@/utilities/modelSelection";
 
 type SendRequestProps = {
   query: string;
   conversationId?: string;
   settings: AdvancedSettingsValidation;
-  llm_type?: LLMType;
+  modelSelection?: ModelSelection;
+  models?: ModelListResponse;
 };
 
 export const sendRequest = async ({
   query,
   conversationId,
   settings,
-  llm_type,
+  modelSelection,
+  models,
 }: SendRequestProps) => {
   const response = await api.post<CreateMessageResponse>(
     `/conversations/${conversationId}/stream-generate-agentic`,
-    buildGenerationPayload({ query, settings, llm_type }),
+    buildGenerationPayload({
+      query,
+      settings,
+      modelSelection,
+      models,
+    }),
   );
   return mapCreateMessageResponse(response.data);
 };
@@ -47,15 +59,30 @@ export const useSendRequest = (conversationId?: string) => {
       query,
       conversationId,
       settings,
-      llm_type,
+      modelSelection,
+      models,
     }: SendRequestProps) => {
       const enableStreaming =
         (import.meta.env.VITE_ENABLE_STREAMING ?? "false") === "true";
-      const payload = buildGenerationPayload({ query, settings, llm_type });
+      const cachedModels =
+        models ??
+        queryClient.getQueryData<ModelListResponse>([QUERY_KEYS.models]);
+      const payload = buildGenerationPayload({
+        query,
+        settings,
+        modelSelection,
+        models: cachedModels,
+      });
 
       try {
         if (!enableStreaming) {
-          return sendRequest({ query, conversationId, settings, llm_type });
+          return sendRequest({
+            query,
+            conversationId,
+            settings,
+            modelSelection,
+            models: cachedModels,
+          });
         }
 
         const updateTemp = (updater: (msg: MessageType) => MessageType) =>
@@ -100,6 +127,13 @@ export const useSendRequest = (conversationId?: string) => {
         });
 
         const now = new Date();
+        const payloadFields = modelSelectionToPayload(
+          reconcileModelSelection(
+            modelSelection ?? getStoredModelSelection(cachedModels),
+            cachedModels,
+          ),
+          cachedModels,
+        );
         return mapToConversationMessage({
           id: `srv-${now.getTime()}`,
           timestamp: now,
@@ -110,7 +144,10 @@ export const useSendRequest = (conversationId?: string) => {
           documents: [],
           answer: finalAnswer || "",
           query: payload.query,
-          request_input: { llm_type: llm_type ?? null },
+          request_input: {
+            llm_type: payloadFields.llm_type ?? null,
+            custom_model_id: payloadFields.custom_model_id ?? null,
+          },
         });
       } catch (e) {
         console.error("streaming error", e);
