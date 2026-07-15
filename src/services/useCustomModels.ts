@@ -2,7 +2,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import api from "./axios";
 import { MUTATION_KEYS, QUERY_KEYS } from "./keys";
-import type { CustomModel } from "@/types";
+import type { ApiError, CustomModel } from "@/types";
+import { handleApiError } from "@/utilities/helpers";
 
 export type CreateCustomModelInput = {
   display_name: string;
@@ -50,8 +51,8 @@ export const useCreateCustomModel = (onSuccess?: () => void) => {
       toast.success("Custom model added");
       onSuccess?.();
     },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to add custom model");
+    onError: (error: ApiError) => {
+      toast.error(handleApiError(error));
     },
   });
 };
@@ -66,8 +67,8 @@ export const useUpdateCustomModel = (onSuccess?: () => void) => {
       toast.success("Custom model updated");
       onSuccess?.();
     },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to update custom model");
+    onError: (error: ApiError) => {
+      toast.error(handleApiError(error));
     },
   });
 };
@@ -82,8 +83,8 @@ export const useDeleteCustomModel = (onSuccess?: () => void) => {
       toast.success("Custom model removed");
       onSuccess?.();
     },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to remove custom model");
+    onError: (error: ApiError) => {
+      toast.error(handleApiError(error));
     },
   });
 };
