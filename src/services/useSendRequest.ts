@@ -129,7 +129,7 @@ export const useSendRequest = (conversationId?: string) => {
         const now = new Date();
         const payloadFields = modelSelectionToPayload(
           reconcileModelSelection(
-            modelSelection ?? getStoredModelSelection(),
+            modelSelection ?? getStoredModelSelection(cachedModels),
             cachedModels,
           ),
           cachedModels,

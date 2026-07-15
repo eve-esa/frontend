@@ -144,15 +144,15 @@ export const MessageInput = ({
 
   useEffect(() => {
     if (!models) return;
-    const stored = getStoredModelSelection();
+    const stored = getStoredModelSelection(models);
     const reconciled = reconcileModelSelection(stored, models);
     if (
       reconciled.type !== stored.type ||
       reconciled.id !== stored.id
     ) {
       setStoredModelSelection(reconciled);
-      setModelSelectionValue(modelSelectionToValue(reconciled));
     }
+    setModelSelectionValue(modelSelectionToValue(reconciled));
   }, [models]);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const queryClient = useQueryClient();

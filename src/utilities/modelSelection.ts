@@ -1,10 +1,37 @@
-import { LOCAL_STORAGE_MODEL_SELECTION } from "@/utilities/localStorage";
+import {
+  LOCAL_STORAGE_LLM_TYPE,
+  LOCAL_STORAGE_MODEL_SELECTION,
+} from "@/utilities/localStorage";
+import { LLMType } from "@/types";
 import type { ModelListResponse, ModelSelection, PlatformModel } from "@/types";
 
 export const DEFAULT_MODEL_SELECTION: ModelSelection = {
   type: "platform",
   id: "eve-instruct",
 };
+
+function resolveDefaultModelSelection(
+  models?: ModelListResponse,
+): ModelSelection {
+  const mainModel = models?.platform.find(
+    (model) => model.llm_type === LLMType.Main,
+  );
+  if (mainModel) {
+    return { type: "platform", id: mainModel.id };
+  }
+  return DEFAULT_MODEL_SELECTION;
+}
+
+function mapLegacyLlmTypeToSelection(
+  llmType: string,
+  platformModels: PlatformModel[] = [],
+): ModelSelection {
+  const match = platformModels.find((model) => model.llm_type === llmType);
+  if (match) {
+    return { type: "platform", id: match.id };
+  }
+  return DEFAULT_MODEL_SELECTION;
+}
 
 export function parseModelSelection(raw: string | null): ModelSelection {
   if (!raw) return DEFAULT_MODEL_SELECTION;
@@ -18,19 +45,37 @@ export function parseModelSelection(raw: string | null): ModelSelection {
       return parsed;
     }
   } catch {
-    // Legacy llm_type string in localStorage
-    if (raw === "main") {
-      return DEFAULT_MODEL_SELECTION;
-    }
-    if (raw === "fallback") {
-      return { type: "platform", id: "mistral-small-latest" };
-    }
+    // Invalid JSON in model_selection
   }
   return DEFAULT_MODEL_SELECTION;
 }
 
-export function getStoredModelSelection(): ModelSelection {
-  return parseModelSelection(localStorage.getItem(LOCAL_STORAGE_MODEL_SELECTION));
+export function getStoredModelSelection(
+  models?: ModelListResponse,
+): ModelSelection {
+  const stored = localStorage.getItem(LOCAL_STORAGE_MODEL_SELECTION);
+  if (stored) {
+    return parseModelSelection(stored);
+  }
+
+  const legacyLlmType = localStorage.getItem(LOCAL_STORAGE_LLM_TYPE);
+  if (!legacyLlmType) {
+    return resolveDefaultModelSelection(models);
+  }
+
+  const selection = mapLegacyLlmTypeToSelection(
+    legacyLlmType,
+    models?.platform ?? [],
+  );
+
+  if (models?.platform?.length) {
+    const migrated = reconcileModelSelection(selection, models);
+    setStoredModelSelection(migrated);
+    localStorage.removeItem(LOCAL_STORAGE_LLM_TYPE);
+    return migrated;
+  }
+
+  return selection;
 }
 
 export function setStoredModelSelection(selection: ModelSelection): void {
@@ -100,5 +145,5 @@ export function reconcileModelSelection(
   if (!models || isModelSelectionAvailable(selection, models)) {
     return selection;
   }
-  return DEFAULT_MODEL_SELECTION;
+  return resolveDefaultModelSelection(models);
 }

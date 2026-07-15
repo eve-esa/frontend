@@ -116,7 +116,7 @@ export const Chat = () => {
         localStorage.getItem(LOCAL_STORAGE_SETTINGS) ?? "{}",
       );
       const modelSelection = reconcileModelSelection(
-        getStoredModelSelection(),
+        getStoredModelSelection(models),
         models,
       );
 

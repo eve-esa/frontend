@@ -44,7 +44,7 @@ export const buildGenerationPayload = ({
   models,
 }: GenerationInput) => {
   const selection = reconcileModelSelection(
-    modelSelection ?? getStoredModelSelection(),
+    modelSelection ?? getStoredModelSelection(models),
     models,
   );
   const modelFields = modelSelectionToPayload(selection, models);
