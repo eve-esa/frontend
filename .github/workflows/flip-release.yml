@@ -1,0 +1,124 @@
+name: Flip Release
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+        description: Target environment (dev, staging, prod)
+      release-sha:
+        required: true
+        type: string
+        description: Full commit SHA of the release to flip to
+
+jobs:
+  flip:
+    name: Flip
+    runs-on: ubuntu-latest
+    environment: esa-eve-${{ inputs.environment }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: eu-west-1
+
+      - name: Flip release pointer with ETAG retry
+        id: flip
+        run: |
+          MAX_ATTEMPTS=5
+          ATTEMPT=0
+
+          while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+            ATTEMPT=$((ATTEMPT + 1))
+            echo "Attempt $ATTEMPT/$MAX_ATTEMPTS: Fetching KVS ETag"
+
+            RESPONSE=$(aws cloudfront-keyvaluestore describe-key-value-store --kvs-arn "${{ vars.RELEASE_KVS_ARN }}" 2>&1)
+            ETAG=$(echo "$RESPONSE" | jq -r '.ETag // empty')
+
+            if [ -z "$ETAG" ]; then
+              echo "Failed to fetch ETag: $RESPONSE"
+              if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
+                sleep $((ATTEMPT * 2))
+                continue
+              fi
+              exit 1
+            fi
+
+            echo "ETag: $ETAG"
+
+            # Attempt to put the key with ETAG
+            if aws cloudfront-keyvaluestore put-key \
+              --kvs-arn "${{ vars.RELEASE_KVS_ARN }}" \
+              --key "active_release" \
+              --value "${{ inputs.release-sha }}" \
+              --if-match "$ETAG" 2>&1; then
+              echo "Successfully flipped release pointer to ${{ inputs.release-sha }}"
+              echo "flipped=true" >> $GITHUB_OUTPUT
+              break
+            else
+              ERROR_MSG=$(aws cloudfront-keyvaluestore put-key \
+                --kvs-arn "${{ vars.RELEASE_KVS_ARN }}" \
+                --key "active_release" \
+                --value "${{ inputs.release-sha }}" \
+                --if-match "$ETAG" 2>&1 || true)
+
+              if echo "$ERROR_MSG" | grep -q "PreconditionFailed"; then
+                echo "ETag mismatch (expected after concurrent update), retrying..."
+                if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
+                  sleep $((ATTEMPT * 2))
+                  continue
+                fi
+              fi
+
+              echo "Put-key failed: $ERROR_MSG"
+              exit 1
+            fi
+          done
+
+          if [ "${{ steps.flip.outputs.flipped }}" != "true" ]; then
+            echo "Failed to flip after $MAX_ATTEMPTS attempts"
+            exit 1
+          fi
+
+      - name: HTTP verify release (retry loop)
+        run: |
+          MAX_ATTEMPTS=8
+          ATTEMPT=0
+          DELAY=5
+
+          while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+            ATTEMPT=$((ATTEMPT + 1))
+            echo "Attempt $ATTEMPT/$MAX_ATTEMPTS: Verifying release at ${{ vars.PUBLIC_URL }}"
+
+            # Check root endpoint
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${{ vars.PUBLIC_URL }}/?cachebust=${{ github.run_id }}")
+
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "Root endpoint returned HTTP $HTTP_CODE"
+
+              # Verify specific asset from the new release
+              ASSET_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${{ vars.PUBLIC_URL }}/releases/${{ inputs.release-sha }}/index.html")
+
+              if [ "$ASSET_CODE" = "200" ]; then
+                echo "Release asset also returned HTTP $ASSET_CODE"
+                echo "Release flip verified successfully"
+                exit 0
+              else
+                echo "Asset returned HTTP $ASSET_CODE (expected 200), retrying..."
+              fi
+            else
+              echo "Root endpoint returned HTTP $HTTP_CODE (expected 200), retrying..."
+            fi
+
+            if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
+              sleep $DELAY
+            fi
+          done
+
+          echo "Failed to verify release after $MAX_ATTEMPTS attempts"
+          exit 1
