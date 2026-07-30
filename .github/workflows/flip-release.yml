@@ -1,0 +1,125 @@
+name: Flip Release
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+        description: Target environment (dev, staging, prod)
+      release-sha:
+        required: true
+        type: string
+        description: Full commit SHA of the release to flip to
+
+jobs:
+  flip:
+    name: Flip
+    environment:
+      name: esa-eve-${{ inputs.environment }}
+      url: ${{ vars.PUBLIC_URL }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: eu-west-1
+
+      - name: Flip release pointer with ETAG retry
+        id: flip
+        env:
+          RELEASE_SHA: ${{ inputs.release-sha }}
+        run: |
+          MAX_ATTEMPTS=5
+          ATTEMPT=0
+          FLIPPED=false
+
+          while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+            ATTEMPT=$((ATTEMPT + 1))
+            echo "Attempt $ATTEMPT/$MAX_ATTEMPTS: Fetching KVS ETag"
+
+            RESPONSE=$(aws cloudfront-keyvaluestore describe-key-value-store --kvs-arn "${{ vars.RELEASE_KVS_ARN }}" 2>&1)
+            ETAG=$(echo "$RESPONSE" | jq -r '.ETag // empty')
+
+            if [ -z "$ETAG" ]; then
+              echo "Failed to fetch ETag: $RESPONSE"
+              if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
+                sleep $((ATTEMPT * 2))
+                continue
+              fi
+              exit 1
+            fi
+
+            echo "ETag: $ETAG"
+
+            # Attempt to put the key with ETAG
+            if ERROR_MSG=$(aws cloudfront-keyvaluestore put-key \
+              --kvs-arn "${{ vars.RELEASE_KVS_ARN }}" \
+              --key "active_release" \
+              --value "$RELEASE_SHA" \
+              --if-match "$ETAG" 2>&1); then
+              echo "Successfully flipped release pointer to $RELEASE_SHA"
+              FLIPPED=true
+              break
+            else
+              if echo "$ERROR_MSG" | grep -q "PreconditionFailed"; then
+                echo "ETag mismatch (expected after concurrent update), retrying..."
+                if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
+                  sleep $((ATTEMPT * 2))
+                  continue
+                fi
+              fi
+
+              echo "Put-key failed: $ERROR_MSG"
+              exit 1
+            fi
+          done
+
+          if [ "$FLIPPED" = "true" ]; then
+            echo "flipped=true" >> $GITHUB_OUTPUT
+          else
+            echo "Failed to flip after $MAX_ATTEMPTS attempts"
+            exit 1
+          fi
+
+      - name: HTTP verify release (retry loop)
+        env:
+          RELEASE_SHA: ${{ inputs.release-sha }}
+        run: |
+          MAX_ATTEMPTS=10
+          ATTEMPT=0
+          DELAY=3
+
+          while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+            ATTEMPT=$((ATTEMPT + 1))
+            echo "Attempt $ATTEMPT/$MAX_ATTEMPTS: Verifying release at ${{ vars.PUBLIC_URL }}"
+
+            # Fetch root index.html with cache-busting to verify pointer propagation
+            ROOT_CONTENT=$(curl -s "${{ vars.PUBLIC_URL }}/index.html?cb=$ATTEMPT")
+            ASSET_CONTENT=$(curl -s "${{ vars.PUBLIC_URL }}/releases/${RELEASE_SHA}/index.html")
+
+            # Verify both fetches succeeded (non-empty content)
+            if [ -n "$ROOT_CONTENT" ] && [ -n "$ASSET_CONTENT" ]; then
+              # Compare to verify router serves the correct release
+              if [ "$ROOT_CONTENT" = "$ASSET_CONTENT" ]; then
+                echo "Release pointer verified: root serves releases/${RELEASE_SHA}"
+                echo "Release flip verified successfully"
+                exit 0
+              else
+                echo "Content mismatch: root and /releases/${RELEASE_SHA} differ (likely eventual consistency)"
+              fi
+            else
+              echo "Failed to fetch content (root empty: $([[ -z $ROOT_CONTENT ]] && echo true || echo false), asset empty: $([[ -z $ASSET_CONTENT ]] && echo true || echo false))"
+            fi
+
+            if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
+              echo "Retrying in ${DELAY}s..."
+              sleep $DELAY
+            fi
+          done
+
+          echo "Failed to verify release after $MAX_ATTEMPTS attempts"
+          exit 1

@@ -1,0 +1,101 @@
+name: Promote to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to promote (e.g. 1.0.0 or v1.0.0)
+        required: true
+        type: string
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+  queue: max
+
+jobs:
+  publish:
+    name: Publish to S3
+    runs-on: ubuntu-latest
+    environment: esa-eve-prod
+    permissions:
+      id-token: write
+      contents: read
+    outputs:
+      commit-sha: ${{ steps.metadata.outputs.commit-sha }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Resolve version metadata
+        id: metadata
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION_INPUT: ${{ inputs.version }}
+        run: |
+          VERSION="$VERSION_INPUT"
+          # Normalize version (remove leading 'v' if present)
+          VERSION="${VERSION#v}"
+
+          # Ensure the release exists
+          if ! gh release view "v${VERSION}" >/dev/null 2>&1; then
+            echo "Release v${VERSION} not found"
+            exit 1
+          fi
+
+          # Resolve commit SHA from the tag (dereference annotated tags to commits)
+          COMMIT_SHA=$(git rev-list -n 1 "v${VERSION}" 2>/dev/null || echo "")
+
+          if [ -z "$COMMIT_SHA" ]; then
+            # Fallback if not a tag or git fails (e.g., shallow clone)
+            echo "Warning: Could not resolve tag via git rev-list, using gh api"
+            COMMIT_SHA=$(gh api repos/${{ github.repository }}/git/refs/tags/v${VERSION} --jq '.object.sha')
+          fi
+
+          echo "commit-sha=${COMMIT_SHA}" >> $GITHUB_OUTPUT
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Promoting version: v${VERSION}"
+          echo "Commit SHA: ${COMMIT_SHA}"
+
+      - name: Download release asset
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.metadata.outputs.version }}
+        run: |
+          ASSET_NAME="eve-frontend-${VERSION}-dist.tar.gz"
+
+          echo "Downloading asset: ${ASSET_NAME}"
+          gh release download "v${VERSION}" \
+            -p "${ASSET_NAME}" \
+            -D .
+
+          tar xzf "${ASSET_NAME}"
+          ls -la dist/
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: eu-west-1
+
+      - name: Upload to S3
+        run: |
+          COMMIT_SHA="${{ steps.metadata.outputs.commit-sha }}"
+          RELEASE_PATH="releases/${COMMIT_SHA}"
+
+          echo "Uploading to s3://${{ vars.FRONTEND_BUCKET }}/${RELEASE_PATH}/"
+          aws s3 cp --recursive dist/ "s3://${{ vars.FRONTEND_BUCKET }}/${RELEASE_PATH}/"
+
+          echo "Upload complete"
+
+  flip:
+    name: Flip Release
+    runs-on: ubuntu-latest
+    needs: publish
+    uses: ./.github/workflows/flip-release.yml
+    with:
+      environment: prod
+      release-sha: ${{ needs.publish.outputs.commit-sha }}
+    secrets: inherit
