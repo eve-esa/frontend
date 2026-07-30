@@ -128,6 +128,10 @@ jobs:
   flip:
     name: Flip Release
     needs: [release-build, publish]
+    # The called workflow's job requests id-token; a caller job must grant at least that.
+    permissions:
+      id-token: write
+      contents: read
     uses: ./.github/workflows/flip-release.yml
     with:
       environment: staging
