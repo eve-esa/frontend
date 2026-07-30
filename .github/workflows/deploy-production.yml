@@ -1,4 +1,4 @@
-name: Deploy production
+name: legacy s3 deploy prod
 
 on:
   push:

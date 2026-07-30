@@ -1,4 +1,4 @@
-name: Deploy staging
+name: legacy s3 deploy staging
 
 on:
   push:
