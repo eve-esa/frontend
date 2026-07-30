@@ -15,6 +15,7 @@ on:
 jobs:
   flip:
     name: Flip
+    runs-on: ubuntu-latest
     environment:
       name: esa-eve-${{ inputs.environment }}
       url: ${{ vars.PUBLIC_URL }}
