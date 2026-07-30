@@ -90,17 +90,23 @@ jobs:
         env:
           RELEASE_SHA: ${{ inputs.release-sha }}
         run: |
-          MAX_ATTEMPTS=10
+          # KeyValueStore updates propagate to the edges in seconds to a couple of minutes, so the
+          # window has to outlast propagation or a correct flip reports as a failure (it did, on the
+          # first prod promotion).
+          MAX_ATTEMPTS=20
           ATTEMPT=0
-          DELAY=3
+          DELAY=6
 
           while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
             ATTEMPT=$((ATTEMPT + 1))
             echo "Attempt $ATTEMPT/$MAX_ATTEMPTS: Verifying release at ${{ vars.PUBLIC_URL }}"
 
             # Fetch root index.html with cache-busting to verify pointer propagation
-            ROOT_CONTENT=$(curl -s "${{ vars.PUBLIC_URL }}/index.html?cb=$ATTEMPT")
-            ASSET_CONTENT=$(curl -s "${{ vars.PUBLIC_URL }}/releases/${RELEASE_SHA}/index.html")
+            # --fail so an HTTP error yields EMPTY content: without it curl returns the S3
+            # AccessDenied body, which is non-empty and silently fails the comparison as a
+            # content mismatch instead of an obvious not-yet-propagated.
+            ROOT_CONTENT=$(curl -sf "${{ vars.PUBLIC_URL }}/index.html?cb=$ATTEMPT" || true)
+            ASSET_CONTENT=$(curl -sf "${{ vars.PUBLIC_URL }}/releases/${RELEASE_SHA}/index.html" || true)
 
             # Verify both fetches succeeded (non-empty content)
             if [ -n "$ROOT_CONTENT" ] && [ -n "$ASSET_CONTENT" ]; then
