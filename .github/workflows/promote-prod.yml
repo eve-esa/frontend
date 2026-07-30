@@ -94,6 +94,10 @@ jobs:
     name: Flip Release
     runs-on: ubuntu-latest
     needs: publish
+    # The called workflow's job requests id-token; a caller job must grant at least that.
+    permissions:
+      id-token: write
+      contents: read
     uses: ./.github/workflows/flip-release.yml
     with:
       environment: prod
