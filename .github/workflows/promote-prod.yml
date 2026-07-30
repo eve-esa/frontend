@@ -11,6 +11,7 @@ on:
 concurrency:
   group: deploy-prod
   cancel-in-progress: false
+  queue: max
 
 jobs:
   publish:
@@ -23,12 +24,18 @@ jobs:
     outputs:
       commit-sha: ${{ steps.metadata.outputs.commit-sha }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
       - name: Resolve version metadata
         id: metadata
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION_INPUT: ${{ inputs.version }}
         run: |
-          VERSION="${{ inputs.version }}"
+          VERSION="$VERSION_INPUT"
           # Normalize version (remove leading 'v' if present)
           VERSION="${VERSION#v}"
 
@@ -38,8 +45,14 @@ jobs:
             exit 1
           fi
 
-          # Resolve commit SHA from the tag
-          COMMIT_SHA=$(git rev-list -n 1 "v${VERSION}" 2>/dev/null || gh api repos/${{ github.repository }}/git/refs/tags/v${VERSION} --jq '.object.sha')
+          # Resolve commit SHA from the tag (dereference annotated tags to commits)
+          COMMIT_SHA=$(git rev-list -n 1 "v${VERSION}" 2>/dev/null || echo "")
+
+          if [ -z "$COMMIT_SHA" ]; then
+            # Fallback if not a tag or git fails (e.g., shallow clone)
+            echo "Warning: Could not resolve tag via git rev-list, using gh api"
+            COMMIT_SHA=$(gh api repos/${{ github.repository }}/git/refs/tags/v${VERSION} --jq '.object.sha')
+          fi
 
           echo "commit-sha=${COMMIT_SHA}" >> $GITHUB_OUTPUT
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
@@ -49,8 +62,8 @@ jobs:
       - name: Download release asset
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.metadata.outputs.version }}
         run: |
-          VERSION="${{ steps.metadata.outputs.version }}"
           ASSET_NAME="eve-frontend-${VERSION}-dist.tar.gz"
 
           echo "Downloading asset: ${ASSET_NAME}"

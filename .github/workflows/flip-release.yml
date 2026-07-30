@@ -15,8 +15,9 @@ on:
 jobs:
   flip:
     name: Flip
-    runs-on: ubuntu-latest
-    environment: esa-eve-${{ inputs.environment }}
+    environment:
+      name: esa-eve-${{ inputs.environment }}
+      url: ${{ vars.PUBLIC_URL }}
     permissions:
       id-token: write
       contents: read
@@ -29,9 +30,12 @@ jobs:
 
       - name: Flip release pointer with ETAG retry
         id: flip
+        env:
+          RELEASE_SHA: ${{ inputs.release-sha }}
         run: |
           MAX_ATTEMPTS=5
           ATTEMPT=0
+          FLIPPED=false
 
           while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
             ATTEMPT=$((ATTEMPT + 1))
@@ -52,21 +56,15 @@ jobs:
             echo "ETag: $ETAG"
 
             # Attempt to put the key with ETAG
-            if aws cloudfront-keyvaluestore put-key \
+            if ERROR_MSG=$(aws cloudfront-keyvaluestore put-key \
               --kvs-arn "${{ vars.RELEASE_KVS_ARN }}" \
               --key "active_release" \
-              --value "${{ inputs.release-sha }}" \
-              --if-match "$ETAG" 2>&1; then
-              echo "Successfully flipped release pointer to ${{ inputs.release-sha }}"
-              echo "flipped=true" >> $GITHUB_OUTPUT
+              --value "$RELEASE_SHA" \
+              --if-match "$ETAG" 2>&1); then
+              echo "Successfully flipped release pointer to $RELEASE_SHA"
+              FLIPPED=true
               break
             else
-              ERROR_MSG=$(aws cloudfront-keyvaluestore put-key \
-                --kvs-arn "${{ vars.RELEASE_KVS_ARN }}" \
-                --key "active_release" \
-                --value "${{ inputs.release-sha }}" \
-                --if-match "$ETAG" 2>&1 || true)
-
               if echo "$ERROR_MSG" | grep -q "PreconditionFailed"; then
                 echo "ETag mismatch (expected after concurrent update), retrying..."
                 if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
@@ -80,42 +78,45 @@ jobs:
             fi
           done
 
-          if [ "${{ steps.flip.outputs.flipped }}" != "true" ]; then
+          if [ "$FLIPPED" = "true" ]; then
+            echo "flipped=true" >> $GITHUB_OUTPUT
+          else
             echo "Failed to flip after $MAX_ATTEMPTS attempts"
             exit 1
           fi
 
       - name: HTTP verify release (retry loop)
+        env:
+          RELEASE_SHA: ${{ inputs.release-sha }}
         run: |
-          MAX_ATTEMPTS=8
+          MAX_ATTEMPTS=10
           ATTEMPT=0
-          DELAY=5
+          DELAY=3
 
           while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
             ATTEMPT=$((ATTEMPT + 1))
             echo "Attempt $ATTEMPT/$MAX_ATTEMPTS: Verifying release at ${{ vars.PUBLIC_URL }}"
 
-            # Check root endpoint
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${{ vars.PUBLIC_URL }}/?cachebust=${{ github.run_id }}")
+            # Fetch root index.html with cache-busting to verify pointer propagation
+            ROOT_CONTENT=$(curl -s "${{ vars.PUBLIC_URL }}/index.html?cb=$ATTEMPT")
+            ASSET_CONTENT=$(curl -s "${{ vars.PUBLIC_URL }}/releases/${RELEASE_SHA}/index.html")
 
-            if [ "$HTTP_CODE" = "200" ]; then
-              echo "Root endpoint returned HTTP $HTTP_CODE"
-
-              # Verify specific asset from the new release
-              ASSET_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${{ vars.PUBLIC_URL }}/releases/${{ inputs.release-sha }}/index.html")
-
-              if [ "$ASSET_CODE" = "200" ]; then
-                echo "Release asset also returned HTTP $ASSET_CODE"
+            # Verify both fetches succeeded (non-empty content)
+            if [ -n "$ROOT_CONTENT" ] && [ -n "$ASSET_CONTENT" ]; then
+              # Compare to verify router serves the correct release
+              if [ "$ROOT_CONTENT" = "$ASSET_CONTENT" ]; then
+                echo "Release pointer verified: root serves releases/${RELEASE_SHA}"
                 echo "Release flip verified successfully"
                 exit 0
               else
-                echo "Asset returned HTTP $ASSET_CODE (expected 200), retrying..."
+                echo "Content mismatch: root and /releases/${RELEASE_SHA} differ (likely eventual consistency)"
               fi
             else
-              echo "Root endpoint returned HTTP $HTTP_CODE (expected 200), retrying..."
+              echo "Failed to fetch content (root empty: $([[ -z $ROOT_CONTENT ]] && echo true || echo false), asset empty: $([[ -z $ASSET_CONTENT ]] && echo true || echo false))"
             fi
 
             if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
+              echo "Retrying in ${DELAY}s..."
               sleep $DELAY
             fi
           done
