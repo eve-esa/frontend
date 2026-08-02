@@ -57,6 +57,13 @@ jobs:
         run: yarn build
         env:
           VITE_API_URL: /api
+          # Shown in the login page footer. This is the only place where the
+          # release version and commit are baked into the bundle: promote-prod
+          # downloads and re-publishes this very same tarball from the GitHub
+          # release instead of rebuilding, so prod inherits these values and is
+          # guaranteed to display exactly what staging displayed.
+          VITE_APP_VERSION: ${{ github.ref_name }}
+          VITE_APP_COMMIT: ${{ steps.metadata.outputs.commit-sha }}
 
       - name: Create distribution tarball
         run: |

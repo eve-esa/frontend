@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { AnimatedLink } from "@/components/ui/AnimatedLink";
+import { AppVersion } from "@/components/ui/AppVersion";
 import { useLogin } from "@/services/useLogin";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, Controller } from "react-hook-form";
@@ -164,6 +165,10 @@ export const Login = () => {
           </AnimatedLink>
         )}
       </div>
+
+      {/* RUNNING VERSION */}
+
+      <AppVersion className="mt-4" />
     </form>
   );
 };
