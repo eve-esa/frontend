@@ -1,0 +1,123 @@
+name: Flip release pointer
+description: >-
+  Points the CloudFront KeyValueStore at a release and verifies the edge serves it.
+  A composite action, not a reusable workflow, on purpose: a reusable workflow is always a separate
+  job, and a GitHub Environment gate fires once per job. As two jobs, promoting to production asked
+  the reviewer to approve the same decision twice. These steps run inside the caller's job instead,
+  so one deployment asks for one approval.
+
+  AWS credentials must already be configured in the calling job. Every caller uploads to S3 first,
+  so they are.
+
+inputs:
+  release-sha:
+    description: Full commit SHA of the release to serve
+    required: true
+  public-url:
+    description: Public origin to verify against, without a trailing slash
+    required: true
+  kvs-arn:
+    description: ARN of the CloudFront KeyValueStore holding the active_release key
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Flip release pointer with ETag retry
+      shell: bash
+      env:
+        RELEASE_SHA: ${{ inputs.release-sha }}
+        KVS_ARN: ${{ inputs.kvs-arn }}
+      run: |
+        MAX_ATTEMPTS=5
+        ATTEMPT=0
+        FLIPPED=false
+
+        while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+          ATTEMPT=$((ATTEMPT + 1))
+          echo "Attempt $ATTEMPT/$MAX_ATTEMPTS: Fetching KVS ETag"
+
+          RESPONSE=$(aws cloudfront-keyvaluestore describe-key-value-store --kvs-arn "$KVS_ARN" 2>&1)
+          ETAG=$(echo "$RESPONSE" | jq -r '.ETag // empty')
+
+          if [ -z "$ETAG" ]; then
+            echo "Failed to fetch ETag: $RESPONSE"
+            if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
+              sleep $((ATTEMPT * 2))
+              continue
+            fi
+            exit 1
+          fi
+
+          echo "ETag: $ETAG"
+
+          # Optimistic concurrency: if-match rejects the write when someone else flipped meanwhile.
+          if ERROR_MSG=$(aws cloudfront-keyvaluestore put-key \
+            --kvs-arn "$KVS_ARN" \
+            --key "active_release" \
+            --value "$RELEASE_SHA" \
+            --if-match "$ETAG" 2>&1); then
+            echo "Successfully flipped release pointer to $RELEASE_SHA"
+            FLIPPED=true
+            break
+          else
+            if echo "$ERROR_MSG" | grep -q "PreconditionFailed"; then
+              echo "ETag mismatch (expected after concurrent update), retrying..."
+              if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
+                sleep $((ATTEMPT * 2))
+                continue
+              fi
+            fi
+
+            echo "Put-key failed: $ERROR_MSG"
+            exit 1
+          fi
+        done
+
+        if [ "$FLIPPED" != "true" ]; then
+          echo "Failed to flip after $MAX_ATTEMPTS attempts"
+          exit 1
+        fi
+
+    - name: HTTP verify release
+      shell: bash
+      env:
+        RELEASE_SHA: ${{ inputs.release-sha }}
+        PUBLIC_URL: ${{ inputs.public-url }}
+      run: |
+        # KeyValueStore updates propagate to the edges in seconds to a couple of minutes, so the
+        # window has to outlast propagation or a correct flip reports as a failure (it did, on the
+        # first prod promotion).
+        MAX_ATTEMPTS=20
+        ATTEMPT=0
+        DELAY=6
+
+        while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+          ATTEMPT=$((ATTEMPT + 1))
+          echo "Attempt $ATTEMPT/$MAX_ATTEMPTS: Verifying release at $PUBLIC_URL"
+
+          # --fail so an HTTP error yields EMPTY content: without it curl returns the S3
+          # AccessDenied body, which is non-empty and silently fails the comparison as a
+          # content mismatch instead of an obvious not-yet-propagated.
+          ROOT_CONTENT=$(curl -sf "${PUBLIC_URL}/index.html?cb=$ATTEMPT" || true)
+          ASSET_CONTENT=$(curl -sf "${PUBLIC_URL}/releases/${RELEASE_SHA}/index.html" || true)
+
+          if [ -n "$ROOT_CONTENT" ] && [ -n "$ASSET_CONTENT" ]; then
+            if [ "$ROOT_CONTENT" = "$ASSET_CONTENT" ]; then
+              echo "Release pointer verified: root serves releases/${RELEASE_SHA}"
+              exit 0
+            else
+              echo "Content mismatch: root and /releases/${RELEASE_SHA} differ (likely eventual consistency)"
+            fi
+          else
+            echo "Failed to fetch content (root empty: $([[ -z $ROOT_CONTENT ]] && echo true || echo false), asset empty: $([[ -z $ASSET_CONTENT ]] && echo true || echo false))"
+          fi
+
+          if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
+            echo "Retrying in ${DELAY}s..."
+            sleep $DELAY
+          fi
+        done
+
+        echo "Failed to verify release after $MAX_ATTEMPTS attempts"
+        exit 1
