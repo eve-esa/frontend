@@ -91,15 +91,11 @@ jobs:
 
           echo "Upload complete"
 
-  flip:
-    name: Flip Release
-    needs: publish
-    # The called workflow's job requests id-token; a caller job must grant at least that.
-    permissions:
-      id-token: write
-      contents: read
-    uses: ./.github/workflows/flip-release.yml
-    with:
-      environment: prod
-      release-sha: ${{ needs.publish.outputs.commit-sha }}
-    secrets: inherit
+      # Same job as the upload on purpose: an Environment gate fires once per job, so promoting to
+      # production used to ask the reviewer to approve the same decision twice.
+      - name: Flip release pointer
+        uses: ./.github/actions/flip-release
+        with:
+          release-sha: ${{ steps.metadata.outputs.commit-sha }}
+          public-url: ${{ vars.PUBLIC_URL }}
+          kvs-arn: ${{ vars.RELEASE_KVS_ARN }}
