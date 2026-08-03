@@ -24,7 +24,14 @@ export const MessageList = ({
 
         return (
           <Message
-            key={message.id}
+            // Keyed by position, not message.id: the id itself is unstable
+            // for the in-flight turn (useSendRequest swaps a "temp-*" id for
+            // the server "srv-*"/real id once streaming completes). Keying
+            // on id would remount this whole Message — and every image
+            // inside it — right at completion, causing a visible flash.
+            // Messages only ever append in this list, never reorder, so a
+            // positional key is safe.
+            key={`${message.conversation_id ?? ""}-${index}`}
             message={message}
             isSending={isSending}
             isLastMessage={isLastMessage}
