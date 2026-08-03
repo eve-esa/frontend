@@ -2,20 +2,23 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { MUTATION_KEYS, QUERY_KEYS } from "./keys";
 import { toast } from "sonner";
 import type { AdvancedSettingsValidation } from "@/components/chat/SettingsForm";
-import type { LLMType } from "@/types";
+import type { ImageAttachment, LLMType } from "@/types";
 import api from "./axios";
 import { postStream, consumeSuppressToastFlag } from "./streaming";
 import type { ApiError, ChaMessageType, MessageType } from "@/types";
 import { handleApiError } from "@/utilities/helpers";
-import { LOCAL_STORAGE_PUBLIC_COLLECTIONS } from "@/utilities/localStorage";
+import { getMessageCollectionPayload } from "@/utilities/collections";
 import { logError } from "./errorLogging";
 import { invalidateTokenUsage } from "./useTokenUsage";
+import { getSelectedMcpServerNames } from "@/utilities/mcpServers";
+import { resolveMessageEndpoint } from "@/utilities/messageEndpoint";
 
 type SendRequestProps = {
   query: string;
   conversationId?: string;
   settings: AdvancedSettingsValidation;
   llm_type?: LLMType;
+  attachments?: ImageAttachment[];
 };
 
 export const sendRequest = async ({
@@ -23,18 +26,24 @@ export const sendRequest = async ({
   conversationId,
   settings,
   llm_type,
+  attachments,
 }: SendRequestProps) => {
-  const response = await api.post<MessageType>(
-    `/conversations/${conversationId}/messages`,
-    {
-      query,
-      ...settings,
-      ...(llm_type ? { llm_type } : {}),
-      public_collections: JSON.parse(
-        localStorage.getItem(LOCAL_STORAGE_PUBLIC_COLLECTIONS) ?? "[]",
-      ),
-    },
+  const mcpServers = getSelectedMcpServerNames();
+  const { url, extraPayload } = resolveMessageEndpoint(
+    conversationId,
+    mcpServers,
+    "sync",
   );
+  const response = await api.post<MessageType>(url, {
+    query,
+    ...settings,
+    ...(llm_type ? { llm_type } : {}),
+    ...getMessageCollectionPayload(),
+    ...(attachments?.length
+      ? { artifact_ids: attachments.map((a) => a.id) }
+      : {}),
+    ...extraPayload,
+  });
   return response.data;
 };
 
@@ -49,22 +58,35 @@ export const useSendRequest = (conversationId?: string) => {
       conversationId,
       settings,
       llm_type,
+      attachments,
     }: SendRequestProps) => {
       const enableStreaming =
         (import.meta.env.VITE_ENABLE_STREAMING ?? "false") === "true";
+
+      const mcpServers = getSelectedMcpServerNames();
+      const { url: streamUrl, extraPayload: mcpPayload } =
+        resolveMessageEndpoint(conversationId, mcpServers, "stream");
 
       const payload = {
         query,
         ...settings,
         ...(llm_type ? { llm_type } : {}),
-        public_collections: JSON.parse(
-          localStorage.getItem(LOCAL_STORAGE_PUBLIC_COLLECTIONS) ?? "[]",
-        ),
+        ...getMessageCollectionPayload(),
+        ...(attachments?.length
+          ? { artifact_ids: attachments.map((a) => a.id) }
+          : {}),
+        ...mcpPayload,
       };
 
       try {
         if (!enableStreaming) {
-          return sendRequest({ query, conversationId, settings, llm_type });
+          return sendRequest({
+            query,
+            conversationId,
+            settings,
+            llm_type,
+            attachments,
+          });
         }
 
         const applyTokenToOptimisticMessage = (tokenChunk: string) => {
@@ -125,8 +147,9 @@ export const useSendRequest = (conversationId?: string) => {
         };
 
         let finalAnswer: string | null = null;
+        let finalArtifactIds: string[] | undefined;
         await postStream({
-          url: `/conversations/${conversationId}/stream_messages`,
+          url: streamUrl,
           payload,
           onEvent: (evt) => {
             if (
@@ -139,6 +162,9 @@ export const useSendRequest = (conversationId?: string) => {
               typeof (evt as any).answer === "string"
             ) {
               finalAnswer = (evt as any).answer;
+              if (Array.isArray((evt as any).artifact_ids)) {
+                finalArtifactIds = (evt as any).artifact_ids;
+              }
               setFinalAnswer(finalAnswer ?? "");
             } else if (
               (evt as any)?.type === "status" &&
@@ -147,6 +173,18 @@ export const useSendRequest = (conversationId?: string) => {
               addPreAnswerNotice((evt as any).content);
             } else if (
               (evt as any)?.type === "requery" &&
+              typeof (evt as any).content === "string"
+            ) {
+              addPreAnswerNotice((evt as any).content);
+            } else if (
+              (evt as any)?.type === "tool_call" &&
+              typeof (evt as any).content === "string"
+            ) {
+              // Agentic pipeline is invoking an MCP tool; reuse the same
+              // in-stream status mechanism as "status"/"requery" notices.
+              addPreAnswerNotice((evt as any).content);
+            } else if (
+              (evt as any)?.type === "tool_result" &&
               typeof (evt as any).content === "string"
             ) {
               addPreAnswerNotice((evt as any).content);
@@ -167,6 +205,8 @@ export const useSendRequest = (conversationId?: string) => {
           documents: [],
           answer: finalAnswer || "",
           query: payload.query,
+          attachments,
+          artifact_ids: finalArtifactIds,
         } as unknown as MessageType;
 
         return finalMessage;
@@ -210,6 +250,7 @@ export const useSendRequest = (conversationId?: string) => {
         documents: [],
         use_rag: false,
         metadata: {},
+        attachments: newMessage.attachments,
       };
 
       if (previousData) {
@@ -308,6 +349,11 @@ export const useSendRequest = (conversationId?: string) => {
             feedback: null,
             documents: data.documents ?? [],
             request_input: data.request_input,
+            // Explicitly carry attachments/artifact_ids over: this rebuilds the
+            // message from scratch and would otherwise drop them, making the
+            // images vanish between send and the refetch that follows onSettled.
+            attachments: data.attachments,
+            artifact_ids: data.artifact_ids,
           };
 
           return {

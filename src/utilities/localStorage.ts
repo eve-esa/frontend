@@ -5,5 +5,7 @@ export const LOCAL_STORAGE_DRAFT_NEW_CONVERSATION = "draft_new_conversation";
 export const LOCAL_STORAGE_TOUR_COMPLETED = "tour_completed";
 export const LOCAL_STORAGE_LOGIN_EMAIL = "login_email";
 export const LOCAL_STORAGE_PUBLIC_COLLECTIONS = "public_collections";
+export const LOCAL_STORAGE_PRIVATE_COLLECTIONS = "private_collections";
 export const LOCAL_STORAGE_WELCOME_DIALOG_VIEWED = "welcome_dialog_viewed";
 export const LOCAL_STORAGE_LLM_TYPE = "llm_type";
+export const LOCAL_STORAGE_MCP_SERVERS = "mcp_servers";

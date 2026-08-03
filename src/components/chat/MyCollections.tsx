@@ -90,7 +90,8 @@ export const MyCollections = ({ onToggle }: MyCollectionsProps) => {
         </div>
         <div>
           <p className="text-sm 3xl:text-xl text-natural-200 font-['NotesESA'] leading-6">
-            Collection of documents to enrich the Knowledge base.
+            Collection of documents to enrich the Knowledge base. Toggle a
+            collection on to let the assistant use it while answering.
           </p>
         </div>
       </div>

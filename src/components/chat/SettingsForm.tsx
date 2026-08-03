@@ -1,5 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, Controller } from "react-hook-form";
+import { useState } from "react";
 import { z } from "zod";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleInfo, faTimes } from "@fortawesome/free-solid-svg-icons";
@@ -7,6 +8,7 @@ import { Tooltip } from "@/components/ui/Tooltip";
 import { Slider } from "@/components/ui/Slider";
 import { Button } from "@/components/ui/Button";
 import { StepInput } from "@/components/ui/StepInput";
+import { Checkbox } from "@/components/ui/Checkbox";
 import {
   YearRangePicker,
   type YearRange,
@@ -25,6 +27,11 @@ import { Autocomplete } from "../ui/Autocomplete";
 import { AnimatedLink } from "../ui/AnimatedLink";
 import { settingsTooltipExplanation } from "@/utilities/settingsTooltipExplanation";
 import { journalOptions } from "@/utilities/journalOptions";
+import { useMcpServers } from "@/services/useMcpServers";
+import {
+  getSelectedMcpServerNames,
+  toggleMcpServerSelection,
+} from "@/utilities/mcpServers";
 
 const AdvancedSettingsSchema = z.object({
   score_threshold: z.number(),
@@ -92,6 +99,23 @@ export const SettingsForm = ({ onToggle }: SettingsFormProps) => {
   const scientific_and_technical = watch("scientific_and_technical");
   const market_perspective = watch("market_perspective");
   const k = watch("k");
+
+  // MCP tool selection: persisted independently of the RAG form above (same
+  // immediate-persist pattern as the LLM type selector), since enabling a
+  // server switches which pipeline/endpoint the next message uses.
+  const [selectedMcpServers, setSelectedMcpServers] = useState<string[]>(() =>
+    getSelectedMcpServerNames(),
+  );
+  const { data: mcpServersResponse } = useMcpServers();
+  const enabledMcpServers = (mcpServersResponse?.data ?? []).filter(
+    (server) => server.enabled,
+  );
+  const toggleMcpServer = (serverName: string) => {
+    setSelectedMcpServers((prev) =>
+      toggleMcpServerSelection(prev, serverName),
+    );
+  };
+
   const onSubmit = (data: AdvancedSettingsValidation) => {
     localStorage.setItem(LOCAL_STORAGE_SETTINGS, JSON.stringify(data));
     toast.success("Settings saved", { duration: 1000 });
@@ -482,6 +506,47 @@ export const SettingsForm = ({ onToggle }: SettingsFormProps) => {
                 </p>
               )}
             </div>
+            {/* MCP Tools */}
+            {enabledMcpServers.length > 0 && (
+              <>
+                <div className="border-t-2 border-primary-500" />
+                <div className="flex flex-col gap-4">
+                  <span className="text-lg">Tools (MCP)</span>
+                  <p className="text-sm 3xl:text-xl text-natural-200 font-['NotesESA'] leading-6">
+                    Let the assistant call these external tools while
+                    answering. Enabling at least one switches the request to
+                    the agentic pipeline.
+                  </p>
+                  <div className="flex flex-col gap-3">
+                    {enabledMcpServers.map((server) => (
+                      <label
+                        key={server.id ?? server.name}
+                        htmlFor={`mcp-server-${server.name}`}
+                        className="flex items-start gap-2 cursor-pointer"
+                      >
+                        <Checkbox
+                          id={`mcp-server-${server.name}`}
+                          checked={selectedMcpServers.includes(server.name)}
+                          onCheckedChange={() =>
+                            toggleMcpServer(server.name)
+                          }
+                        />
+                        <span className="flex flex-col">
+                          <span className="font-['NotesESA'] text-sm">
+                            {server.name}
+                          </span>
+                          {server.description && (
+                            <span className="text-xs text-natural-200">
+                              {server.description}
+                            </span>
+                          )}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
