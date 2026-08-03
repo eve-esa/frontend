@@ -17,6 +17,7 @@ export const router = createBrowserRouter(
         <Route element={<ChatLayout />}>
           <Route {...routes.EMPTY_CHAT} />
           <Route {...routes.CHAT} />
+          <Route {...routes.ARTIFACTS} />
           <Route {...routes.ONBOARDING} />
         </Route>
       </Route>

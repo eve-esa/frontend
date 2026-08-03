@@ -7,6 +7,8 @@ import {
   LOCAL_STORAGE_WELCOME_DIALOG_VIEWED,
 } from "@/utilities/localStorage";
 import { suggestions } from "@/utilities/suggestions";
+import { serializeDraftNewConversation } from "@/utilities/draftNewConversation";
+import type { ImageAttachment } from "@/types";
 import { ChatHeader } from "./ChatHeader";
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -38,8 +40,14 @@ export const ChatEmpty = () => {
   const { mutate: createConversation, isPending: isCreatingConversation } =
     useCreateConversation(createConversationSuccess);
 
-  const handleSendRequest = async (input: string) => {
-    localStorage.setItem(LOCAL_STORAGE_DRAFT_NEW_CONVERSATION, input);
+  const handleSendRequest = async (
+    input: string,
+    attachments?: ImageAttachment[],
+  ) => {
+    localStorage.setItem(
+      LOCAL_STORAGE_DRAFT_NEW_CONVERSATION,
+      serializeDraftNewConversation({ input, attachments }),
+    );
     await createConversation(input);
   };
 

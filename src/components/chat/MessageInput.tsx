@@ -4,13 +4,21 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPaperPlane } from "@fortawesome/free-regular-svg-icons";
 import {
   faArrowRight,
+  faPaperclip,
   faSearch,
   faSliders,
   faStop,
 } from "@fortawesome/free-solid-svg-icons";
 import { useForm, useWatch } from "react-hook-form";
+import { useDropzone } from "react-dropzone";
+import { toast } from "sonner";
 import { useSidebar } from "./DynamicSidebarProvider";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  AttachmentPreviewList,
+  type PendingAttachment,
+} from "./AttachmentPreviewList";
+import { useUploadImage } from "@/services/useUploadImage";
 import logo from "@/assets/images/esa_phi_lab_1.svg";
 import { useTour } from "@/components/onboarding/TourContext";
 import { cn } from "@/lib/utils";
@@ -22,14 +30,21 @@ import {
   SelectValue,
 } from "@/components/ui/Select";
 import { LOCAL_STORAGE_LLM_TYPE } from "@/utilities/localStorage";
-import { LLMType, LLMTypeLabel } from "@/types";
+import {
+  LLMType,
+  LLMTypeLabel,
+  ACCEPTED_UPLOAD_EXTENSIONS,
+  ACCEPTED_UPLOAD_MIME_TYPES,
+  MAX_ATTACHMENTS_PER_MESSAGE,
+  MAX_IMAGE_SIZE_BYTES,
+} from "@/types";
 import { useParams } from "react-router-dom";
 import { abortCurrentStream } from "@/services/streaming";
 import { stopConversation as stopConversationApi } from "@/services/stopConversation";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { useQueryClient } from "@tanstack/react-query";
 import { QUERY_KEYS } from "@/services/keys";
-import type { ChaMessageType, MessageType } from "@/types";
+import type { ChaMessageType, ImageAttachment, MessageType } from "@/types";
 import { useTokenUsage } from "@/services/useTokenUsage";
 const isStaging = (import.meta.env.VITE_IS_STAGING ?? "false") === "true";
 
@@ -90,7 +105,7 @@ export type MessageInputProps = {
   className?: string;
   placeholder?: string;
   disabled?: boolean;
-  sendRequest?: (input: string) => void;
+  sendRequest?: (input: string, attachments?: ImageAttachment[]) => void;
   suggestions?: string[];
 };
 
@@ -119,13 +134,185 @@ export const MessageInput = ({
   const inputLengthWithoutNewlines = inputValue.replace(/\n/g, "").length;
   const isOverLimit = inputLengthWithoutNewlines > maxCharacters;
 
-  const onSubmit = (data: { input: string }) => {
-    const inputLengthWithoutNewlines = data.input.replace(/\n/g, "").length;
-    if (inputLengthWithoutNewlines <= maxCharacters) {
-      sendRequest?.(data.input);
-      reset();
+  // ─── File attachments ──────────────────────────────────────────────────────
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
+  const { mutateAsync: uploadImage } = useUploadImage();
+
+  const isUploading = attachments.some((a) => a.status === "uploading");
+
+  const uploadOne = useCallback(
+    async (item: PendingAttachment) => {
+      setAttachments((prev) =>
+        prev.map((a) =>
+          a.localId === item.localId
+            ? { ...a, status: "uploading", progress: 0 }
+            : a,
+        ),
+      );
+      try {
+        const data = await uploadImage({
+          file: item.file,
+          onUploadProgress: (event) => {
+            const progress = event.total
+              ? Math.round((event.loaded / event.total) * 100)
+              : 0;
+            setAttachments((prev) =>
+              prev.map((a) =>
+                a.localId === item.localId ? { ...a, progress } : a,
+              ),
+            );
+          },
+        });
+        const uploaded: ImageAttachment = {
+          id: data.id,
+          url: data.url,
+          filename: data.filename,
+          content_type: data.content_type,
+          size: data.size_bytes,
+        };
+        setAttachments((prev) =>
+          prev.map((a) =>
+            a.localId === item.localId
+              ? { ...a, status: "done", progress: 100, uploaded }
+              : a,
+          ),
+        );
+      } catch {
+        // Error is toasted/logged by useUploadImage; mark item for retry.
+        setAttachments((prev) =>
+          prev.map((a) =>
+            a.localId === item.localId ? { ...a, status: "error" } : a,
+          ),
+        );
+      }
+    },
+    [uploadImage],
+  );
+
+  const addFiles = useCallback(
+    (files: File[]) => {
+      if (files.length === 0) return;
+      const accepted: File[] = [];
+      let slots = MAX_ATTACHMENTS_PER_MESSAGE - attachments.length;
+
+      for (const file of files) {
+        const name = file.name.toLowerCase();
+        const isAccepted =
+          ACCEPTED_UPLOAD_MIME_TYPES.includes(file.type) ||
+          ACCEPTED_UPLOAD_EXTENSIONS.some((ext) => name.endsWith(ext));
+        if (!isAccepted) {
+          toast.error(`${file.name}: unsupported file type`);
+          continue;
+        }
+        if (file.size > MAX_IMAGE_SIZE_BYTES) {
+          toast.error(`${file.name}: file exceeds 10 MB`);
+          continue;
+        }
+        if (slots <= 0) {
+          toast.error(
+            `You can attach up to ${MAX_ATTACHMENTS_PER_MESSAGE} files`,
+          );
+          break;
+        }
+        accepted.push(file);
+        slots -= 1;
+      }
+
+      if (accepted.length === 0) return;
+
+      const newItems: PendingAttachment[] = accepted.map((file) => ({
+        localId: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        file,
+        // Only images get a thumbnail; other types render as a file chip.
+        previewUrl: file.type.startsWith("image/")
+          ? URL.createObjectURL(file)
+          : "",
+        filename: file.name,
+        status: "uploading",
+        progress: 0,
+      }));
+
+      setAttachments((prev) => [...prev, ...newItems]);
+      newItems.forEach((item) => void uploadOne(item));
+    },
+    [attachments.length, uploadOne],
+  );
+
+  const removeAttachment = useCallback((localId: string) => {
+    setAttachments((prev) => {
+      const target = prev.find((a) => a.localId === localId);
+      if (target) URL.revokeObjectURL(target.previewUrl);
+      return prev.filter((a) => a.localId !== localId);
+    });
+  }, []);
+
+  const retryAttachment = useCallback(
+    (localId: string) => {
+      const target = attachments.find((a) => a.localId === localId);
+      if (target) void uploadOne(target);
+    },
+    [attachments, uploadOne],
+  );
+
+  const clearAttachments = useCallback(() => {
+    setAttachments((prev) => {
+      prev.forEach((a) => URL.revokeObjectURL(a.previewUrl));
+      return [];
+    });
+  }, []);
+
+  const handlePaste = (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const images = Array.from(event.clipboardData?.items ?? [])
+      .filter((item) => item.kind === "file" && item.type.startsWith("image/"))
+      .map((item) => item.getAsFile())
+      .filter((file): file is File => Boolean(file));
+    if (images.length > 0) {
+      event.preventDefault();
+      addFiles(images);
     }
   };
+
+  // Revoke any outstanding preview object URLs on unmount.
+  useEffect(() => {
+    return () => {
+      setAttachments((prev) => {
+        prev.forEach((a) => URL.revokeObjectURL(a.previewUrl));
+        return prev;
+      });
+    };
+  }, []);
+
+  const onSubmit = (data: { input: string }) => {
+    const inputLengthWithoutNewlines = data.input.replace(/\n/g, "").length;
+    if (inputLengthWithoutNewlines > maxCharacters || isUploading) return;
+
+    const uploaded = attachments
+      .filter((a) => a.status === "done" && a.uploaded)
+      .map((a) => a.uploaded as ImageAttachment);
+
+    sendRequest?.(data.input, uploaded.length > 0 ? uploaded : undefined);
+    reset();
+    clearAttachments();
+  };
+
+  const { getRootProps, isDragActive } = useDropzone({
+    onDrop: addFiles,
+    accept: {
+      "image/png": [".png"],
+      "image/jpeg": [".jpg", ".jpeg"],
+      "image/webp": [".webp"],
+      "image/gif": [".gif"],
+      "application/pdf": [".pdf"],
+      "text/csv": [".csv"],
+      "text/plain": [".txt"],
+      "application/json": [".json"],
+      "application/geo+json": [".geojson"],
+    },
+    multiple: true,
+    noClick: true,
+    noKeyboard: true,
+  });
 
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [llmType, setLlmType] = useState<string>(
@@ -266,13 +453,30 @@ export const MessageInput = ({
       <div className="flex flex-col gap-2 h-full">
         <form className={`flex gap-4  ${className || ""} h-full`}>
           <div
-            className="w-full  flex-none border-primary-400 border-2 flex flex-col bg-primary-900 relative start-new-chat-tour"
+            {...getRootProps()}
+            className={cn(
+              "w-full  flex-none border-primary-400 border-2 flex flex-col bg-primary-900 relative start-new-chat-tour",
+              isDragActive && "border-dashed border-primary-200 bg-primary-800",
+            )}
             data-tour="start-new-chat-tour"
           >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,text/csv,text/plain,application/json,.pdf,.csv,.txt,.json,.geojson"
+              multiple
+              className="hidden"
+              data-testid="attach-image-input"
+              onChange={(e) => {
+                addFiles(Array.from(e.target.files ?? []));
+                e.target.value = "";
+              }}
+            />
             <Textarea
               ref={textareaRef}
               value={inputValue}
               onChange={(e) => setValue("input", e.target.value)}
+              onPaste={handlePaste}
               onFocus={() => {
                 if (timeoutRef.current) {
                   clearTimeout(timeoutRef.current);
@@ -292,7 +496,8 @@ export const MessageInput = ({
                   if (
                     inputValue.trim().length > 0 &&
                     !isOverLimit &&
-                    !disabled
+                    !disabled &&
+                    !isUploading
                   ) {
                     handleSubmit(onSubmit)();
                   }
@@ -300,6 +505,13 @@ export const MessageInput = ({
               }}
               placeholder={placeholder}
             />
+
+            <AttachmentPreviewList
+              attachments={attachments}
+              onRemove={removeAttachment}
+              onRetry={retryAttachment}
+            />
+
             {isOverLimit && (
               <div className="text-sm 3xl:text-lg text-danger-400 px-4 md:px-8">
                 Character limit exceeded ({inputLengthWithoutNewlines}/
@@ -337,6 +549,9 @@ export const MessageInput = ({
                         <SelectItem value={LLMType.Satcom_Large}>
                           {LLMTypeLabel.Satcom_Large}
                         </SelectItem>
+                        <SelectItem value={LLMType.EVE_JSC}>
+                          {LLMTypeLabel.EVE_JSC}
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -355,6 +570,23 @@ export const MessageInput = ({
                     data-tour="settings-button"
                   >
                     <FontAwesomeIcon icon={faSliders} className="size-4" />
+                  </Button>
+                </Tooltip>
+                <Tooltip content={<>Attach files</>} disableClick={true}>
+                  <Button
+                    type="button"
+                    variant="icon"
+                    size="sm"
+                    aria-label="Attach files"
+                    data-testid="attach-image-button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      fileInputRef.current?.click();
+                    }}
+                    className="h-8 w-8 p-0 cursor-pointer"
+                  >
+                    <FontAwesomeIcon icon={faPaperclip} className="size-4" />
                   </Button>
                 </Tooltip>
               </div>
@@ -378,7 +610,10 @@ export const MessageInput = ({
                   <Button
                     type="submit"
                     disabled={
-                      !inputValue.trim().length || isOverLimit || disabled
+                      !inputValue.trim().length ||
+                      isOverLimit ||
+                      disabled ||
+                      isUploading
                     }
                     variant="icon"
                     size="sm"

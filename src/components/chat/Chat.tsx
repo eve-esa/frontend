@@ -10,20 +10,23 @@ import { useNavigate, useParams } from "react-router-dom";
 import {
   LOCAL_STORAGE_SETTINGS,
   LOCAL_STORAGE_DRAFT_NEW_CONVERSATION,
+  LOCAL_STORAGE_LLM_TYPE,
 } from "@/utilities/localStorage";
 import { useScrollToBottom } from "@/hooks/useScrollToBottom";
 import { useNavigationBlocker } from "@/hooks/useNavigationBlocker";
 import { MessageSkeleton } from "./MessageSkeleton";
 import { routes } from "@/utilities/routes";
 import { adaptSettingsForRequest } from "@/utilities/helpers";
-import { LOCAL_STORAGE_LLM_TYPE } from "@/utilities/localStorage";
-import { LLMType } from "@/types";
+import { LLMType, type ImageAttachment } from "@/types";
+import {
+  parseDraftNewConversation,
+  type DraftNewConversation,
+} from "@/utilities/draftNewConversation";
 import { StopRequestWarningDialog } from "./StopRequestWarningDialog";
 import { useSidebar } from "./DynamicSidebarProvider";
-import { useIsMutating } from "@tanstack/react-query";
+import { useIsMutating, useQueryClient } from "@tanstack/react-query";
 import { MUTATION_KEYS } from "@/services/keys";
 import { useRetry } from "@/services/useRetry";
-import { useQueryClient } from "@tanstack/react-query";
 import { prefetchTokenUsage } from "@/services/useTokenUsage";
 
 export const Chat = () => {
@@ -32,7 +35,9 @@ export const Chat = () => {
   const { conversationId } = useParams();
   const firstMessageSent = useRef(false);
   const { setPendingConversation, removePendingConversation } = useSidebar();
-  const [draftMessage, setDraftMessage] = useState<string | null>(null);
+  const [draftMessage, setDraftMessage] = useState<DraftNewConversation | null>(
+    null,
+  );
 
   const isMutating = Boolean(
     useIsMutating({
@@ -53,7 +58,7 @@ export const Chat = () => {
     isError,
   } = useGetConversation({
     conversationId,
-    enabled: !draftMessage || firstMessageSent.current,
+    enabled: (!draftMessage || firstMessageSent.current) && !isMutating,
   });
 
   const messages = data?.messages || [];
@@ -95,7 +100,7 @@ export const Chat = () => {
     scrollToBottom("auto");
     const draft = localStorage.getItem(LOCAL_STORAGE_DRAFT_NEW_CONVERSATION);
     if (draft) {
-      setDraftMessage(draft);
+      setDraftMessage(parseDraftNewConversation(draft));
     }
   }, [conversationId, messages.length]);
 
@@ -105,7 +110,7 @@ export const Chat = () => {
   }, [conversationId, queryClient]);
 
   const handleSendRequest = useCallback(
-    (input: string) => {
+    (input: string, attachments?: ImageAttachment[]) => {
       if (!conversationId) return;
 
       const settings = JSON.parse(
@@ -120,6 +125,7 @@ export const Chat = () => {
         conversationId,
         settings: { ...adaptSettingsForRequest(settings) },
         llm_type,
+        attachments,
       });
     },
     [sendRequest, conversationId],
@@ -130,7 +136,7 @@ export const Chat = () => {
       firstMessageSent.current = true;
       localStorage.removeItem(LOCAL_STORAGE_DRAFT_NEW_CONVERSATION);
       setDraftMessage(null);
-      handleSendRequest(draftMessage);
+      handleSendRequest(draftMessage.input, draftMessage.attachments);
     }
   }, [draftMessage, isMutating, handleSendRequest]);
 
