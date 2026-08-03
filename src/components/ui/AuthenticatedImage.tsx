@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useImageBlob } from "@/services/useImageBlob";
-import { Skeleton } from "./Skeleton";
+import { cn } from "@/lib/utils";
 import { isTrustedRequestUrl, resolveApiOrigin } from "@/utilities/sameOrigin";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "";
@@ -60,7 +60,19 @@ export const AuthenticatedImage = ({
   if (authenticated) {
     if (isError) return null;
     if (isLoading || !blobUrl) {
-      return <Skeleton className={className} data-testid={dataTestId} />;
+      // span, not the Skeleton component: this can render inside a markdown
+      // <p> (chat images), where Skeleton's <div> would be invalid HTML and
+      // trigger a React hydration warning. Mirrors Skeleton's own styling.
+      return (
+        <span
+          data-slot="skeleton"
+          data-testid={dataTestId}
+          className={cn(
+            "inline-block bg-primary-300 animate-pulse rounded-md",
+            className,
+          )}
+        />
+      );
     }
     return (
       <img
