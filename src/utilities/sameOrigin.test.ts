@@ -33,6 +33,27 @@ describe("isTrustedRequestUrl", () => {
     ).toBe(true);
   });
 
+  it("trusts a relative path when baseUrl itself is relative (same-origin /api deployments)", () => {
+    expect(
+      isTrustedRequestUrl("/users/me", "/api", PAGE_ORIGIN, PAGE_ORIGIN),
+    ).toBe(true);
+  });
+
+  it("still rejects a cross-origin absolute URL when baseUrl is relative", () => {
+    expect(
+      isTrustedRequestUrl(
+        "https://attacker.example/x",
+        "/api",
+        PAGE_ORIGIN,
+        PAGE_ORIGIN,
+      ),
+    ).toBe(false);
+  });
+
+  it("stays untrusting when both baseUrl and page origin are unusable", () => {
+    expect(isTrustedRequestUrl("/users/me", "/api", "", "")).toBe(false);
+  });
+
   it("trusts an absolute URL on the page origin", () => {
     expect(
       isTrustedRequestUrl(
