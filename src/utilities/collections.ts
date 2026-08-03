@@ -1,9 +1,7 @@
 import {
   LOCAL_STORAGE_PRIVATE_COLLECTIONS,
   LOCAL_STORAGE_PUBLIC_COLLECTIONS,
-  LOCAL_STORAGE_PUBLIC_MCP_SERVERS,
 } from "./localStorage";
-import { getStoredStringArray } from "./storedStringArray";
 
 type CollectionRef = {
   id: string;
@@ -82,11 +80,5 @@ export function getMessageCollectionPayload() {
   return {
     public_collections: getEnabledCollectionIds(LOCAL_STORAGE_PUBLIC_COLLECTIONS),
     private_collections: getEnabledCollectionIds(LOCAL_STORAGE_PRIVATE_COLLECTIONS),
-  };
-}
-
-export function getMessageMcpServerPayload() {
-  return {
-    public_mcp_servers: getStoredStringArray(LOCAL_STORAGE_PUBLIC_MCP_SERVERS),
   };
 }

@@ -8,10 +8,7 @@ import type {
   ModelSelection,
 } from "@/types";
 import { QUERY_KEYS } from "./keys";
-import {
-  getMessageCollectionPayload,
-  getMessageMcpServerPayload,
-} from "@/utilities/collections";
+import { getMessageCollectionPayload } from "@/utilities/collections";
 import {
   getStoredModelSelection,
   modelSelectionToPayload,
@@ -28,6 +25,8 @@ export type CreateMessageResponse = {
   trace?: AgenticTraceStep[] | null;
   metadata?: MessageType["metadata"];
   request_input?: MessageType["request_input"];
+  attachments?: MessageType["attachments"];
+  artifact_ids?: MessageType["artifact_ids"];
 };
 
 type GenerationInput = {
@@ -49,12 +48,15 @@ export const buildGenerationPayload = ({
   );
   const modelFields = modelSelectionToPayload(selection, models);
 
+  // Note: the MCP server selection (which endpoint this hits and its
+  // `public_mcp_servers` field) is resolved by the caller via
+  // utilities/messageEndpoint.ts + utilities/mcpServers.ts, and spread on top
+  // of this payload — see useSendRequest.ts.
   return {
     query,
     ...settings,
     ...modelFields,
     ...getMessageCollectionPayload(),
-    ...getMessageMcpServerPayload(),
   };
 };
 
@@ -72,6 +74,10 @@ export const mapCreateMessageResponse = (
     trace: data.trace ?? null,
     metadata: data.metadata,
     request_input: data.request_input,
+    // Carried over as-is: the sync path doesn't rebuild attachments, it just
+    // reports back what the backend persisted for this message.
+    attachments: data.attachments,
+    artifact_ids: data.artifact_ids,
     feedback: null,
     timestamp: new Date(),
   }) as MessageType;
@@ -87,6 +93,8 @@ export const mapToConversationMessage = (
     | "trace"
     | "metadata"
     | "request_input"
+    | "attachments"
+    | "artifact_ids"
   > & {
     query?: string;
     answer?: string;
@@ -105,6 +113,11 @@ export const mapToConversationMessage = (
     trace: data.trace ?? null,
     metadata: data.metadata,
     request_input: data.request_input,
+    // Explicitly carried over: this rebuilds the message from scratch and
+    // would otherwise drop them, making chat images vanish between send and
+    // the refetch that follows onSettled.
+    attachments: data.attachments,
+    artifact_ids: data.artifact_ids,
   }) as MessageType;
 
 export const updateLastTempMessage = (

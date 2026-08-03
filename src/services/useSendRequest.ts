@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { MUTATION_KEYS, QUERY_KEYS } from "./keys";
 import { toast } from "sonner";
 import type { AdvancedSettingsValidation } from "@/components/chat/SettingsForm";
-import type { ModelListResponse, ModelSelection } from "@/types";
+import type { ImageAttachment, ModelListResponse, ModelSelection } from "@/types";
 import api from "./axios";
 import { postStream, consumeSuppressToastFlag } from "./streaming";
 import type { ApiError, ChaMessageType, MessageType } from "@/types";
@@ -21,6 +21,8 @@ import {
   modelSelectionToPayload,
   reconcileModelSelection,
 } from "@/utilities/modelSelection";
+import { getSelectedMcpServerNames } from "@/utilities/mcpServers";
+import { resolveMessageEndpoint } from "@/utilities/messageEndpoint";
 
 type SendRequestProps = {
   query: string;
@@ -28,6 +30,7 @@ type SendRequestProps = {
   settings: AdvancedSettingsValidation;
   modelSelection?: ModelSelection;
   models?: ModelListResponse;
+  attachments?: ImageAttachment[];
 };
 
 export const sendRequest = async ({
@@ -36,16 +39,24 @@ export const sendRequest = async ({
   settings,
   modelSelection,
   models,
+  attachments,
 }: SendRequestProps) => {
-  const response = await api.post<CreateMessageResponse>(
-    `/conversations/${conversationId}/stream-generate-agentic`,
-    buildGenerationPayload({
-      query,
-      settings,
-      modelSelection,
-      models,
-    }),
+  // Which endpoint this hits (classic RAG vs agentic) is driven entirely by
+  // the MCP server selection: empty selection keeps the classic path
+  // byte-identical, one or more servers switches to the agentic pipeline.
+  const mcpServers = getSelectedMcpServerNames();
+  const { url, extraPayload } = resolveMessageEndpoint(
+    conversationId,
+    mcpServers,
+    "sync",
   );
+  const response = await api.post<CreateMessageResponse>(url, {
+    ...buildGenerationPayload({ query, settings, modelSelection, models }),
+    ...(attachments?.length
+      ? { artifact_ids: attachments.map((a) => a.id) }
+      : {}),
+    ...extraPayload,
+  });
   return mapCreateMessageResponse(response.data);
 };
 
@@ -61,18 +72,30 @@ export const useSendRequest = (conversationId?: string) => {
       settings,
       modelSelection,
       models,
+      attachments,
     }: SendRequestProps) => {
       const enableStreaming =
         (import.meta.env.VITE_ENABLE_STREAMING ?? "false") === "true";
       const cachedModels =
         models ??
         queryClient.getQueryData<ModelListResponse>([QUERY_KEYS.models]);
-      const payload = buildGenerationPayload({
-        query,
-        settings,
-        modelSelection,
-        models: cachedModels,
-      });
+
+      const mcpServers = getSelectedMcpServerNames();
+      const { url: streamUrl, extraPayload: mcpPayload } =
+        resolveMessageEndpoint(conversationId, mcpServers, "stream");
+
+      const payload = {
+        ...buildGenerationPayload({
+          query,
+          settings,
+          modelSelection,
+          models: cachedModels,
+        }),
+        ...(attachments?.length
+          ? { artifact_ids: attachments.map((a) => a.id) }
+          : {}),
+        ...mcpPayload,
+      };
 
       try {
         if (!enableStreaming) {
@@ -82,6 +105,7 @@ export const useSendRequest = (conversationId?: string) => {
             settings,
             modelSelection,
             models: cachedModels,
+            attachments,
           });
         }
 
@@ -98,9 +122,10 @@ export const useSendRequest = (conversationId?: string) => {
           s.length > max ? s.slice(0, max) + "…" : s;
 
         let finalAnswer: string | null = null;
+        let finalArtifactIds: string[] | undefined;
 
         await postStream({
-          url: `/conversations/${conversationId}/stream-generate-agentic`,
+          url: streamUrl,
           payload,
           onEvent: (evt) => {
             const { type, content, answer } = evt as Record<string, unknown>;
@@ -112,6 +137,11 @@ export const useSendRequest = (conversationId?: string) => {
               }));
             } else if (type === "final" && typeof answer === "string") {
               finalAnswer = answer;
+              const artifactIds = (evt as Record<string, unknown>)
+                .artifact_ids;
+              if (Array.isArray(artifactIds)) {
+                finalArtifactIds = artifactIds as string[];
+              }
               updateTemp((msg) => ({ ...msg, output: answer }));
             } else if (
               (type === "status" || type === "requery") &&
@@ -119,6 +149,8 @@ export const useSendRequest = (conversationId?: string) => {
             ) {
               addNotice(content);
             } else if (type === "tool_call" && typeof content === "string") {
+              // Agentic pipeline is invoking an MCP tool; reuse the same
+              // in-stream status mechanism as "status"/"requery" notices.
               addNotice(`${truncate(content, 100)}`);
             } else if (type === "tool_result" && typeof content === "string") {
               addNotice(`${truncate(content, 100)}`);
@@ -148,6 +180,8 @@ export const useSendRequest = (conversationId?: string) => {
             llm_type: payloadFields.llm_type ?? null,
             custom_model_id: payloadFields.custom_model_id ?? null,
           },
+          attachments,
+          artifact_ids: finalArtifactIds,
         });
       } catch (e) {
         console.error("streaming error", e);
@@ -184,6 +218,7 @@ export const useSendRequest = (conversationId?: string) => {
         documents: [],
         use_rag: false,
         metadata: {},
+        attachments: newMessage.attachments,
       };
 
       if (previousData) {

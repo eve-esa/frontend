@@ -3,9 +3,16 @@ import type { AxiosProgressEvent } from "axios";
 
 export type StreamEvent =
   | { type: "token"; content: string }
-  | { type: "final"; answer: string; trace?: Record<string, unknown>[] | null }
+  | {
+      type: "final";
+      answer: string;
+      trace?: Record<string, unknown>[] | null;
+      artifact_ids?: string[];
+    }
   | { type: "status"; content: string }
   | { type: "requery"; content: string }
+  // Agentic pipeline only (stream-generate-agentic): emitted when the agent
+  // invokes an MCP tool ("tool_call") or the tool returns ("tool_result").
   | { type: "tool_call"; content?: string; [key: string]: unknown }
   | { type: "tool_result"; content?: string; preview?: string; [key: string]: unknown }
   | { type: "stopped" }

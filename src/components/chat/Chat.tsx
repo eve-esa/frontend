@@ -20,12 +20,16 @@ import {
   getStoredModelSelection,
   reconcileModelSelection,
 } from "@/utilities/modelSelection";
+import type { ImageAttachment } from "@/types";
+import {
+  parseDraftNewConversation,
+  type DraftNewConversation,
+} from "@/utilities/draftNewConversation";
 import { StopRequestWarningDialog } from "./StopRequestWarningDialog";
 import { useSidebar } from "./DynamicSidebarProvider";
-import { useIsMutating } from "@tanstack/react-query";
+import { useIsMutating, useQueryClient } from "@tanstack/react-query";
 import { MUTATION_KEYS } from "@/services/keys";
 import { useRetry } from "@/services/useRetry";
-import { useQueryClient } from "@tanstack/react-query";
 import { prefetchTokenUsage } from "@/services/useTokenUsage";
 import { useListModels } from "@/services/useListModels";
 
@@ -35,7 +39,9 @@ export const Chat = () => {
   const { conversationId } = useParams();
   const firstMessageSent = useRef(false);
   const { setPendingConversation, removePendingConversation } = useSidebar();
-  const [draftMessage, setDraftMessage] = useState<string | null>(null);
+  const [draftMessage, setDraftMessage] = useState<DraftNewConversation | null>(
+    null,
+  );
 
   const isMutating = Boolean(
     useIsMutating({
@@ -99,7 +105,7 @@ export const Chat = () => {
     scrollToBottom("auto");
     const draft = localStorage.getItem(LOCAL_STORAGE_DRAFT_NEW_CONVERSATION);
     if (draft) {
-      setDraftMessage(draft);
+      setDraftMessage(parseDraftNewConversation(draft));
     }
   }, [conversationId, messages.length]);
 
@@ -109,7 +115,7 @@ export const Chat = () => {
   }, [conversationId, queryClient]);
 
   const handleSendRequest = useCallback(
-    (input: string) => {
+    (input: string, attachments?: ImageAttachment[]) => {
       if (!conversationId) return;
 
       const settings = JSON.parse(
@@ -126,6 +132,7 @@ export const Chat = () => {
         settings: { ...adaptSettingsForRequest(settings) },
         modelSelection,
         models,
+        attachments,
       });
     },
     [sendRequest, conversationId, models],
@@ -136,7 +143,7 @@ export const Chat = () => {
       firstMessageSent.current = true;
       localStorage.removeItem(LOCAL_STORAGE_DRAFT_NEW_CONVERSATION);
       setDraftMessage(null);
-      handleSendRequest(draftMessage);
+      handleSendRequest(draftMessage.input, draftMessage.attachments);
     }
   }, [draftMessage, isMutating, handleSendRequest]);
 

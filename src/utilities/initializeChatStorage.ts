@@ -1,12 +1,6 @@
 import type { SharedCollectionType } from "@/services/useGetSharedCollection";
-import {
-  LOCAL_STORAGE_PUBLIC_COLLECTIONS,
-  LOCAL_STORAGE_PUBLIC_MCP_SERVERS,
-} from "@/utilities/localStorage";
-import {
-  ensureStoredStringArray,
-  setStoredStringArray,
-} from "@/utilities/storedStringArray";
+import { LOCAL_STORAGE_PUBLIC_COLLECTIONS } from "@/utilities/localStorage";
+import { setStoredStringArray } from "@/utilities/storedStringArray";
 
 const parseStoredIds = (raw: string): string[] | null => {
   try {
@@ -54,10 +48,4 @@ export const initializePublicCollectionsStorage = (
 
     setStoredStringArray(key, migrated);
   }
-};
-
-export const initializePublicMcpServersStorage = (
-  serverNames: string[],
-): void => {
-  ensureStoredStringArray(LOCAL_STORAGE_PUBLIC_MCP_SERVERS, serverNames);
 };

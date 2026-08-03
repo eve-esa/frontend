@@ -10,14 +10,12 @@ import {
   LOCAL_STORAGE_PRIVATE_COLLECTIONS,
   LOCAL_STORAGE_PUBLIC_COLLECTIONS,
 } from "@/utilities/localStorage";
-import { initializePublicMcpServersStorage } from "@/utilities/initializeChatStorage";  
 import { TourProvider } from "@/components/onboarding/TourContext";
 import { steps } from "@/utilities/onboardingSteps";
 import { useJoyride } from "@/hooks/useJoyride";
 import { useGetSharedCollection } from "@/services/useGetSharedCollection";
 import { useGetMyCollections } from "@/services/useGetMyCollections";
 import { migrateCollectionStorage } from "@/utilities/collections";
-import { useGetMcpServers } from "@/services/useGetMcpServers";
 
 export const ChatLayout = () => {
   const { run, stepIndex, handleJoyrideCallback } = useJoyride();
@@ -29,7 +27,6 @@ export const ChatLayout = () => {
   );
   const { data: publicCollections } = useGetSharedCollection();
   const { data: myCollections } = useGetMyCollections({});
-  const { data: mcpServers } = useGetMcpServers();
 
   useEffect(() => {
     if (!publicCollections) return;
@@ -52,17 +49,6 @@ export const ChatLayout = () => {
       allCollections,
     );
   }, [myCollections, storedPrivateCollections]);
-
-  useEffect(() => {
-    if (!mcpServers) return;
-
-    const enabledServerNames = mcpServers.pages
-      .flatMap((page) => page.data)
-      .filter((server) => server.enabled)
-      .map((server) => server.name);
-
-    initializePublicMcpServersStorage(enabledServerNames);
-  }, [mcpServers]);
 
   useEffect(() => {
     const settings = localStorage.getItem(LOCAL_STORAGE_SETTINGS);
