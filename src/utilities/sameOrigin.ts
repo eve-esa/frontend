@@ -49,8 +49,13 @@ export const isTrustedRequestUrl = (
 
   try {
     // Mirror axios: relative URLs are resolved against baseURL; absolute URLs
-    // keep their own origin.
-    const base = baseUrl || pageOrigin;
+    // keep their own origin. baseURL itself may be relative (e.g. "/api" in
+    // same-origin deployments) and is only meaningful against the page origin —
+    // passing it to `new URL` as-is would throw and wrongly mark every request
+    // untrusted, so credentials would silently never be attached.
+    const base = baseUrl
+      ? new URL(baseUrl, pageOrigin || undefined)
+      : new URL(pageOrigin);
     const resolved = new URL(target, base);
     if (resolved.protocol !== "http:" && resolved.protocol !== "https:") {
       return false;
