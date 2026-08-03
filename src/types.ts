@@ -30,6 +30,16 @@ export type MessageType = {
   stopped?: boolean;
   timestamp: Date;
   documents: Document[];
+  // Images attached to the user turn. Stored in the canonical frontend shape
+  // (`ImageAttachment`) for optimistic messages, but the backend persists them
+  // with different keys (`image_id`/`size_bytes`) — see `RawMessageAttachment`
+  // and `toImageAttachment` in `utilities/attachments.ts`.
+  attachments?: RawMessageAttachment[];
+  // Ids of artifacts (uploads or MCP-generated images) associated with this
+  // message, per the final SSE event / message response. Lets the persisted
+  // message state know about its artifacts without waiting for the
+  // onSettled refetch.
+  artifact_ids?: string[];
   answer?: string;
   was_copied?: boolean;
   query?: string;
@@ -125,6 +135,7 @@ export enum LLMType {
   Mistral = "mistral",
   Satcom_Small = "satcom_small",
   Satcom_Large = "satcom_large",
+  EVE_JSC = "eve_jsc"
 }
 
 export enum LLMTypeLabel {
@@ -132,4 +143,99 @@ export enum LLMTypeLabel {
   Mistral = "Mistral Medium",
   Satcom_Small = "SatcomLLM - Small",
   Satcom_Large = "SatcomLLM - Large",
+  EVE_JSC = "EVE-JSC"
 }
+
+// ─── Image attachments ───────────────────────────────────────────────────────
+
+// Canonical attachment shape used throughout the frontend UI.
+export type ImageAttachment = {
+  id: string;
+  url: string;
+  filename: string;
+  content_type: string;
+  size?: number;
+};
+
+// Raw attachment as persisted / returned by the backend on GET /conversations.
+// Backend keys differ from `ImageAttachment` (image_id -> id, size_bytes -> size),
+// so message attachments may arrive in either shape. `toImageAttachment` in
+// `utilities/attachments.ts` normalizes both. `ImageAttachment` is assignable to
+// this type, which is why optimistic messages can carry the canonical shape.
+export type RawMessageAttachment = {
+  id?: string;
+  image_id?: string;
+  url: string;
+  filename: string;
+  content_type: string;
+  size?: number;
+  size_bytes?: number;
+};
+
+// Response of POST /artifacts.
+export type ImageUploadResponse = {
+  id: string;
+  url: string;
+  markdown: string;
+  filename: string;
+  content_type: string;
+  size_bytes: number;
+};
+
+// How an artifact came to exist: uploaded directly by the user, or produced by
+// an MCP tool call. Deletion is only allowed for "upload" (backend 403s
+// otherwise), so the UI hides the delete button for "mcp_tool" items.
+export type ArtifactSource = {
+  type: "mcp_tool" | "upload";
+  mcp_server?: string;
+  tool_name?: string;
+};
+
+// Item returned by the paginated GET /artifacts (Artifacts gallery).
+export type ImageAsset = {
+  id: string;
+  url?: string;
+  filename: string;
+  content_type: string;
+  size_bytes: number;
+  conversation_id?: string | null;
+  timestamp?: string;
+  source?: ArtifactSource;
+};
+
+export const ACCEPTED_IMAGE_TYPES = [
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/gif",
+];
+
+// Client-side mirror of the backend's upload allowlist (see
+// ARTIFACT_UPLOAD_ALLOWED_TYPES): images plus pdf/csv/txt/json/geojson.
+// Validation accepts a file by MIME type OR extension because browsers
+// report an empty MIME type for extensions they don't know (e.g. .geojson).
+export const ACCEPTED_UPLOAD_MIME_TYPES = [
+  ...ACCEPTED_IMAGE_TYPES,
+  "application/pdf",
+  "text/csv",
+  "text/plain",
+  "application/json",
+  "application/geo+json",
+];
+
+export const ACCEPTED_UPLOAD_EXTENSIONS = [
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".webp",
+  ".gif",
+  ".pdf",
+  ".csv",
+  ".txt",
+  ".json",
+  ".geojson",
+];
+
+export const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
+
+export const MAX_ATTACHMENTS_PER_MESSAGE = 4;
