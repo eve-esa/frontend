@@ -5,6 +5,11 @@ import type { MessageType } from "@/types";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { cn } from "@/lib/utils";
 import { useSmoothStream } from "@/hooks/useSmoothStream";
+import { AuthenticatedImage } from "@/components/ui/AuthenticatedImage";
+import { ImageLightbox } from "@/components/ui/ImageLightbox";
+import { ArtifactDownloadChip } from "@/components/ui/ArtifactDownloadChip";
+import { toImageAttachment } from "@/utilities/attachments";
+import { stripIncompleteImage } from "@/utilities/stripIncompleteImage";
 
 type MessageProps = {
   message: MessageType;
@@ -23,8 +28,19 @@ export const Message = ({
 }: MessageProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isOverflowing, setIsOverflowing] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const messageRef = useRef<HTMLDivElement | null>(null);
   const textRef = useRef<HTMLDivElement | null>(null);
+
+  const attachments = (message.attachments ?? []).map(toImageAttachment);
+  // Only images join the thumbnail grid + lightbox; other uploads (pdf, csv,
+  // ...) render as download chips. The lightbox indexes the image list only.
+  const imageAttachments = attachments.filter((a) =>
+    (a.content_type ?? "").startsWith("image/"),
+  );
+  const fileAttachments = attachments.filter(
+    (a) => !(a.content_type ?? "").startsWith("image/"),
+  );
 
   const showLoading = isSending && isLastMessage && !message?.output;
 
@@ -46,6 +62,14 @@ export const Message = ({
     smoothed.length >= (message.output?.length || 0)
       ? message.output
       : smoothed;
+
+  // While this message is the active streaming target, drop a trailing
+  // half-typed image token so no raw markdown flashes and no partial URL is
+  // fetched. Persisted/complete messages are rendered verbatim.
+  const displayOutput =
+    isStreamingTarget && effectiveOutput
+      ? stripIncompleteImage(effectiveOutput)
+      : effectiveOutput;
 
   // Track whether the user is near the bottom of the scroll container
   const [isUserNearBottom, setIsUserNearBottom] = useState(true);
@@ -104,6 +128,31 @@ export const Message = ({
       {/* USER BUBBLE */}
       <div className="flex justify-end">
         <div className="max-w-[min(1200px,90%)] bg-primary-900 border-2 border-primary-400 text-natural-50 rounded-2xl rounded-br-sm px-4 py-3 shadow-sm">
+          {imageAttachments.length > 0 && (
+            <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {imageAttachments.map((attachment, index) => (
+                <AuthenticatedImage
+                  key={attachment.id || `${attachment.url}-${index}`}
+                  src={attachment.url}
+                  alt={attachment.filename}
+                  onClick={() => setLightboxIndex(index)}
+                  data-testid="message-attachment-image"
+                  className="h-28 w-full rounded-lg object-cover cursor-zoom-in"
+                />
+              ))}
+            </div>
+          )}
+          {fileAttachments.length > 0 && (
+            <div className="mb-3 flex flex-wrap gap-2">
+              {fileAttachments.map((attachment, index) => (
+                <ArtifactDownloadChip
+                  key={attachment.id || `${attachment.url}-${index}`}
+                  href={attachment.url}
+                  filename={attachment.filename}
+                />
+              ))}
+            </div>
+          )}
           <div
             ref={(el) => {
               textRef.current = el;
@@ -138,7 +187,7 @@ export const Message = ({
       <div className="bg-natural-900 rounded-tl-[20px] rounded-br-[20px] pb-4 pt-0 relative">
         <div className="md:pt-8 pt-4 px-[1px]">
           {effectiveOutput ? (
-            <SmartText text={`${isRequery ? requery : ""}${effectiveOutput}`} />
+            <SmartText text={`${isRequery ? requery : ""}${displayOutput}`} />
           ) : showLoading ? (
             <div className="flex flex-col gap-2 text-natural-600">
               {Array.isArray(message.pre_answer_notices) &&
@@ -172,6 +221,18 @@ export const Message = ({
           {!showLoading && <MessageFooter message={message} />}
         </div>
       </div>
+
+      {lightboxIndex !== null && (
+        <ImageLightbox
+          images={imageAttachments.map((attachment) => ({
+            src: attachment.url,
+            alt: attachment.filename,
+          }))}
+          initialIndex={lightboxIndex}
+          open={lightboxIndex !== null}
+          onOpenChange={(open) => !open && setLightboxIndex(null)}
+        />
+      )}
     </div>
   );
 };
