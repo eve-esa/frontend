@@ -1,70 +1,68 @@
+import Joyride from "react-joyride";
+import { useEffect } from "react";
+import { Outlet } from "react-router-dom";
 import { DynamicSidebarProvider } from "@/components/chat/DynamicSidebarProvider";
 import { ConversationsMenuSidebar } from "@/components/chat/ConversationsMenuSidebar";
 import { DynamicSidebar } from "@/components/chat/DynamicSidebar";
-import { Outlet } from "react-router-dom";
 import { messageDefaultSettings } from "@/utilities/messageDefaultSettings";
+import { LOCAL_STORAGE_SETTINGS } from "@/utilities/localStorage";
 import {
+  LOCAL_STORAGE_PRIVATE_COLLECTIONS,
   LOCAL_STORAGE_PUBLIC_COLLECTIONS,
-  LOCAL_STORAGE_SETTINGS,
 } from "@/utilities/localStorage";
-import { useEffect } from "react";
-import Joyride from "react-joyride";
+import { initializePublicMcpServersStorage } from "@/utilities/initializeChatStorage";  
 import { TourProvider } from "@/components/onboarding/TourContext";
 import { steps } from "@/utilities/onboardingSteps";
 import { useJoyride } from "@/hooks/useJoyride";
 import { useGetSharedCollection } from "@/services/useGetSharedCollection";
+import { useGetMyCollections } from "@/services/useGetMyCollections";
+import { migrateCollectionStorage } from "@/utilities/collections";
+import { useGetMcpServers } from "@/services/useGetMcpServers";
 
 export const ChatLayout = () => {
   const { run, stepIndex, handleJoyrideCallback } = useJoyride();
   const storedPublicCollections = localStorage.getItem(
     LOCAL_STORAGE_PUBLIC_COLLECTIONS
   );
+  const storedPrivateCollections = localStorage.getItem(
+    LOCAL_STORAGE_PRIVATE_COLLECTIONS
+  );
   const { data: publicCollections } = useGetSharedCollection();
+  const { data: myCollections } = useGetMyCollections({});
+  const { data: mcpServers } = useGetMcpServers();
 
   useEffect(() => {
     if (!publicCollections) return;
 
     const allCollections = publicCollections.pages.flatMap((page) => page.data);
+    migrateCollectionStorage(
+      LOCAL_STORAGE_PUBLIC_COLLECTIONS,
+      storedPublicCollections,
+      allCollections,
+    );
+  }, [publicCollections, storedPublicCollections]);
 
-    // If nothing stored yet, initialize with all IDs
-    if (!storedPublicCollections) {
-      localStorage.setItem(
-        LOCAL_STORAGE_PUBLIC_COLLECTIONS,
-        JSON.stringify(allCollections.map((c) => c.id))
-      );
-      return;
-    }
+  useEffect(() => {
+    if (!myCollections) return;
 
-    // Migration: if stored values look like names, map to IDs
-    try {
-      const parsed = JSON.parse(storedPublicCollections) as string[];
-      const containsId = parsed.some((v) =>
-        allCollections.some((c) => c.id === v)
-      );
-      const containsName = parsed.some((v) =>
-        allCollections.some((c) => c.name === v)
-      );
+    const allCollections = myCollections.pages.flatMap((page) => page.data);
+    migrateCollectionStorage(
+      LOCAL_STORAGE_PRIVATE_COLLECTIONS,
+      storedPrivateCollections,
+      allCollections,
+    );
+  }, [myCollections, storedPrivateCollections]);
 
-      if (!containsId && containsName) {
-        const nameToId = new Map(
-          allCollections.map((c) => [c.name, c.id] as const)
-        );
-        const migrated = parsed
-          .map((name) => nameToId.get(name))
-          .filter((id): id is string => Boolean(id));
-        localStorage.setItem(
-          LOCAL_STORAGE_PUBLIC_COLLECTIONS,
-          JSON.stringify(migrated)
-        );
-      }
-    } catch (_) {
-      // If parsing fails, reset to all IDs
-      localStorage.setItem(
-        LOCAL_STORAGE_PUBLIC_COLLECTIONS,
-        JSON.stringify(allCollections.map((c) => c.id))
-      );
-    }
-  }, [publicCollections]);
+  useEffect(() => {
+    if (!mcpServers) return;
+
+    const enabledServerNames = mcpServers.pages
+      .flatMap((page) => page.data)
+      .filter((server) => server.enabled)
+      .map((server) => server.name);
+
+    initializePublicMcpServersStorage(enabledServerNames);
+  }, [mcpServers]);
 
   useEffect(() => {
     const settings = localStorage.getItem(LOCAL_STORAGE_SETTINGS);

@@ -6,25 +6,35 @@ import {
   type ReactNode,
 } from "react";
 import { useIsMobile } from "@/hooks/useIsMobile";
-import type { Document as AppDocument } from "@/types";
+import type { AgenticTraceStep, Document as AppDocument } from "@/types";
+import { AgenticTrace } from "./AgenticTrace";
 import { SettingsForm } from "./SettingsForm";
 import { Sources } from "./Sources";
 import { SharedCollections } from "./SharedCollections";
 import { MyCollections } from "./MyCollections";
+import { SharedToolkits } from "./SharedToolkits";
 
 export type SidebarContentType =
   | "settings"
   | "sources"
+  | "trace"
   | "shared-collections"
-  | "my-collections";
+  | "my-collections"
+  | "toolkits";
 
 export type SidebarContent = {
   type: SidebarContentType;
   props?: {
-    sources: AppDocument[];
+    sources?: AppDocument[];
+    trace?: AgenticTraceStep[];
     messageId?: string;
   };
 };
+
+const MESSAGE_SCOPED_SIDEBARS = new Set<SidebarContentType>([
+  "sources",
+  "trace",
+]);
 
 type SidebarContextType = {
   isOpenDynamicSidebar: boolean;
@@ -68,7 +78,7 @@ export const DynamicSidebarProvider = ({ children }: SidebarProviderProps) => {
       if (
         content?.type === newContent.type &&
         isOpenDynamicSidebar &&
-        newContent.type !== "sources"
+        !MESSAGE_SCOPED_SIDEBARS.has(newContent.type)
       ) {
         closeDynamicSidebar();
         return;
@@ -121,10 +131,19 @@ export const DynamicSidebarProvider = ({ children }: SidebarProviderProps) => {
             messageId={content.props?.messageId}
           />
         );
+      case "trace":
+        return (
+          <AgenticTrace
+            onToggle={closeDynamicSidebar}
+            trace={content.props?.trace || []}
+          />
+        );
       case "shared-collections":
         return <SharedCollections onToggle={closeDynamicSidebar} />;
       case "my-collections":
         return <MyCollections onToggle={closeDynamicSidebar} />;
+      case "toolkits":
+        return <SharedToolkits onToggle={closeDynamicSidebar} />;
       default:
         return null;
     }

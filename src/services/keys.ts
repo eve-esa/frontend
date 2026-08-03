@@ -19,16 +19,20 @@ export const MUTATION_KEYS = {
   sendRequest: "sendRequest",
   retryRequest: "retryRequest",
   sourceLog: "sourceLog",
+  customModels: "customModels",
 };
 
 export const QUERY_KEYS = {
   profile: "profile",
   tokenUsage: "tokenUsage",
   publicCollections: "publicCollections",
+  mcpServers: "mcpServers",
+  mcpServer: "mcpServer",
   myCollections: "myCollections",
   conversationsList: "conversationsList",
   conversation: "conversation",
   documents: "documents",
   getDocument: "getDocument",
   userMessageStats: "userMessageStats",
+  models: "models",
 };

@@ -16,8 +16,10 @@ import { useNavigationBlocker } from "@/hooks/useNavigationBlocker";
 import { MessageSkeleton } from "./MessageSkeleton";
 import { routes } from "@/utilities/routes";
 import { adaptSettingsForRequest } from "@/utilities/helpers";
-import { LOCAL_STORAGE_LLM_TYPE } from "@/utilities/localStorage";
-import { LLMType } from "@/types";
+import {
+  getStoredModelSelection,
+  reconcileModelSelection,
+} from "@/utilities/modelSelection";
 import { StopRequestWarningDialog } from "./StopRequestWarningDialog";
 import { useSidebar } from "./DynamicSidebarProvider";
 import { useIsMutating } from "@tanstack/react-query";
@@ -25,6 +27,7 @@ import { MUTATION_KEYS } from "@/services/keys";
 import { useRetry } from "@/services/useRetry";
 import { useQueryClient } from "@tanstack/react-query";
 import { prefetchTokenUsage } from "@/services/useTokenUsage";
+import { useListModels } from "@/services/useListModels";
 
 export const Chat = () => {
   const navigate = useNavigate();
@@ -41,6 +44,7 @@ export const Chat = () => {
   );
 
   const { mutate: sendRequest } = useSendRequest(conversationId);
+  const { data: models } = useListModels();
 
   const { isModalOpen, handleConfirm, handleCancel } =
     useNavigationBlocker(isMutating);
@@ -53,7 +57,7 @@ export const Chat = () => {
     isError,
   } = useGetConversation({
     conversationId,
-    enabled: !draftMessage || firstMessageSent.current,
+    enabled: (!draftMessage || firstMessageSent.current) && !isMutating,
   });
 
   const messages = data?.messages || [];
@@ -111,18 +115,20 @@ export const Chat = () => {
       const settings = JSON.parse(
         localStorage.getItem(LOCAL_STORAGE_SETTINGS) ?? "{}",
       );
-      const llm_type =
-        (localStorage.getItem(LOCAL_STORAGE_LLM_TYPE) as LLMType) ||
-        LLMType.Main;
+      const modelSelection = reconcileModelSelection(
+        getStoredModelSelection(models),
+        models,
+      );
 
       sendRequest({
         query: input,
         conversationId,
         settings: { ...adaptSettingsForRequest(settings) },
-        llm_type,
+        modelSelection,
+        models,
       });
     },
-    [sendRequest, conversationId],
+    [sendRequest, conversationId, models],
   );
 
   useEffect(() => {

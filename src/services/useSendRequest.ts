@@ -2,40 +2,51 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { MUTATION_KEYS, QUERY_KEYS } from "./keys";
 import { toast } from "sonner";
 import type { AdvancedSettingsValidation } from "@/components/chat/SettingsForm";
-import type { LLMType } from "@/types";
+import type { ModelListResponse, ModelSelection } from "@/types";
 import api from "./axios";
 import { postStream, consumeSuppressToastFlag } from "./streaming";
 import type { ApiError, ChaMessageType, MessageType } from "@/types";
 import { handleApiError } from "@/utilities/helpers";
-import { LOCAL_STORAGE_PUBLIC_COLLECTIONS } from "@/utilities/localStorage";
 import { logError } from "./errorLogging";
 import { invalidateTokenUsage } from "./useTokenUsage";
+import {
+  buildGenerationPayload,
+  mapCreateMessageResponse,
+  mapToConversationMessage,
+  updateLastTempMessage,
+  type CreateMessageResponse,
+} from "./agenticMessage";
+import {
+  getStoredModelSelection,
+  modelSelectionToPayload,
+  reconcileModelSelection,
+} from "@/utilities/modelSelection";
 
 type SendRequestProps = {
   query: string;
   conversationId?: string;
   settings: AdvancedSettingsValidation;
-  llm_type?: LLMType;
+  modelSelection?: ModelSelection;
+  models?: ModelListResponse;
 };
 
 export const sendRequest = async ({
   query,
   conversationId,
   settings,
-  llm_type,
+  modelSelection,
+  models,
 }: SendRequestProps) => {
-  const response = await api.post<MessageType>(
-    `/conversations/${conversationId}/messages`,
-    {
+  const response = await api.post<CreateMessageResponse>(
+    `/conversations/${conversationId}/stream-generate-agentic`,
+    buildGenerationPayload({
       query,
-      ...settings,
-      ...(llm_type ? { llm_type } : {}),
-      public_collections: JSON.parse(
-        localStorage.getItem(LOCAL_STORAGE_PUBLIC_COLLECTIONS) ?? "[]",
-      ),
-    },
+      settings,
+      modelSelection,
+      models,
+    }),
   );
-  return response.data;
+  return mapCreateMessageResponse(response.data);
 };
 
 export const useSendRequest = (conversationId?: string) => {
@@ -48,128 +59,96 @@ export const useSendRequest = (conversationId?: string) => {
       query,
       conversationId,
       settings,
-      llm_type,
+      modelSelection,
+      models,
     }: SendRequestProps) => {
       const enableStreaming =
         (import.meta.env.VITE_ENABLE_STREAMING ?? "false") === "true";
-
-      const payload = {
+      const cachedModels =
+        models ??
+        queryClient.getQueryData<ModelListResponse>([QUERY_KEYS.models]);
+      const payload = buildGenerationPayload({
         query,
-        ...settings,
-        ...(llm_type ? { llm_type } : {}),
-        public_collections: JSON.parse(
-          localStorage.getItem(LOCAL_STORAGE_PUBLIC_COLLECTIONS) ?? "[]",
-        ),
-      };
+        settings,
+        modelSelection,
+        models: cachedModels,
+      });
 
       try {
         if (!enableStreaming) {
-          return sendRequest({ query, conversationId, settings, llm_type });
+          return sendRequest({
+            query,
+            conversationId,
+            settings,
+            modelSelection,
+            models: cachedModels,
+          });
         }
 
-        const applyTokenToOptimisticMessage = (tokenChunk: string) => {
-          queryClient.setQueryData<ChaMessageType>(
-            [QUERY_KEYS.conversation, conversationId],
-            (old) => {
-              if (!old || !old.messages?.length) return old;
-              const lastIndex = old.messages.length - 1;
-              const last = old.messages[lastIndex];
-              if (!last?.id?.startsWith("temp-")) return old;
-              const updated = {
-                ...last,
-                output: (last.output || "") + tokenChunk,
-              } as MessageType;
-              const newMessages = [...old.messages];
-              newMessages[lastIndex] = updated;
-              return { ...old, messages: newMessages };
-            },
-          );
-        };
+        const updateTemp = (updater: (msg: MessageType) => MessageType) =>
+          updateLastTempMessage(queryClient, conversationId, updater);
 
-        const setFinalAnswer = (answer: string) => {
-          queryClient.setQueryData<ChaMessageType>(
-            [QUERY_KEYS.conversation, conversationId],
-            (old) => {
-              if (!old || !old.messages?.length) return old;
-              const lastIndex = old.messages.length - 1;
-              const last = old.messages[lastIndex];
-              if (!last?.id?.startsWith("temp-")) return old;
-              const updated = { ...last, output: answer } as MessageType;
-              const newMessages = [...old.messages];
-              newMessages[lastIndex] = updated;
-              return { ...old, messages: newMessages };
-            },
-          );
-        };
+        const addNotice = (notice: string) =>
+          updateTemp((msg) => ({
+            ...msg,
+            pre_answer_notices: [...(msg.pre_answer_notices ?? []), notice],
+          }));
 
-        const addPreAnswerNotice = (notice: string) => {
-          queryClient.setQueryData<ChaMessageType>(
-            [QUERY_KEYS.conversation, conversationId],
-            (old) => {
-              if (!old || !old.messages?.length) return old;
-              const lastIndex = old.messages.length - 1;
-              const last = old.messages[lastIndex];
-              if (!last?.id?.startsWith("temp-")) return old;
-              const updated = {
-                ...last,
-                pre_answer_notices: [
-                  ...((last as MessageType).pre_answer_notices ?? []),
-                  notice,
-                ],
-              } as MessageType;
-              const newMessages = [...old.messages];
-              newMessages[lastIndex] = updated;
-              return { ...old, messages: newMessages };
-            },
-          );
-        };
+        const truncate = (s: string, max: number) =>
+          s.length > max ? s.slice(0, max) + "…" : s;
 
         let finalAnswer: string | null = null;
+
         await postStream({
-          url: `/conversations/${conversationId}/stream_messages`,
+          url: `/conversations/${conversationId}/stream-generate-agentic`,
           payload,
           onEvent: (evt) => {
-            if (
-              (evt as any)?.type === "token" &&
-              typeof (evt as any).content === "string"
-            ) {
-              applyTokenToOptimisticMessage((evt as any).content);
+            const { type, content, answer } = evt as Record<string, unknown>;
+
+            if (type === "token" && typeof content === "string") {
+              updateTemp((msg) => ({
+                ...msg,
+                output: (msg.output || "") + content,
+              }));
+            } else if (type === "final" && typeof answer === "string") {
+              finalAnswer = answer;
+              updateTemp((msg) => ({ ...msg, output: answer }));
             } else if (
-              (evt as any)?.type === "final" &&
-              typeof (evt as any).answer === "string"
+              (type === "status" || type === "requery") &&
+              typeof content === "string"
             ) {
-              finalAnswer = (evt as any).answer;
-              setFinalAnswer(finalAnswer ?? "");
-            } else if (
-              (evt as any)?.type === "status" &&
-              typeof (evt as any).content === "string"
-            ) {
-              addPreAnswerNotice((evt as any).content);
-            } else if (
-              (evt as any)?.type === "requery" &&
-              typeof (evt as any).content === "string"
-            ) {
-              addPreAnswerNotice((evt as any).content);
+              addNotice(content);
+            } else if (type === "tool_call" && typeof content === "string") {
+              addNotice(`${truncate(content, 100)}`);
+            } else if (type === "tool_result" && typeof content === "string") {
+              addNotice(`${truncate(content, 100)}`);
             }
           },
         });
 
-        // Build the final MessageType to return so onSuccess can replace temp message
         const now = new Date();
-        const finalMessage: MessageType = {
+        const payloadFields = modelSelectionToPayload(
+          reconcileModelSelection(
+            modelSelection ?? getStoredModelSelection(cachedModels),
+            cachedModels,
+          ),
+          cachedModels,
+        );
+        return mapToConversationMessage({
           id: `srv-${now.getTime()}`,
           timestamp: now,
           conversation_id: conversationId || "",
           input: payload.query,
           output: finalAnswer || "",
           feedback: null,
-          feedback_reason: null as any,
           documents: [],
           answer: finalAnswer || "",
           query: payload.query,
-        } as unknown as MessageType;
-
-        return finalMessage;
+          request_input: {
+            llm_type: payloadFields.llm_type ?? null,
+            custom_model_id: payloadFields.custom_model_id ?? null,
+          },
+        });
       } catch (e) {
         console.error("streaming error", e);
         logError({
@@ -185,20 +164,15 @@ export const useSendRequest = (conversationId?: string) => {
       }
     },
     onMutate: async (newMessage: SendRequestProps) => {
-      //OPTIMISTIC UPDATE
-      // Cancel any outgoing refetches
-      // (so they don't overwrite our optimistic update)
       await queryClient.cancelQueries({
         queryKey: [QUERY_KEYS.conversation, conversationId],
       });
 
-      // Snapshot the previous value
       const previousData = queryClient.getQueryData<ChaMessageType>([
         QUERY_KEYS.conversation,
         conversationId,
       ]);
 
-      // Add temporary message to messages array optimistically
       const optimisticMessage = {
         id: `temp-${Date.now()}`,
         timestamp: new Date().toISOString(),
@@ -218,10 +192,9 @@ export const useSendRequest = (conversationId?: string) => {
           messages: [...(previousData.messages ?? []), optimisticMessage],
         });
       } else {
-        // Initialize conversation data with this optimistic message for new conversation
         queryClient.setQueryData([QUERY_KEYS.conversation, conversationId], {
           id: conversationId,
-          user_id: "", // Default or empty string, adjust if needed
+          user_id: "",
           name: "",
           timestamp: new Date().toISOString(),
           messages: [optimisticMessage],
@@ -231,10 +204,6 @@ export const useSendRequest = (conversationId?: string) => {
       return { previousData };
     },
     onError: (error: ApiError, _, context) => {
-      // Treat user-initiated cancellations (abort) as a graceful stop:
-      // - Keep the partial output already streamed
-      // - Mark the temp message as stopped to suppress error UI
-      // - Do not toast an error
       const code = (error as any)?.code;
       const name = (error as any)?.name;
       const msg = String((error as any)?.message || "").toLowerCase();
@@ -249,29 +218,13 @@ export const useSendRequest = (conversationId?: string) => {
 
       if (isCanceled) {
         lastWasCanceled = true;
-        // Mark the last temp message as stopped and keep its partial output
-        queryClient.setQueryData<ChaMessageType>(
-          [QUERY_KEYS.conversation, conversationId],
-          (old) => {
-            if (!old || !old.messages?.length) return old;
-            const lastIndex = old.messages.length - 1;
-            const last = old.messages[lastIndex] as MessageType;
-            if (!last?.id?.startsWith("temp-")) return old;
-            const updated = {
-              ...last,
-              stopped: true,
-            } as MessageType;
-            const newMessages = [...old.messages];
-            newMessages[lastIndex] = updated;
-            return { ...old, messages: newMessages };
-          },
-        );
-
-        // Do not invalidate any queries on cancel
+        updateLastTempMessage(queryClient, conversationId, (message) => ({
+          ...message,
+          stopped: true,
+        }));
         return;
       }
 
-      // Non-cancel errors: rollback and notify
       const errorMessage = handleApiError(error);
       console.error("Streaming error:", error);
       toast.error(errorMessage);
@@ -287,9 +240,6 @@ export const useSendRequest = (conversationId?: string) => {
       }
     },
     onSuccess: (data: MessageType) => {
-      // Replace temp message with real message in messages array
-      // If the mutation fails,
-      // use the context returned from onMutate to roll back
       queryClient.setQueryData<ChaMessageType>(
         [QUERY_KEYS.conversation, conversationId],
         (oldData) => {
@@ -299,31 +249,18 @@ export const useSendRequest = (conversationId?: string) => {
             (msg: MessageType) => !msg.id?.startsWith("temp-"),
           );
 
-          const newMessage = {
-            id: data.id,
-            timestamp: new Date(),
-            conversation_id: data.conversation_id,
-            input: data.query || data.input || "",
-            output: data.answer || data.output || "",
-            feedback: null,
-            documents: data.documents ?? [],
-            request_input: data.request_input,
-          };
-
           return {
             ...oldData,
-            messages: [...filteredMessages, newMessage],
+            messages: [...filteredMessages, mapToConversationMessage(data)],
           };
         },
       );
     },
     onSettled: () => {
-      // Skip refetch after user-initiated Stop/cancel
       if (lastWasCanceled) {
         lastWasCanceled = false;
         return;
       }
-      // Refetch after non-cancel error or success
       queryClient.invalidateQueries({
         queryKey: [QUERY_KEYS.conversation, conversationId],
       });
