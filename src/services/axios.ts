@@ -4,8 +4,12 @@ import {
   LOCAL_STORAGE_REFRESH_TOKEN,
 } from "@/utilities/localStorage";
 import { routes } from "@/utilities/routes";
+import { isTrustedRequestUrl, resolveApiOrigin } from "@/utilities/sameOrigin";
 
 const baseURL = import.meta.env.VITE_API_URL;
+const PAGE_ORIGIN =
+  typeof window !== "undefined" ? window.location.origin : "";
+const API_ORIGIN = resolveApiOrigin(baseURL, PAGE_ORIGIN);
 
 // Public endpoints that don't require authentication
 const PUBLIC_ENDPOINTS = [
@@ -36,6 +40,16 @@ api.interceptors.request.use(
 
     // Skip authentication logic for public endpoints
     if (isPublicEndpoint) {
+      return config;
+    }
+
+    // Defense-in-depth: never attach credentials (or run refresh/redirect logic)
+    // for requests that don't target our own origin or the API origin. This
+    // prevents the bearer token from leaking to a foreign host even if a caller
+    // is tricked into requesting a cross-origin/protocol-relative URL.
+    if (
+      !isTrustedRequestUrl(config.url, config.baseURL, PAGE_ORIGIN, API_ORIGIN)
+    ) {
       return config;
     }
 
