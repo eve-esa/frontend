@@ -8,6 +8,7 @@ import { ProfileDialog } from "@/components/profile/ProfileDialog";
 import { CO2eqDialog } from "@/components/profile/CO2eqDialog";
 import { useGetProfile } from "@/services/useMe";
 import { KnowledgeBaseMenuBar } from "./KnowledgeBaseMenuBar";
+import { ToolkitsMenuBar } from "./ToolkitsMenuBar";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { routes } from "@/utilities/routes";
 
@@ -52,6 +53,11 @@ export const SidebarMenu = ({ isOpen }: SidebarMenuProps) => {
   return (
     <div className="flex flex-col gap-4">
       <KnowledgeBaseMenuBar
+        isOpen={isOpen}
+        className={`${baseStyles} ${layoutStyles} text-natural-50 hover:text-white`}
+      />
+
+      <ToolkitsMenuBar
         isOpen={isOpen}
         className={`${baseStyles} ${layoutStyles} text-natural-50 hover:text-white`}
       />

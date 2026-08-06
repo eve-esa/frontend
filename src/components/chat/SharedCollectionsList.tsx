@@ -2,12 +2,8 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import useInfinityLoading from "@/hooks/useInfinityLoading";
 import type { SharedCollectionType } from "@/services/useGetSharedCollection";
 import { Switch } from "@/components/ui/Switch";
-import { useState } from "react";
+import { useStoredSelection } from "@/hooks/useStoredSelection";
 import { LOCAL_STORAGE_PUBLIC_COLLECTIONS } from "@/utilities/localStorage";
-import {
-  getEnabledCollectionIds,
-  toggleCollectionInStorage,
-} from "@/utilities/collections";
 
 type CollectionsListProps = {
   loading: boolean;
@@ -26,20 +22,9 @@ export const SharedCollectionsList = ({
     fetchFunction: fetchNextPage,
     dependencies: [hasNextPage],
   });
-
-  const [enabledPublicCollections, setEnabledPublicCollections] = useState<
-    string[]
-  >(() => getEnabledCollectionIds(LOCAL_STORAGE_PUBLIC_COLLECTIONS));
-
-  const toggleCollection = (collectionId: string) => {
-    setEnabledPublicCollections((prev) =>
-      toggleCollectionInStorage(
-        LOCAL_STORAGE_PUBLIC_COLLECTIONS,
-        prev,
-        collectionId,
-      ),
-    );
-  };
+  const { isSelected, setSelected } = useStoredSelection(
+    LOCAL_STORAGE_PUBLIC_COLLECTIONS,
+  );
 
   return (
     <>
@@ -56,8 +41,10 @@ export const SharedCollectionsList = ({
             <div className="flex flex-col gap-4" key={collection.id}>
               <div className="flex items-center gap-2">
                 <Switch
-                  checked={enabledPublicCollections.includes(collection.id)}
-                  onCheckedChange={() => toggleCollection(collection.id)}
+                  checked={isSelected(collection.id)}
+                  onCheckedChange={(checked) =>
+                    setSelected(collection.id, checked)
+                  }
                 />
                 <span className="leading-none 3xl:text-3xl">
                   {collection.name}

@@ -2,14 +2,25 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { MUTATION_KEYS, QUERY_KEYS } from "./keys";
 import { toast } from "sonner";
 import type { AdvancedSettingsValidation } from "@/components/chat/SettingsForm";
-import type { ImageAttachment, LLMType } from "@/types";
+import type { ImageAttachment, ModelListResponse, ModelSelection } from "@/types";
 import api from "./axios";
 import { postStream, consumeSuppressToastFlag } from "./streaming";
 import type { ApiError, ChaMessageType, MessageType } from "@/types";
 import { handleApiError } from "@/utilities/helpers";
-import { getMessageCollectionPayload } from "@/utilities/collections";
 import { logError } from "./errorLogging";
 import { invalidateTokenUsage } from "./useTokenUsage";
+import {
+  buildGenerationPayload,
+  mapCreateMessageResponse,
+  mapToConversationMessage,
+  updateLastTempMessage,
+  type CreateMessageResponse,
+} from "./agenticMessage";
+import {
+  getStoredModelSelection,
+  modelSelectionToPayload,
+  reconcileModelSelection,
+} from "@/utilities/modelSelection";
 import { getSelectedMcpServerNames } from "@/utilities/mcpServers";
 import { resolveMessageEndpoint } from "@/utilities/messageEndpoint";
 
@@ -17,7 +28,8 @@ type SendRequestProps = {
   query: string;
   conversationId?: string;
   settings: AdvancedSettingsValidation;
-  llm_type?: LLMType;
+  modelSelection?: ModelSelection;
+  models?: ModelListResponse;
   attachments?: ImageAttachment[];
 };
 
@@ -25,26 +37,27 @@ export const sendRequest = async ({
   query,
   conversationId,
   settings,
-  llm_type,
+  modelSelection,
+  models,
   attachments,
 }: SendRequestProps) => {
+  // Which endpoint this hits (classic RAG vs agentic) is driven entirely by
+  // the MCP server selection: empty selection keeps the classic path
+  // byte-identical, one or more servers switches to the agentic pipeline.
   const mcpServers = getSelectedMcpServerNames();
   const { url, extraPayload } = resolveMessageEndpoint(
     conversationId,
     mcpServers,
     "sync",
   );
-  const response = await api.post<MessageType>(url, {
-    query,
-    ...settings,
-    ...(llm_type ? { llm_type } : {}),
-    ...getMessageCollectionPayload(),
+  const response = await api.post<CreateMessageResponse>(url, {
+    ...buildGenerationPayload({ query, settings, modelSelection, models }),
     ...(attachments?.length
       ? { artifact_ids: attachments.map((a) => a.id) }
       : {}),
     ...extraPayload,
   });
-  return response.data;
+  return mapCreateMessageResponse(response.data);
 };
 
 export const useSendRequest = (conversationId?: string) => {
@@ -57,21 +70,27 @@ export const useSendRequest = (conversationId?: string) => {
       query,
       conversationId,
       settings,
-      llm_type,
+      modelSelection,
+      models,
       attachments,
     }: SendRequestProps) => {
       const enableStreaming =
         (import.meta.env.VITE_ENABLE_STREAMING ?? "false") === "true";
+      const cachedModels =
+        models ??
+        queryClient.getQueryData<ModelListResponse>([QUERY_KEYS.models]);
 
       const mcpServers = getSelectedMcpServerNames();
       const { url: streamUrl, extraPayload: mcpPayload } =
         resolveMessageEndpoint(conversationId, mcpServers, "stream");
 
       const payload = {
-        query,
-        ...settings,
-        ...(llm_type ? { llm_type } : {}),
-        ...getMessageCollectionPayload(),
+        ...buildGenerationPayload({
+          query,
+          settings,
+          modelSelection,
+          models: cachedModels,
+        }),
         ...(attachments?.length
           ? { artifact_ids: attachments.map((a) => a.id) }
           : {}),
@@ -84,132 +103,86 @@ export const useSendRequest = (conversationId?: string) => {
             query,
             conversationId,
             settings,
-            llm_type,
+            modelSelection,
+            models: cachedModels,
             attachments,
           });
         }
 
-        const applyTokenToOptimisticMessage = (tokenChunk: string) => {
-          queryClient.setQueryData<ChaMessageType>(
-            [QUERY_KEYS.conversation, conversationId],
-            (old) => {
-              if (!old || !old.messages?.length) return old;
-              const lastIndex = old.messages.length - 1;
-              const last = old.messages[lastIndex];
-              if (!last?.id?.startsWith("temp-")) return old;
-              const updated = {
-                ...last,
-                output: (last.output || "") + tokenChunk,
-              } as MessageType;
-              const newMessages = [...old.messages];
-              newMessages[lastIndex] = updated;
-              return { ...old, messages: newMessages };
-            },
-          );
-        };
+        const updateTemp = (updater: (msg: MessageType) => MessageType) =>
+          updateLastTempMessage(queryClient, conversationId, updater);
 
-        const setFinalAnswer = (answer: string) => {
-          queryClient.setQueryData<ChaMessageType>(
-            [QUERY_KEYS.conversation, conversationId],
-            (old) => {
-              if (!old || !old.messages?.length) return old;
-              const lastIndex = old.messages.length - 1;
-              const last = old.messages[lastIndex];
-              if (!last?.id?.startsWith("temp-")) return old;
-              const updated = { ...last, output: answer } as MessageType;
-              const newMessages = [...old.messages];
-              newMessages[lastIndex] = updated;
-              return { ...old, messages: newMessages };
-            },
-          );
-        };
+        const addNotice = (notice: string) =>
+          updateTemp((msg) => ({
+            ...msg,
+            pre_answer_notices: [...(msg.pre_answer_notices ?? []), notice],
+          }));
 
-        const addPreAnswerNotice = (notice: string) => {
-          queryClient.setQueryData<ChaMessageType>(
-            [QUERY_KEYS.conversation, conversationId],
-            (old) => {
-              if (!old || !old.messages?.length) return old;
-              const lastIndex = old.messages.length - 1;
-              const last = old.messages[lastIndex];
-              if (!last?.id?.startsWith("temp-")) return old;
-              const updated = {
-                ...last,
-                pre_answer_notices: [
-                  ...((last as MessageType).pre_answer_notices ?? []),
-                  notice,
-                ],
-              } as MessageType;
-              const newMessages = [...old.messages];
-              newMessages[lastIndex] = updated;
-              return { ...old, messages: newMessages };
-            },
-          );
-        };
+        const truncate = (s: string, max: number) =>
+          s.length > max ? s.slice(0, max) + "…" : s;
 
         let finalAnswer: string | null = null;
         let finalArtifactIds: string[] | undefined;
+
         await postStream({
           url: streamUrl,
           payload,
           onEvent: (evt) => {
-            if (
-              (evt as any)?.type === "token" &&
-              typeof (evt as any).content === "string"
-            ) {
-              applyTokenToOptimisticMessage((evt as any).content);
-            } else if (
-              (evt as any)?.type === "final" &&
-              typeof (evt as any).answer === "string"
-            ) {
-              finalAnswer = (evt as any).answer;
-              if (Array.isArray((evt as any).artifact_ids)) {
-                finalArtifactIds = (evt as any).artifact_ids;
+            const { type, content, answer } = evt as Record<string, unknown>;
+
+            if (type === "token" && typeof content === "string") {
+              updateTemp((msg) => ({
+                ...msg,
+                output: (msg.output || "") + content,
+              }));
+            } else if (type === "final" && typeof answer === "string") {
+              finalAnswer = answer;
+              const artifactIds = (evt as Record<string, unknown>)
+                .artifact_ids;
+              if (Array.isArray(artifactIds)) {
+                finalArtifactIds = artifactIds as string[];
               }
-              setFinalAnswer(finalAnswer ?? "");
+              updateTemp((msg) => ({ ...msg, output: answer }));
             } else if (
-              (evt as any)?.type === "status" &&
-              typeof (evt as any).content === "string"
+              (type === "status" || type === "requery") &&
+              typeof content === "string"
             ) {
-              addPreAnswerNotice((evt as any).content);
-            } else if (
-              (evt as any)?.type === "requery" &&
-              typeof (evt as any).content === "string"
-            ) {
-              addPreAnswerNotice((evt as any).content);
-            } else if (
-              (evt as any)?.type === "tool_call" &&
-              typeof (evt as any).content === "string"
-            ) {
+              addNotice(content);
+            } else if (type === "tool_call" && typeof content === "string") {
               // Agentic pipeline is invoking an MCP tool; reuse the same
               // in-stream status mechanism as "status"/"requery" notices.
-              addPreAnswerNotice((evt as any).content);
-            } else if (
-              (evt as any)?.type === "tool_result" &&
-              typeof (evt as any).content === "string"
-            ) {
-              addPreAnswerNotice((evt as any).content);
+              addNotice(`${truncate(content, 100)}`);
+            } else if (type === "tool_result" && typeof content === "string") {
+              addNotice(`${truncate(content, 100)}`);
             }
           },
         });
 
-        // Build the final MessageType to return so onSuccess can replace temp message
         const now = new Date();
-        const finalMessage: MessageType = {
+        const payloadFields = modelSelectionToPayload(
+          reconcileModelSelection(
+            modelSelection ?? getStoredModelSelection(cachedModels),
+            cachedModels,
+          ),
+          cachedModels,
+        );
+        return mapToConversationMessage({
           id: `srv-${now.getTime()}`,
           timestamp: now,
           conversation_id: conversationId || "",
           input: payload.query,
           output: finalAnswer || "",
           feedback: null,
-          feedback_reason: null as any,
           documents: [],
           answer: finalAnswer || "",
           query: payload.query,
+          request_input: {
+            llm_type: payloadFields.llm_type ?? null,
+            custom_model_id: payloadFields.custom_model_id ?? null,
+          },
           attachments,
           artifact_ids: finalArtifactIds,
-        } as unknown as MessageType;
-
-        return finalMessage;
+        });
       } catch (e) {
         console.error("streaming error", e);
         logError({
@@ -225,20 +198,15 @@ export const useSendRequest = (conversationId?: string) => {
       }
     },
     onMutate: async (newMessage: SendRequestProps) => {
-      //OPTIMISTIC UPDATE
-      // Cancel any outgoing refetches
-      // (so they don't overwrite our optimistic update)
       await queryClient.cancelQueries({
         queryKey: [QUERY_KEYS.conversation, conversationId],
       });
 
-      // Snapshot the previous value
       const previousData = queryClient.getQueryData<ChaMessageType>([
         QUERY_KEYS.conversation,
         conversationId,
       ]);
 
-      // Add temporary message to messages array optimistically
       const optimisticMessage = {
         id: `temp-${Date.now()}`,
         timestamp: new Date().toISOString(),
@@ -259,10 +227,9 @@ export const useSendRequest = (conversationId?: string) => {
           messages: [...(previousData.messages ?? []), optimisticMessage],
         });
       } else {
-        // Initialize conversation data with this optimistic message for new conversation
         queryClient.setQueryData([QUERY_KEYS.conversation, conversationId], {
           id: conversationId,
-          user_id: "", // Default or empty string, adjust if needed
+          user_id: "",
           name: "",
           timestamp: new Date().toISOString(),
           messages: [optimisticMessage],
@@ -272,10 +239,6 @@ export const useSendRequest = (conversationId?: string) => {
       return { previousData };
     },
     onError: (error: ApiError, _, context) => {
-      // Treat user-initiated cancellations (abort) as a graceful stop:
-      // - Keep the partial output already streamed
-      // - Mark the temp message as stopped to suppress error UI
-      // - Do not toast an error
       const code = (error as any)?.code;
       const name = (error as any)?.name;
       const msg = String((error as any)?.message || "").toLowerCase();
@@ -290,29 +253,13 @@ export const useSendRequest = (conversationId?: string) => {
 
       if (isCanceled) {
         lastWasCanceled = true;
-        // Mark the last temp message as stopped and keep its partial output
-        queryClient.setQueryData<ChaMessageType>(
-          [QUERY_KEYS.conversation, conversationId],
-          (old) => {
-            if (!old || !old.messages?.length) return old;
-            const lastIndex = old.messages.length - 1;
-            const last = old.messages[lastIndex] as MessageType;
-            if (!last?.id?.startsWith("temp-")) return old;
-            const updated = {
-              ...last,
-              stopped: true,
-            } as MessageType;
-            const newMessages = [...old.messages];
-            newMessages[lastIndex] = updated;
-            return { ...old, messages: newMessages };
-          },
-        );
-
-        // Do not invalidate any queries on cancel
+        updateLastTempMessage(queryClient, conversationId, (message) => ({
+          ...message,
+          stopped: true,
+        }));
         return;
       }
 
-      // Non-cancel errors: rollback and notify
       const errorMessage = handleApiError(error);
       console.error("Streaming error:", error);
       toast.error(errorMessage);
@@ -328,9 +275,6 @@ export const useSendRequest = (conversationId?: string) => {
       }
     },
     onSuccess: (data: MessageType) => {
-      // Replace temp message with real message in messages array
-      // If the mutation fails,
-      // use the context returned from onMutate to roll back
       queryClient.setQueryData<ChaMessageType>(
         [QUERY_KEYS.conversation, conversationId],
         (oldData) => {
@@ -340,36 +284,18 @@ export const useSendRequest = (conversationId?: string) => {
             (msg: MessageType) => !msg.id?.startsWith("temp-"),
           );
 
-          const newMessage = {
-            id: data.id,
-            timestamp: new Date(),
-            conversation_id: data.conversation_id,
-            input: data.query || data.input || "",
-            output: data.answer || data.output || "",
-            feedback: null,
-            documents: data.documents ?? [],
-            request_input: data.request_input,
-            // Explicitly carry attachments/artifact_ids over: this rebuilds the
-            // message from scratch and would otherwise drop them, making the
-            // images vanish between send and the refetch that follows onSettled.
-            attachments: data.attachments,
-            artifact_ids: data.artifact_ids,
-          };
-
           return {
             ...oldData,
-            messages: [...filteredMessages, newMessage],
+            messages: [...filteredMessages, mapToConversationMessage(data)],
           };
         },
       );
     },
     onSettled: () => {
-      // Skip refetch after user-initiated Stop/cancel
       if (lastWasCanceled) {
         lastWasCanceled = false;
         return;
       }
-      // Refetch after non-cancel error or success
       queryClient.invalidateQueries({
         queryKey: [QUERY_KEYS.conversation, conversationId],
       });

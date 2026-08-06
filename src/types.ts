@@ -1,6 +1,8 @@
 import type { AxiosError } from "axios";
 import { z } from "zod";
 
+export type AgenticTraceStep = Record<string, unknown>;
+
 export type Document = {
   id: string | number;
   text: string;
@@ -62,8 +64,10 @@ export type MessageType = {
   } | null;
   // Transient notices to show before the final answer while streaming
   pre_answer_notices?: string[];
+  trace?: AgenticTraceStep[] | null;
   request_input: {
     llm_type: string | null;
+    custom_model_id?: string | null;
   };
   metadata?: {
     generated_model_name: string | null;
@@ -89,6 +93,10 @@ export type MessageType = {
         requery: string;
       };
       generation_prompt: string | null;
+      custom_model_display_name?: string | null;
+      custom_model_name?: string | null;
+      agentic_llm_resolved?: string | null;
+      used_fallback_llm?: boolean | null;
     };
   };
 };
@@ -145,6 +153,48 @@ export enum LLMTypeLabel {
   Satcom_Large = "SatcomLLM - Large",
   EVE_JSC = "EVE-JSC"
 }
+
+export type PlatformModel = {
+  id: string;
+  llm_type: string;
+  display_name: string;
+  description?: string | null;
+};
+
+export type ProviderCatalogModel = {
+  id: string;
+  display_name: string;
+  model_name: string;
+};
+
+export type ProviderCatalog = {
+  id: string;
+  display_name: string;
+  models: ProviderCatalogModel[];
+};
+
+export type CustomModel = {
+  id: string;
+  display_name: string;
+  provider_id: string;
+  catalog_model_id: string;
+  provider_display_name: string;
+  model_display_name: string;
+  model_name: string;
+  has_api_key: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ModelListResponse = {
+  platform: PlatformModel[];
+  providers: ProviderCatalog[];
+  custom: CustomModel[];
+};
+
+export type ModelSelection =
+  | { type: "platform"; id: string }
+  | { type: "custom"; id: string };
 
 // ─── Image attachments ───────────────────────────────────────────────────────
 

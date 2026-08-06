@@ -42,7 +42,10 @@ export const Message = ({
     (a) => !(a.content_type ?? "").startsWith("image/"),
   );
 
-  const showLoading = isSending && isLastMessage && !message?.output;
+  const awaitingOutput = isLastMessage && !message?.output;
+  const showLoading =
+    awaitingOutput &&
+    (isSending || Boolean(message.pre_answer_notices?.length));
 
   const isStreamingTarget = isSending && isLastMessage;
   const persistKey = `${message.conversation_id ?? ""}:${String(
@@ -61,7 +64,11 @@ export const Message = ({
   const effectiveOutput =
     smoothed.length >= (message.output?.length || 0)
       ? message.output
-      : smoothed;
+      : smoothed.length > 0
+        ? smoothed
+        : !isStreamingTarget && message.output
+          ? message.output
+          : smoothed;
 
   // While this message is the active streaming target, drop a trailing
   // half-typed image token so no raw markdown flashes and no partial URL is
@@ -190,30 +197,35 @@ export const Message = ({
             <SmartText text={`${isRequery ? requery : ""}${displayOutput}`} />
           ) : showLoading ? (
             <div className="flex flex-col gap-2 text-natural-600">
-              {Array.isArray(message.pre_answer_notices) &&
-                message.pre_answer_notices.length > 0 && (
-                  <div className="mb-2 space-y-1">
-                    {message.pre_answer_notices.map((notice, idx) => (
-                      <div
-                        key={idx}
-                        className="text-base font-bold text-natural-50 animate-pulse"
-                      >
-                        {notice}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              <Skeleton className="w-full h-2 max-w-[98%]" />
-              <Skeleton className="w-full h-2 max-w-[100%]" />
-              <Skeleton className="w-full h-2 max-w-[97%]" />
-              <Skeleton className="w-full max-w-[87%] h-2" />
-              <Skeleton className="w-full max-w-[40%] h-2" />
+              {message.pre_answer_notices?.length ? (
+                <div className="mb-2 space-y-1">
+                  {message.pre_answer_notices.map((notice, idx) => (
+                    <div
+                      key={`notice-${idx}`}
+                      className="text-base font-bold text-natural-50 animate-pulse"
+                    >
+                      {notice}
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+              {!message.pre_answer_notices?.length && (
+                <>
+                  <Skeleton className="w-full h-2 max-w-[98%]" />
+                  <Skeleton className="w-full h-2 max-w-[100%]" />
+                  <Skeleton className="w-full h-2 max-w-[97%]" />
+                  <Skeleton className="w-full max-w-[87%] h-2" />
+                  <Skeleton className="w-full max-w-[40%] h-2" />
+                </>
+              )}
             </div>
-          ) : message.stopped ? null : (
+          ) : message.stopped ? null : awaitingOutput &&
+            !isSending &&
+            !message.pre_answer_notices?.length ? (
             <p className="text-danger-400">
               Something went wrong! Retry please your request.
             </p>
-          )}
+          ) : null}
         </div>
 
         {/* FOOTER SECTION */}
