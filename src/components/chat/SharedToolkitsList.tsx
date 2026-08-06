@@ -28,10 +28,10 @@ export const SharedToolkitsList = ({
     fetchFunction: fetchNextPage,
     dependencies: [hasNextPage],
   });
-  // Same storage/selection mechanism as the Control Panel's "Tools (MCP)"
-  // section (utilities/mcpServers.ts): a single `mcp_servers` source of
-  // truth drives which endpoint useSendRequest hits next, regardless of
-  // which of the two UIs toggled it.
+  // The toggles here are the only place MCP servers get selected. They write
+  // to the shared `mcp_servers` storage (utilities/mcpServers.ts), which is
+  // what useSendRequest reads to decide whether the next message goes to the
+  // agentic endpoint.
   const [selectedServers, setSelectedServers] = useState<string[]>(() =>
     getSelectedMcpServerNames(),
   );
