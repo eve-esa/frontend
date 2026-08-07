@@ -2,6 +2,7 @@ import { faTimes } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useGetMcpServers } from "@/services/useGetMcpServers";
 import { SharedToolkitsList } from "./SharedToolkitsList";
+import { enabledToolkits } from "@/utilities/toolkits";
 
 type SharedToolkitsProps = {
   onToggle: () => void;
@@ -11,15 +12,16 @@ export const SharedToolkits = ({ onToggle }: SharedToolkitsProps) => {
   const {
     data,
     isLoading,
+    isError,
     isFetchingNextPage,
     fetchNextPage,
     hasNextPage,
   } = useGetMcpServers();
 
-  const serversList =
-    data?.pages.flatMap((page) => page.data).filter((server) => server.enabled) ??
-    [];
-  const isEmpty = !isLoading && serversList.length === 0;
+  // Same helper the sidebar entry uses to decide whether to exist at all, so the
+  // two cannot disagree about what "empty" means.
+  const serversList = enabledToolkits(data?.pages);
+  const isEmpty = !isLoading && !isError && serversList.length === 0;
 
   return (
     <div className="flex flex-col h-full py-6 gap-6 md:gap-10">
@@ -46,7 +48,16 @@ export const SharedToolkits = ({ onToggle }: SharedToolkitsProps) => {
 
       <div className="flex-1 overflow-y-auto min-w-0 flex flex-col gap-8 py-2 px-6">
         <div className="flex h-full flex-col gap-4 ">
-          {isEmpty ? (
+          {isError ? (
+            // Distinct from the empty state on purpose. "None found" and "could
+            // not ask" are opposite situations, and rendering them identically is
+            // what makes a broken catalog look like a deliberately empty one.
+            <div className="flex flex-1 flex-col gap-4 items-center justify-center">
+              <p className="text-sm text-natural-200">
+                Could not load the toolkits
+              </p>
+            </div>
+          ) : isEmpty ? (
             <div className="flex flex-1 flex-col gap-4 items-center justify-center">
               <p className="text-sm text-natural-200">
                 No shared toolkits found

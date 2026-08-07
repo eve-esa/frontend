@@ -11,6 +11,8 @@ import { useSidebar } from "./DynamicSidebarProvider";
 import { Tooltip } from "../ui/Tooltip";
 import { useTour } from "@/components/onboarding/TourContext";
 import { cn } from "@/lib/utils";
+import { useGetMcpServers } from "@/services/useGetMcpServers";
+import { enabledToolkits, shouldShowToolkitsEntry } from "@/utilities/toolkits";
 
 type ToolkitsMenuBarProps = {
   isOpen: boolean;
@@ -23,9 +25,24 @@ export const ToolkitsMenuBar = ({
 }: ToolkitsMenuBarProps) => {
   const { openDynamicSidebar, content, isOpenDynamicSidebar } = useSidebar();
   const { isRunning } = useTour();
+  const { data, isPending, isError } = useGetMcpServers();
 
   const isToolkitsSidebarOpen =
     isOpenDynamicSidebar && content?.type === "toolkits";
+
+  // The catalog is per environment, so whether this entry belongs in the sidebar
+  // is a runtime question, not a build-time one: the release artifact is promoted
+  // unchanged from dev to production. See utilities/toolkits for why a failed
+  // request still shows the entry.
+  if (
+    !shouldShowToolkitsEntry({
+      isPending,
+      isError,
+      enabledCount: enabledToolkits(data?.pages).length,
+    })
+  ) {
+    return null;
+  }
 
   const triggerContent = (
     <MenubarTrigger
