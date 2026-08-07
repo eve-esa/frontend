@@ -10,6 +10,13 @@ export type McpTool = {
 
 export type McpServerDetail = McpServerPublic & {
   tools: McpTool[];
+  /**
+   * Why tool discovery failed, or null when it succeeded (backend #147).
+   *
+   * When this is set, `tools` is empty because the server could not be queried,
+   * NOT because it exposes nothing. The two must never render the same way.
+   */
+  tools_error?: string | null;
 };
 
 type UseGetMcpServerOptions = {

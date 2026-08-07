@@ -31,8 +31,15 @@ export const McpServerTools = ({ server }: McpServerToolsProps) => {
   }
 
   const tools = data?.tools ?? [];
+  // A discovery failure comes back as HTTP 200 with an empty list plus tools_error
+  // (backend #147), so isError alone does not catch it. Without this the sidebar
+  // renders "Tools (0)" and "No tools available" for a server it could not reach,
+  // which reads as a deliberate absence rather than a fault.
+  const discoveryError = data?.tools_error ?? null;
+  // No count when discovery failed: zero is not a fact about the server, it is the
+  // absence of an answer.
   const toolCountLabel =
-    data?.tools !== undefined ? ` (${data.tools.length})` : "";
+    data?.tools !== undefined && !discoveryError ? ` (${data.tools.length})` : "";
 
   return (
     <div className="flex flex-col gap-2">
@@ -61,7 +68,17 @@ export const McpServerTools = ({ server }: McpServerToolsProps) => {
               Unable to load tools for this server.
             </p>
           )}
-          {!isLoading && !isError && tools.length === 0 && (
+          {!isLoading && !isError && discoveryError && (
+            <div className="flex flex-col gap-1">
+              <p className="text-xs 3xl:text-xl text-natural-200">
+                Could not reach this toolkit, so its tools are unknown.
+              </p>
+              <p className="text-[11px] 3xl:text-base text-natural-300 break-words">
+                {discoveryError}
+              </p>
+            </div>
+          )}
+          {!isLoading && !isError && !discoveryError && tools.length === 0 && (
             <p className="text-xs 3xl:text-xl text-natural-200">
               No tools available.
             </p>
