@@ -113,7 +113,7 @@ export const useSmoothStream = (
     } else if (newLen < prevLen) {
       queueRef.current = "";
       sourceLenRef.current = newLen;
-      setDisplayed((_) => sourceText.slice(0, 0));
+      setDisplayed("");
       if (persistKey) {
         PERSIST_STORE.set(persistKey, {
           displayed: "",

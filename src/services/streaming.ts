@@ -126,7 +126,7 @@ export async function postStream<TPayload>({
           try {
             const evt = JSON.parse(content) as StreamEvent;
             onEvent(evt);
-          } catch (_e) {
+          } catch {
             console.error("Malformed JSON line:", content);
           }
         }
@@ -146,7 +146,7 @@ export async function postStream<TPayload>({
       try {
         const evt = JSON.parse(trimmed) as StreamEvent;
         onEvent(evt);
-      } catch (_e) {
+      } catch {
         console.error("Malformed JSON line:", trimmed);
       }
     }

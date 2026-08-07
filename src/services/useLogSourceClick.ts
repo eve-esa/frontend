@@ -36,8 +36,8 @@ export const useLogSourceClick = () => {
   return useMutation({
     mutationKey: [MUTATION_KEYS.sourceLog],
     mutationFn: (params: SourceLogParams) => httpLogSourceClick(params),
-    onError: (error: any) => {
-      toast.error(error?.message ?? "Failed to log source click");
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to log source click");
     },
   });
 };

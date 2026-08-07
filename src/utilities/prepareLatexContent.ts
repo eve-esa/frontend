@@ -45,7 +45,7 @@ export const prepareLatexContent = (content: string): string => {
     // Fix misuse of sizing/paired delimiter commands given with braced arguments, e.g., \bigg{(} -> \bigg(
     // KaTeX expects sizing commands to be followed directly by a delimiter token, not a grouped {token}
     const sizedCmdPattern =
-      /(\\(?:big|Big|bigg|Bigg))\s*\{\s*(\\[a-zA-Z]+|\\.|\{|\}|[()\[\]\|])\s*\}/g;
+      /(\\(?:big|Big|bigg|Bigg))\s*\{\s*(\\[a-zA-Z]+|\\.|\{|\}|[()[\]|])\s*\}/g;
     s = s.replace(sizedCmdPattern, (_m, cmd, tok) => {
       const token = tok === "{" || tok === "}" ? `\\${tok}` : tok;
       return `${cmd}${token}`;
@@ -53,7 +53,7 @@ export const prepareLatexContent = (content: string): string => {
 
     // Also fix \left{token} and \right{token} -> \left token (e.g., \left{(} -> \left()
     const leftRightPattern =
-      /(\\(?:left|right))\s*\{\s*(\\[a-zA-Z]+|\\.|\{|\}|[()\[\]\|])\s*\}/g;
+      /(\\(?:left|right))\s*\{\s*(\\[a-zA-Z]+|\\.|\{|\}|[()[\]|])\s*\}/g;
     s = s.replace(leftRightPattern, (_m, cmd, tok) => {
       const token = tok === "{" || tok === "}" ? `\\${tok}` : tok;
       return `${cmd} ${token}`;
