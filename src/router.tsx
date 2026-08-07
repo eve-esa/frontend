@@ -4,6 +4,7 @@ import {
   Route,
 } from "react-router-dom";
 import { routes } from "./utilities/routes";
+import { SELF_SIGNUP_ENABLED } from "./utilities/features";
 import { PrivateRoute } from "./route-guards/private-route/PrivateRoute";
 import { PublicRoute } from "./route-guards/public-route/PublicRoute";
 import { PublicLayout } from "./layouts/public-layout/PublicLayout";
@@ -25,7 +26,10 @@ export const router = createBrowserRouter(
         <Route element={<PublicLayout />}>
           <Route element={<AuthLayout />}>
             <Route {...routes.LOGIN} />
-            <Route {...routes.SIGN_UP} />
+            {/* Not merely hidden: when self-signup is off the route is never
+                registered, so /signup 404s instead of rendering a form whose
+                submission the backend refuses. */}
+            {SELF_SIGNUP_ENABLED && <Route {...routes.SIGN_UP} />}
             <Route {...routes.FORGOT_PASSWORD} />
             <Route {...routes.RESET_PASSWORD} />
             <Route {...routes.VERIFY} />

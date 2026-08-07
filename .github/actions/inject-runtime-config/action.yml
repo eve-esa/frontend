@@ -1,0 +1,80 @@
+name: Inject runtime config
+description: >-
+  Writes this deploy's configuration into dist/index.html as window.__EVE_CONFIG__, immediately
+  before the upload. This is the release stage: one build is promoted unchanged across
+  environments, so anything that differs between them cannot be baked in at build time and has
+  to be combined with the artifact here instead.
+
+inputs:
+  config-json:
+    description: >-
+      The configuration, as a JSON object of string values. Keys must match ConfigKey in
+      src/utilities/runtimeConfig.ts. Blank values are treated as absent by the app, so a key
+      whose GitHub variable is undefined falls back to the code's default rather than reading
+      as "off".
+    required: true
+  dist-path:
+    description: Directory holding the built site.
+    required: false
+    default: dist
+
+runs:
+  using: composite
+  steps:
+    - name: Inject
+      shell: bash
+      env:
+        CONFIG_JSON: ${{ inputs.config-json }}
+        DIST_PATH: ${{ inputs.dist-path }}
+      run: |
+        set -euo pipefail
+        INDEX="${DIST_PATH}/index.html"
+
+        test -f "$INDEX" || { echo "::error::$INDEX not found"; exit 1; }
+
+        # Reject anything that is not a JSON object of strings, rather than writing a broken
+        # script tag that would only fail in the browser.
+        echo "$CONFIG_JSON" | python3 -c '
+        import json, sys
+        cfg = json.load(sys.stdin)
+        if not isinstance(cfg, dict):
+            sys.exit("config-json must be a JSON object")
+        bad = [k for k, v in cfg.items() if not isinstance(v, str)]
+        if bad:
+            sys.exit(f"config-json values must be strings; offending keys: {bad}")
+        '
+
+        # A classic script, placed before the module bundle so it runs first: every consumer
+        # reads the config at module scope, which nothing asynchronous could satisfy.
+        # Anchoring on the module tag rather than appending to <head> keeps that ordering true
+        # regardless of how the rest of the document is laid out.
+        python3 - "$INDEX" <<'PY'
+        import json, os, re, sys
+
+        path = sys.argv[1]
+        html = open(path, encoding="utf-8").read()
+
+        marker = re.search(r'<script[^>]*\btype=(["\'])module\1', html)
+        if not marker:
+            # Failing loudly is the point. A silent no-op here is exactly how production ends
+            # up unconfigured, which is the failure this whole mechanism exists to prevent.
+            sys.exit("::error::no <script type=\"module\"> found in index.html; refusing to "
+                     "publish an unconfigured build")
+
+        if "__EVE_CONFIG__" in html:
+            sys.exit("::error::index.html already carries __EVE_CONFIG__; the artifact was "
+                     "injected once already and must not be injected twice")
+
+        config = json.loads(os.environ["CONFIG_JSON"])
+        # </script> inside a string literal would close the tag early; JSON escaping does not
+        # cover it because it is an HTML concern, not a JSON one.
+        payload = json.dumps(config, separators=(",", ":")).replace("</", "<\\/")
+        tag = f"<script>window.__EVE_CONFIG__={payload};</script>"
+
+        open(path, "w", encoding="utf-8").write(
+            html[: marker.start()] + tag + html[marker.start() :]
+        )
+        print(f"injected {len(config)} key(s): {', '.join(sorted(config))}")
+        PY
+
+        grep -q "__EVE_CONFIG__" "$INDEX" || { echo "::error::injection verified absent"; exit 1; }

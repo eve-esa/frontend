@@ -25,6 +25,7 @@ import { Autocomplete } from "../ui/Autocomplete";
 import { AnimatedLink } from "../ui/AnimatedLink";
 import { settingsTooltipExplanation } from "@/utilities/settingsTooltipExplanation";
 import { journalOptions } from "@/utilities/journalOptions";
+import { CLASSIFICATION_FILTERS_ENABLED } from "@/utilities/features";
 
 const AdvancedSettingsSchema = z.object({
   score_threshold: z.number(),
@@ -97,9 +98,6 @@ export const SettingsForm = ({ onToggle }: SettingsFormProps) => {
     localStorage.setItem(LOCAL_STORAGE_SETTINGS, JSON.stringify(data));
     toast.success("Settings saved", { duration: 1000 });
   };
-
-  const hideClassificationFilters =
-    import.meta.env.VITE_HIDE_CLASSIFICATION_FILTERS?.toLowerCase() === "true";
 
   return (
     <form
@@ -324,7 +322,7 @@ export const SettingsForm = ({ onToggle }: SettingsFormProps) => {
             </div>
             {/* TOPIC FILTERS */}
             {/* Semantic Perspective */}
-            {!hideClassificationFilters && (
+            {CLASSIFICATION_FILTERS_ENABLED && (
               <div className="flex flex-col gap-2 p-[1px]">
                 <label className="flex items-center gap-1">
                   <p className="font-['NotesESA'] text-sm 3xl:text-xl">
@@ -365,7 +363,7 @@ export const SettingsForm = ({ onToggle }: SettingsFormProps) => {
               </div>
             )}
             {/* Scientific and Technical */}
-            {!hideClassificationFilters && (
+            {CLASSIFICATION_FILTERS_ENABLED && (
               <div className="flex flex-col gap-2 p-[1px]">
                 <label className="flex items-center gap-1">
                   <p className="font-['NotesESA'] text-sm 3xl:text-xl 3xl:leading-6">
@@ -406,7 +404,7 @@ export const SettingsForm = ({ onToggle }: SettingsFormProps) => {
               </div>
             )}
             {/* Market Perspective */}
-            {!hideClassificationFilters && (
+            {CLASSIFICATION_FILTERS_ENABLED && (
               <div className="flex flex-col gap-2 p-[1px]">
                 <label className="flex items-center gap-1">
                   <p className="font-['NotesESA'] text-sm 3xl:text-xl 3xl:leading-6">

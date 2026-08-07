@@ -2,10 +2,16 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { MUTATION_KEYS, QUERY_KEYS } from "./keys";
 import { toast } from "sonner";
 import type { AdvancedSettingsValidation } from "@/components/chat/SettingsForm";
-import type { ImageAttachment, ModelListResponse, ModelSelection } from "@/types";
+import type {
+  ApiError,
+  ChaMessageType,
+  ImageAttachment,
+  MessageType,
+  ModelListResponse,
+  ModelSelection,
+} from "@/types";
 import api from "./axios";
 import { postStream, consumeSuppressToastFlag } from "./streaming";
-import type { ApiError, ChaMessageType, MessageType } from "@/types";
 import { handleApiError } from "@/utilities/helpers";
 import { logError } from "./errorLogging";
 import { invalidateTokenUsage } from "./useTokenUsage";
@@ -23,6 +29,7 @@ import {
 } from "@/utilities/modelSelection";
 import { getSelectedMcpServerNames } from "@/utilities/mcpServers";
 import { resolveMessageEndpoint } from "@/utilities/messageEndpoint";
+import { STREAMING_ENABLED } from "@/utilities/features";
 
 type SendRequestProps = {
   query: string;
@@ -74,8 +81,6 @@ export const useSendRequest = (conversationId?: string) => {
       models,
       attachments,
     }: SendRequestProps) => {
-      const enableStreaming =
-        (import.meta.env.VITE_ENABLE_STREAMING ?? "false") === "true";
       const cachedModels =
         models ??
         queryClient.getQueryData<ModelListResponse>([QUERY_KEYS.models]);
@@ -98,7 +103,7 @@ export const useSendRequest = (conversationId?: string) => {
       };
 
       try {
-        if (!enableStreaming) {
+        if (!STREAMING_ENABLED) {
           return sendRequest({
             query,
             conversationId,
@@ -239,9 +244,15 @@ export const useSendRequest = (conversationId?: string) => {
       return { previousData };
     },
     onError: (error: ApiError, _, context) => {
-      const code = (error as any)?.code;
-      const name = (error as any)?.name;
-      const msg = String((error as any)?.message || "").toLowerCase();
+      // AxiosError carries code/name/message, but a cancellation can also
+      // surface as a bare DOMException, so read the three fields structurally
+      // rather than asserting either shape.
+      const { code, name, message } = error as {
+        code?: string;
+        name?: string;
+        message?: string;
+      };
+      const msg = String(message || "").toLowerCase();
       const isCanceled =
         consumeSuppressToastFlag() ||
         name === "CanceledError" ||

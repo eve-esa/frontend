@@ -13,7 +13,8 @@ import { useState, useEffect } from "react";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Spinner } from "@/components/ui/Spinner";
 import { LOCAL_STORAGE_LOGIN_EMAIL } from "@/utilities/localStorage";
-const isStaging = (import.meta.env.VITE_IS_STAGING ?? "false") === "true";
+import { SELF_SIGNUP_ENABLED } from "@/utilities/features";
+
 
 const LoginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -159,7 +160,7 @@ export const Login = () => {
         <AnimatedLink href={routes.FORGOT_PASSWORD.path}>
           Forgot password
         </AnimatedLink>
-        {isStaging && (
+        {SELF_SIGNUP_ENABLED && (
           <AnimatedLink href={routes.SIGN_UP.path}>
             Don't have an account?
           </AnimatedLink>
