@@ -130,7 +130,10 @@ jobs:
               "FEATURE_CUSTOM_MODELS": "${{ vars.FEATURE_CUSTOM_MODELS }}",
               "FEATURE_STREAMING": "${{ vars.FEATURE_STREAMING }}",
               "FEATURE_CLASSIFICATION_FILTERS": "${{ vars.FEATURE_CLASSIFICATION_FILTERS }}",
-              "FEATURE_SELF_SIGNUP": "${{ vars.FEATURE_SELF_SIGNUP }}"
+              "FEATURE_SELF_SIGNUP": "${{ vars.FEATURE_SELF_SIGNUP }}",
+              "CONTACT_URL": "${{ vars.VITE_CONTACT_URL }}",
+              "PRIVACY_POLICY_URL": "${{ vars.VITE_PRIVACY_POLICY_URL }}",
+              "ABOUT_US_URL": "${{ vars.VITE_ABOUT_US_URL }}"
             }
 
       - name: Configure AWS credentials

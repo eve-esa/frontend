@@ -10,10 +10,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Node.js 20
+      # .nvmrc, not a pinned 20: every deploy build uses node-version-file, so a
+      # hardcoded version here means CI tests on a different Node major than the
+      # one that ships.
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version-file: .nvmrc
           cache: yarn
 
       - name: Enable corepack
@@ -22,5 +25,19 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
+      # Lint, type-check and build were not checked on a pull request, only the
+      # unit tests. That is why 30 lint problems could stand on main, and why a
+      # type error in a file no test imports first surfaced in deploy-dev, after
+      # merge. `yarn build` is `tsc -b && vite build`, so it is the real gate:
+      # type-check is kept separate because it names the failing file faster.
+      - name: Lint
+        run: yarn lint
+
+      - name: Type-check
+        run: yarn type-check
+
       - name: Run tests
         run: yarn test
+
+      - name: Build
+        run: yarn build

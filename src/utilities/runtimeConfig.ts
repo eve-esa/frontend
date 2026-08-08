@@ -41,7 +41,16 @@ export type ConfigKey =
   | "FEATURE_CUSTOM_MODELS"
   | "FEATURE_STREAMING"
   | "FEATURE_CLASSIFICATION_FILTERS"
-  | "FEATURE_SELF_SIGNUP";
+  | "FEATURE_SELF_SIGNUP"
+  // Not switches. They are here because they are per-environment values that a
+  // promoted artifact cannot carry, which is the same problem the flags have.
+  // They were build-time only, set on deploy-dev and on nothing else, so
+  // `window.open(undefined)` opened about:blank on staging and production —
+  // on the exact path the "one artifact, promoted unchanged" argument runs
+  // through, since promote-prod republishes staging's tarball byte for byte.
+  | "CONTACT_URL"
+  | "PRIVACY_POLICY_URL"
+  | "ABOUT_US_URL";
 
 declare global {
   interface Window {
@@ -63,6 +72,9 @@ const BUILD_TIME: Record<ConfigKey, string | undefined> = {
   FEATURE_CLASSIFICATION_FILTERS:
     import.meta.env.VITE_FEATURE_CLASSIFICATION_FILTERS,
   FEATURE_SELF_SIGNUP: import.meta.env.VITE_FEATURE_SELF_SIGNUP,
+  CONTACT_URL: import.meta.env.VITE_CONTACT_URL,
+  PRIVACY_POLICY_URL: import.meta.env.VITE_PRIVACY_POLICY_URL,
+  ABOUT_US_URL: import.meta.env.VITE_ABOUT_US_URL,
 };
 
 const injected = (): Partial<Record<ConfigKey, string>> =>
@@ -83,3 +95,14 @@ export const isEnabled = (key: ConfigKey, defaultOn: boolean): boolean => {
   }
   return raw === "true";
 };
+
+/**
+ * A configured value, or undefined when there is none. Same resolution order as `isEnabled`
+ * and the same treatment of blank as absent.
+ *
+ * Undefined rather than an empty string, so a caller has to decide what to do about a missing
+ * value. Passing "" to `window.open` reopens the current page and passing undefined opens
+ * about:blank; neither is a link, and both used to happen silently.
+ */
+export const configValue = (key: ConfigKey): string | undefined =>
+  (injected()[key] ?? BUILD_TIME[key] ?? "").trim() || undefined;

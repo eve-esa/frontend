@@ -45,12 +45,12 @@ jobs:
           # is no release version to display: only the commit identifies them.
           VITE_APP_VERSION: dev
           VITE_APP_COMMIT: ${{ github.sha }}
-          # Read at module scope and folded to a constant at build time, so an
-          # unset value is not a runtime default: Rollup deletes the branch.
-          # Unset URLs compile to window.open(undefined), which opens about:blank.
-          VITE_CONTACT_URL: ${{ vars.VITE_CONTACT_URL }}
-          VITE_PRIVACY_POLICY_URL: ${{ vars.VITE_PRIVACY_POLICY_URL }}
-          VITE_ABOUT_US_URL: ${{ vars.VITE_ABOUT_US_URL }}
+          # The three ESA links used to be baked in here. They are injected at the
+          # release stage instead, with the flags, because they differ per
+          # environment and dev is the only pipeline that BUILDS: promote-staging
+          # and promote-prod republish an existing artifact, so a value baked in
+          # here could never reach them. Baking them only here is what left
+          # staging and production opening about:blank.
 
       - name: Upload dist artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -96,7 +96,10 @@ jobs:
               "FEATURE_CUSTOM_MODELS": "${{ vars.FEATURE_CUSTOM_MODELS }}",
               "FEATURE_STREAMING": "${{ vars.FEATURE_STREAMING }}",
               "FEATURE_CLASSIFICATION_FILTERS": "${{ vars.FEATURE_CLASSIFICATION_FILTERS }}",
-              "FEATURE_SELF_SIGNUP": "${{ vars.FEATURE_SELF_SIGNUP }}"
+              "FEATURE_SELF_SIGNUP": "${{ vars.FEATURE_SELF_SIGNUP }}",
+              "CONTACT_URL": "${{ vars.VITE_CONTACT_URL }}",
+              "PRIVACY_POLICY_URL": "${{ vars.VITE_PRIVACY_POLICY_URL }}",
+              "ABOUT_US_URL": "${{ vars.VITE_ABOUT_US_URL }}"
             }
 
       - name: Configure AWS credentials
