@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { ImageLightbox } from "@/components/ui/ImageLightbox";
 import { useGetMyImages } from "@/services/useGetMyImages";
-import { useDeleteImage } from "@/services/useDeleteImage";
 import { ArtifactCard } from "./ArtifactCard";
 import { cn } from "@/lib/utils";
 import type { ImageAsset } from "@/types";
@@ -30,8 +29,6 @@ export const ArtifactsPage = () => {
     isFetchingNextPage,
   } = useGetMyImages();
 
-  const { mutate: deleteImage, isPending: isDeleting, variables: deletingId } =
-    useDeleteImage();
 
   const images = data?.pages.flatMap((page) => page.data) ?? [];
 
@@ -97,8 +94,6 @@ export const ArtifactsPage = () => {
                     key={asset.id}
                     asset={asset}
                     onOpen={() => setLightboxAsset(asset)}
-                    onDelete={() => deleteImage(asset.id)}
-                    isDeleting={isDeleting && deletingId === asset.id}
                   />
                 ))}
               </div>
