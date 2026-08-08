@@ -40,10 +40,17 @@ import {
 import { useListModels } from "@/services/useListModels";
 import { CustomModelsDialog } from "./CustomModelsDialog";
 import {
+  CUSTOM_MODELS_ENABLED,
+  MODEL_PICKER_ENABLED,
+} from "@/utilities/features";
+import {
   ACCEPTED_UPLOAD_EXTENSIONS,
   ACCEPTED_UPLOAD_MIME_TYPES,
   MAX_ATTACHMENTS_PER_MESSAGE,
   MAX_IMAGE_SIZE_BYTES,
+  type ChaMessageType,
+  type ImageAttachment,
+  type MessageType,
 } from "@/types";
 import { useParams } from "react-router-dom";
 import { abortCurrentStream } from "@/services/streaming";
@@ -51,10 +58,8 @@ import { stopConversation as stopConversationApi } from "@/services/stopConversa
 import { Tooltip } from "@/components/ui/Tooltip";
 import { useQueryClient } from "@tanstack/react-query";
 import { QUERY_KEYS } from "@/services/keys";
-import type { ChaMessageType, ImageAttachment, MessageType } from "@/types";
 import { useTokenUsage } from "@/services/useTokenUsage";
 
-const isStaging = (import.meta.env.VITE_IS_STAGING ?? "false") === "true";
 
 const TOKEN_RING_R = 7;
 const TOKEN_RING_C = 2 * Math.PI * TOKEN_RING_R;
@@ -407,7 +412,7 @@ export const MessageInput = ({
       }
       if (conversationId) {
         const result = await stopConversationApi({ conversationId });
-        const stoppedId = (result && (result as any).message_id) as
+        const stoppedId = result?.message_id as
           | string
           | undefined;
         if (stoppedId) {
@@ -544,8 +549,7 @@ export const MessageInput = ({
 
             <div className="flex items-center justify-between pointer-events-none p-2 md:p-6 pt-0 md:pt-1">
               <div className="pointer-events-auto flex items-center gap-2">
-                {isStaging && (
-                  <>
+                {MODEL_PICKER_ENABLED && (
                     <div className="min-w-[140px]">
                       <Select
                         value={modelSelectionValue}
@@ -592,6 +596,9 @@ export const MessageInput = ({
                         </SelectContent>
                       </Select>
                     </div>
+                )}
+                {CUSTOM_MODELS_ENABLED && (
+                  <>
                     <Tooltip
                       content={<>Manage custom models</>}
                       disableClick={true}

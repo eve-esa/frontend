@@ -4,6 +4,7 @@ import { useVerify } from "@/services/useVerify";
 import { routes } from "@/utilities/routes";
 import { useSearchParams } from "react-router-dom";
 import { useEffect } from "react";
+import { SELF_SIGNUP_ENABLED } from "@/utilities/features";
 
 const pendingVerifyKeys = new Set<string>();
 
@@ -39,7 +40,9 @@ export const Verify = () => {
         </p>
         <div className="flex justify-center gap-6 mt-8">
           <AnimatedLink href={routes.LOGIN.path}>Log in</AnimatedLink>
-          <AnimatedLink href={routes.SIGN_UP.path}>Sign up</AnimatedLink>
+          {SELF_SIGNUP_ENABLED && (
+            <AnimatedLink href={routes.SIGN_UP.path}>Sign up</AnimatedLink>
+          )}
         </div>
       </>
     );
@@ -61,7 +64,9 @@ export const Verify = () => {
           </p>
           <div className="flex justify-center gap-6">
             <AnimatedLink href={routes.LOGIN.path}>Log in</AnimatedLink>
+            {SELF_SIGNUP_ENABLED && (
             <AnimatedLink href={routes.SIGN_UP.path}>Sign up</AnimatedLink>
+          )}
           </div>
         </div>
       )}

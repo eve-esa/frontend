@@ -117,6 +117,25 @@ jobs:
           tar xzf "${ASSET_NAME}"
           ls -la dist/
 
+      # The release stage: one build is promoted unchanged across environments, so anything
+      # that differs between them is combined with the artifact here rather than baked in.
+      # An undefined variable expands to the empty string, which the app treats as absent and
+      # falls back to the code's default -- it does not read as "off".
+      - name: Inject runtime config
+        uses: ./.github/actions/inject-runtime-config
+        with:
+          config-json: |
+            {
+              "FEATURE_MODEL_PICKER": "${{ vars.FEATURE_MODEL_PICKER }}",
+              "FEATURE_CUSTOM_MODELS": "${{ vars.FEATURE_CUSTOM_MODELS }}",
+              "FEATURE_STREAMING": "${{ vars.FEATURE_STREAMING }}",
+              "FEATURE_CLASSIFICATION_FILTERS": "${{ vars.FEATURE_CLASSIFICATION_FILTERS }}",
+              "FEATURE_SELF_SIGNUP": "${{ vars.FEATURE_SELF_SIGNUP }}",
+              "CONTACT_URL": "${{ vars.VITE_CONTACT_URL }}",
+              "PRIVACY_POLICY_URL": "${{ vars.VITE_PRIVACY_POLICY_URL }}",
+              "ABOUT_US_URL": "${{ vars.VITE_ABOUT_US_URL }}"
+            }
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
         with:

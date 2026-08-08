@@ -2,6 +2,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { QUERY_KEYS } from "./keys";
 import api from "./axios";
 import type { Meta } from "@/types";
+import { nextPageParamAsString } from "@/utilities/pagination";
 
 export type SingleConversation = {
   id: string;
@@ -43,7 +44,6 @@ export const useGetConversationsList = ({
         page: pageParam,
       }),
     initialPageParam: "1",
-    getNextPageParam: ({ meta: { total_pages, current_page } }) =>
-      current_page !== total_pages ? `${current_page + 1}` : undefined,
+    getNextPageParam: nextPageParamAsString,
   });
 };

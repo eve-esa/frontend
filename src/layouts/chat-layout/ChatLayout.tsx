@@ -5,10 +5,10 @@ import { DynamicSidebarProvider } from "@/components/chat/DynamicSidebarProvider
 import { ConversationsMenuSidebar } from "@/components/chat/ConversationsMenuSidebar";
 import { DynamicSidebar } from "@/components/chat/DynamicSidebar";
 import { messageDefaultSettings } from "@/utilities/messageDefaultSettings";
-import { LOCAL_STORAGE_SETTINGS } from "@/utilities/localStorage";
 import {
   LOCAL_STORAGE_PRIVATE_COLLECTIONS,
   LOCAL_STORAGE_PUBLIC_COLLECTIONS,
+  LOCAL_STORAGE_SETTINGS,
 } from "@/utilities/localStorage";
 import { TourProvider } from "@/components/onboarding/TourContext";
 import { steps } from "@/utilities/onboardingSteps";

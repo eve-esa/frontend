@@ -9,6 +9,7 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Tooltip } from "../ui/Tooltip";
+import { configValue, type ConfigKey } from "@/utilities/runtimeConfig";
 
 type ProfileMenubarProps = {
   email?: string;
@@ -29,17 +30,18 @@ export const ProfileMenubar = ({
   onLogoutClick,
   isLoadingProfile,
 }: ProfileMenubarProps) => {
-  const onContactClick = () => {
-    window.open(import.meta.env.VITE_CONTACT_URL, "_blank");
+  // openLink rather than window.open directly: an unconfigured URL used to open
+  // about:blank, which looks like a broken app rather than a missing setting.
+  const openLink = (key: ConfigKey) => () => {
+    const url = configValue(key);
+    if (url) {
+      window.open(url, "_blank", "noopener,noreferrer");
+    }
   };
 
-  const onPrivacyPolicyClick = () => {
-    window.open(import.meta.env.VITE_PRIVACY_POLICY_URL, "_blank");
-  };
-
-  const onAboutUsClick = () => {
-    window.open(import.meta.env.VITE_ABOUT_US_URL, "_blank");
-  };
+  const onContactClick = openLink("CONTACT_URL");
+  const onPrivacyPolicyClick = openLink("PRIVACY_POLICY_URL");
+  const onAboutUsClick = openLink("ABOUT_US_URL");
 
   const triggerContent = (
     <MenubarTrigger

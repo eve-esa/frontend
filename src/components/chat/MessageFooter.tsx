@@ -13,8 +13,15 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Button } from "@/components/ui/Button";
 import SmartText from "@/components/ui/SmartText";
-import type { MessageType, ChaMessageType, Document, ModelListResponse } from "@/types";
-import { LLMTypeLabel, LLMType } from "@/types";
+import {
+  LLMType,
+  LLMTypeLabel,
+  type ApiError,
+  type ChaMessageType,
+  type Document,
+  type MessageType,
+  type ModelListResponse,
+} from "@/types";
 import { useSidebar, type SidebarContent } from "./DynamicSidebarProvider";
 import { useClipboard } from "@/hooks/useClipboard";
 import { useState } from "react";
@@ -26,10 +33,11 @@ import { SendFeedbackDialog } from "./SendFeedbackDialog";
 import { useQueryClient } from "@tanstack/react-query";
 import { QUERY_KEYS } from "@/services/keys";
 import { toast } from "sonner";
-import type { ApiError } from "@/types";
 import { handleApiError } from "@/utilities/helpers";
 import { useListModels } from "@/services/useListModels";
 import { resolveCustomModelDisplayName } from "@/utilities/modelSelection";
+
+type Hallucination = NonNullable<MessageType["hallucination"]>;
 
 const LLM_TYPE_TO_LABEL: Record<string, string> = {
   [LLMType.Main]: LLMTypeLabel.Main,
@@ -265,68 +273,78 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
         url: `/conversations/${conversationId}/messages/${message.id}/stream-hallucination`,
         payload: {},
         onEvent: (evt: StreamEvent) => {
-          const anyEvt = evt as any;
+          const streamEvt = evt as {
+            type?: string;
+            content?: unknown;
+            answer?: unknown;
+            documents?: unknown;
+            label?: unknown;
+            reason?: unknown;
+            rewritten_query?: unknown;
+            rewritten_question?: unknown;
+            top_k_retrieved_docs?: unknown;
+          };
           // Stream tokens
-          if (anyEvt?.type === "token" && typeof anyEvt.content === "string") {
+          if (streamEvt?.type === "token" && typeof streamEvt.content === "string") {
             // Alternative answer streams as tokens
-            setAlternativeRaw((prev) => prev + anyEvt.content);
+            setAlternativeRaw((prev) => prev + streamEvt.content);
             return;
           }
 
-          if (anyEvt?.type === "status" && typeof anyEvt.content === "string") {
+          if (streamEvt?.type === "status" && typeof streamEvt.content === "string") {
             // Replace current status with the latest one
-            setHallucinationStatus(anyEvt.content);
+            setHallucinationStatus(streamEvt.content);
             return;
           }
 
-          if (anyEvt?.type === "label" && anyEvt?.content !== undefined) {
+          if (streamEvt?.type === "label" && streamEvt?.content !== undefined) {
             const parsed =
-              typeof anyEvt.content === "number"
-                ? anyEvt.content
-                : Number(anyEvt.content);
+              typeof streamEvt.content === "number"
+                ? streamEvt.content
+                : Number(streamEvt.content);
             if (!Number.isNaN(parsed)) {
               setHallucinationLabel(parsed);
             }
             return;
           }
 
-          if (anyEvt?.type === "reason" && typeof anyEvt.content === "string") {
-            setHallucinationRaw(anyEvt.content);
+          if (streamEvt?.type === "reason" && typeof streamEvt.content === "string") {
+            setHallucinationRaw(streamEvt.content);
             return;
           }
 
           if (
-            anyEvt?.type === "rewritten_question" &&
-            typeof anyEvt.content === "string"
+            streamEvt?.type === "rewritten_question" &&
+            typeof streamEvt.content === "string"
           ) {
-            setRewrittenQuery(anyEvt.content);
+            setRewrittenQuery(streamEvt.content);
             return;
           }
 
-          if (anyEvt?.type === "final") {
+          if (streamEvt?.type === "final") {
             const finalText =
-              typeof anyEvt?.answer === "string" ? anyEvt.answer : "";
+              typeof streamEvt?.answer === "string" ? streamEvt.answer : "";
             setHallucinationStatus("");
-            const docs: Document[] = Array.isArray(anyEvt?.top_k_retrieved_docs)
-              ? (anyEvt.top_k_retrieved_docs as Document[])
-              : Array.isArray(anyEvt?.documents)
-                ? (anyEvt.documents as Document[])
+            const docs: Document[] = Array.isArray(streamEvt?.top_k_retrieved_docs)
+              ? (streamEvt.top_k_retrieved_docs as Document[])
+              : Array.isArray(streamEvt?.documents)
+                ? (streamEvt.documents as Document[])
                 : [];
             if (docs.length > 0) {
               setHallucinationSources(docs);
             }
             const rewritten =
-              (anyEvt?.rewritten_question as string) ||
-              (anyEvt?.rewritten_query as string) ||
+              (streamEvt?.rewritten_question as string) ||
+              (streamEvt?.rewritten_query as string) ||
               "";
             if (rewritten) {
               setRewrittenQuery(rewritten);
             }
-            if (typeof anyEvt?.reason === "string" && anyEvt.reason.length) {
-              setHallucinationRaw(anyEvt.reason);
+            if (typeof streamEvt?.reason === "string" && streamEvt.reason.length) {
+              setHallucinationRaw(streamEvt.reason);
             }
-            if (typeof anyEvt?.label === "number") {
-              setHallucinationLabel(anyEvt.label);
+            if (typeof streamEvt?.label === "number") {
+              setHallucinationLabel(streamEvt.label);
             }
             if (finalText) {
               setAlternativeRaw(finalText);
@@ -340,19 +358,19 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
                 const newMessages = old.messages.map((m) => {
                   if (m.id !== message?.id) return m as MessageType;
                   const existingHallucination =
-                    (m as MessageType).hallucination || ({} as any);
+                    (m as MessageType).hallucination || ({} as Hallucination);
                   const updatedHallucination = {
                     ...existingHallucination,
                     final_answer: finalText || null,
                     reason:
-                      typeof anyEvt?.reason === "string" && anyEvt.reason.length
-                        ? anyEvt.reason
+                      typeof streamEvt?.reason === "string" && streamEvt.reason.length
+                        ? streamEvt.reason
                         : ((m as MessageType).hallucination?.reason ??
                           (hallucinationRaw || null)),
                     rewritten_question: rewritten || null,
                     label:
-                      typeof anyEvt?.label === "number"
-                        ? anyEvt.label
+                      typeof streamEvt?.label === "number"
+                        ? streamEvt.label
                         : typeof hallucinationLabel === "number"
                           ? hallucinationLabel
                           : (existingHallucination?.label ?? null),
@@ -360,7 +378,7 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
                       docs.length > 0
                         ? docs
                         : (existingHallucination?.top_k_retrieved_docs ?? null),
-                  } as any;
+                  } as Hallucination;
                   return {
                     ...(m as MessageType),
                     hallucination: updatedHallucination,
@@ -634,14 +652,14 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
                             const newMessages = old.messages.map((m) => {
                               if (m.id !== message.id) return m as MessageType;
                               const existingHalluc =
-                                (m as MessageType).hallucination || ({} as any);
+                                (m as MessageType).hallucination || ({} as Hallucination);
                               return {
                                 ...(m as MessageType),
                                 hallucination: {
-                                  ...(existingHalluc as any),
+                                  ...existingHalluc,
                                   feedback: FeedbackEnum.GOOD,
                                   feedback_reason: null,
-                                } as any,
+                                } as Hallucination,
                               } as MessageType;
                             });
                             return { ...old, messages: newMessages };
@@ -691,13 +709,13 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
                             const newMessages = old.messages.map((m) => {
                               if (m.id !== message.id) return m as MessageType;
                               const existingHalluc =
-                                (m as MessageType).hallucination || ({} as any);
+                                (m as MessageType).hallucination || ({} as Hallucination);
                               return {
                                 ...(m as MessageType),
                                 hallucination: {
-                                  ...(existingHalluc as any),
+                                  ...existingHalluc,
                                   was_copied: true,
-                                } as any,
+                                } as Hallucination,
                               } as MessageType;
                             });
                             return { ...old, messages: newMessages };
@@ -742,14 +760,14 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
                     const newMessages = old.messages.map((m) => {
                       if (m.id !== message.id) return m as MessageType;
                       const existingHalluc =
-                        (m as MessageType).hallucination || ({} as any);
+                        (m as MessageType).hallucination || ({} as Hallucination);
                       return {
                         ...(m as MessageType),
                         hallucination: {
-                          ...(existingHalluc as any),
+                          ...existingHalluc,
                           feedback: FeedbackEnum.BAD,
                           feedback_reason: feedbackText,
-                        } as any,
+                        } as Hallucination,
                       } as MessageType;
                     });
                     return { ...old, messages: newMessages };

@@ -2,8 +2,12 @@ import {
   LOCAL_STORAGE_LLM_TYPE,
   LOCAL_STORAGE_MODEL_SELECTION,
 } from "@/utilities/localStorage";
-import { LLMType } from "@/types";
-import type { ModelListResponse, ModelSelection, PlatformModel } from "@/types";
+import {
+  LLMType,
+  type ModelListResponse,
+  type ModelSelection,
+  type PlatformModel,
+} from "@/types";
 
 export const DEFAULT_MODEL_SELECTION: ModelSelection = {
   type: "platform",

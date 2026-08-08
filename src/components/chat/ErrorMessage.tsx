@@ -1,16 +1,19 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Button } from "@/components/ui/Button";
 import { faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
+import { configValue } from "@/utilities/runtimeConfig";
 
 export const ErrorMessage = ({
   onRetry,
 }: {
   onRetry?: () => void;
 }) => {
-  const contactUrl = import.meta.env.VITE_CONTACT_URL;
+  const contactUrl = configValue("CONTACT_URL");
 
   const onContactClick = () => {
-    window.open(contactUrl, "_blank");
+    if (contactUrl) {
+      window.open(contactUrl, "_blank", "noopener,noreferrer");
+    }
   };
 
   return (

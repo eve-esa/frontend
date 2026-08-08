@@ -2,6 +2,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { QUERY_KEYS } from "./keys";
 import api from "./axios";
 import type { ImageAsset, Meta } from "@/types";
+import { nextPageParam } from "@/utilities/pagination";
 
 export type MyImagesResponse = {
   data: ImageAsset[];
@@ -37,7 +38,6 @@ export const useGetMyImages = ({
         page: pageParam.toString(),
       }),
     initialPageParam: 1,
-    getNextPageParam: ({ meta: { total_pages, current_page } }) =>
-      current_page < total_pages ? current_page + 1 : undefined,
+    getNextPageParam: nextPageParam,
   });
 };

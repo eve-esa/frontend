@@ -2,6 +2,7 @@ import { QUERY_KEYS } from "./keys";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import api from "./axios";
 import type { Meta } from "@/types";
+import { nextPageParam } from "@/utilities/pagination";
 
 export type McpServerPublic = {
   id: string | null;
@@ -55,7 +56,6 @@ export const useGetMcpServers = ({
         page: pageParam.toString(),
       }),
     initialPageParam: 1,
-    getNextPageParam: ({ meta: { total_pages, current_page } }) =>
-      current_page < total_pages ? current_page + 1 : undefined,
+    getNextPageParam: nextPageParam,
   });
 };
