@@ -1,13 +1,11 @@
 import { Link, generatePath } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faTrash,
   faUpRightFromSquare,
   faFile,
 } from "@fortawesome/free-solid-svg-icons";
 import { AuthenticatedImage } from "@/components/ui/AuthenticatedImage";
 import { ArtifactDownloadChip } from "@/components/ui/ArtifactDownloadChip";
-import { Spinner } from "@/components/ui/Spinner";
 import { routes } from "@/utilities/routes";
 import { formatDate } from "@/utilities/dayjs";
 import { formatBytes } from "@/utilities/formatBytes";
@@ -16,8 +14,6 @@ import type { ImageAsset } from "@/types";
 type ArtifactCardProps = {
   asset: ImageAsset;
   onOpen: () => void;
-  onDelete: () => void;
-  isDeleting: boolean;
 };
 
 // The stable serving route never expires and is environment-independent, so it
@@ -33,8 +29,6 @@ const sourceLabel = (asset: ImageAsset): string | null => {
 export const ArtifactCard = ({
   asset,
   onOpen,
-  onDelete,
-  isDeleting,
 }: ArtifactCardProps) => {
   return (
     <div
@@ -63,22 +57,6 @@ export const ArtifactCard = ({
           <span className="absolute left-2 top-2 rounded-full border border-primary-400 bg-natural-1000/60 px-2 py-0.5 text-[10px] uppercase tracking-wide text-natural-50">
             {sourceLabel(asset)}
           </span>
-        )}
-        {asset.source?.type !== "mcp_tool" && (
-          <button
-            type="button"
-            data-testid="artifact-delete"
-            onClick={onDelete}
-            disabled={isDeleting}
-            aria-label="Delete image"
-            className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full border border-primary-400 bg-natural-1000/60 text-natural-50 hover:bg-danger-400/70 disabled:opacity-60 cursor-pointer"
-          >
-            {isDeleting ? (
-              <Spinner size="xs" />
-            ) : (
-              <FontAwesomeIcon icon={faTrash} className="w-3 h-3" />
-            )}
-          </button>
         )}
       </div>
 

@@ -21,7 +21,6 @@ export const MUTATION_KEYS = {
   sourceLog: "sourceLog",
   customModels: "customModels",
   uploadImage: "uploadImage",
-  deleteImage: "deleteImage",
 };
 
 export const QUERY_KEYS = {
