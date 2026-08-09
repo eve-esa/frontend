@@ -144,7 +144,7 @@ Related to #(issue number)
 <!-- Mark completed documentation updates with an "x" -->
 
 - [ ] README.md updated (if applicable)
-- [ ] CHANGELOG.md updated
+- [ ] PR title follows Conventional Commits (`feat:`, `fix:`, ...). It becomes the commit on `main` and writes the changelog. Do not edit `CHANGELOG.md` by hand, it is generated.
 - [ ] API documentation updated (if applicable)
 - [ ] Code comments added/updated
 - [ ] Component documentation updated (if applicable)
