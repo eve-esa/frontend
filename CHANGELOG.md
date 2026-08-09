@@ -16,6 +16,13 @@ Release and promotes staging. Production is promoted from there by an explicit d
 The `[1.0.0]` entry below is historical and predates this repository's current version series. The
 released tags run `v0.0.1` through `v0.0.6`; no `v1.0.0` was ever tagged here.
 
+## [0.0.7](https://github.com/eve-esa/frontend/compare/v0.0.6...v0.0.7) (2026-08-09)
+
+
+### Miscellaneous
+
+* release 0.0.7 ([#43](https://github.com/eve-esa/frontend/issues/43)) ([303c7d2](https://github.com/eve-esa/frontend/commit/303c7d2646bf06fbb779656e7ddabaa8bc5910a5))
+
 ## [1.0.0] - 2025-09-18
 
 ### Added - Initial EVE Frontend Release
