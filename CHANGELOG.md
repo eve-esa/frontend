@@ -7,25 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > **About EVE**: EVE (Earth Virtual Expert) is an AI-powered Digital Assistant for Earth Observation and Earth Science, developed by Pi School in collaboration with Imperative Space and funded by ESA Φ-lab.
 
-## [Unreleased]
+From v0.0.7 onward this file is written by [release-please](https://github.com/googleapis/release-please)
+from the pull request titles merged into `main`, so entries are not added by hand. Work that has landed
+but is not yet released is visible in the open `chore(main): release ...` pull request, which is also
+what cuts the release: merging it commits the version, creates the `vX.Y.Z` tag, publishes the GitHub
+Release and promotes staging. Production is promoted from there by an explicit dispatch.
 
-### Added
-- Nothing yet
-
-### Changed
-- Nothing yet
-
-### Deprecated
-- Nothing yet
-
-### Removed
-- Nothing yet
-
-### Fixed
-- Nothing yet
-
-### Security
-- Nothing yet
+The `[1.0.0]` entry below is historical and predates this repository's current version series. The
+released tags run `v0.0.1` through `v0.0.6`; no `v1.0.0` was ever tagged here.
 
 ## [1.0.0] - 2025-09-18
 
@@ -154,5 +143,4 @@ This project follows [Semantic Versioning](https://semver.org/):
 
 ### Links
 
-- [Unreleased]: https://github.com/pischool/eve-fe-3/compare/v1.0.0...HEAD
-- [1.0.0]: https://github.com/pischool/eve-fe-3/releases/tag/v1.0.0
+- [1.0.0]: https://github.com/eve-esa/frontend/releases/tag/v1.0.0

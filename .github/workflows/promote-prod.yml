@@ -40,9 +40,20 @@ jobs:
           # Normalize version (remove leading 'v' if present)
           VERSION="${VERSION#v}"
 
-          # Ensure the release exists
+          # Ensure the release exists AND carries the bundle. Checking only that the release exists
+          # used to be a proxy for "staging has run", because staging was what created it. Since
+          # release-please creates the release the moment its pull request merges, that proxy no
+          # longer holds: the release can exist while staging never promoted. Assert the asset,
+          # which is the thing production actually consumes.
+          ASSET_NAME="eve-frontend-${VERSION}-dist.tar.gz"
           if ! gh release view "v${VERSION}" >/dev/null 2>&1; then
-            echo "Release v${VERSION} not found"
+            echo "ERROR: release v${VERSION} not found."
+            exit 1
+          fi
+          if ! gh release view "v${VERSION}" --json assets --jq '.assets[].name' | grep -qx "$ASSET_NAME"; then
+            echo "ERROR: release v${VERSION} exists but carries no ${ASSET_NAME}."
+            echo "Production re-publishes the bundle staging built; it never builds its own."
+            echo "Promote v${VERSION} to staging first, then run this again."
             exit 1
           fi
 

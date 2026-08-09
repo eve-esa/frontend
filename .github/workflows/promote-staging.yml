@@ -1,10 +1,28 @@
+# Staging promotion. The bundle is built from the tag, published as a GitHub Release asset, and
+# uploaded to S3 behind the release pointer. Production later re-publishes that exact asset.
+#
+# Dispatch only, and it must be dispatched at the tag. release.yml fires it automatically after a
+# release is cut; running it by hand is the break-glass path. The v* tag no longer triggers it on
+# push: release-please owns the tags now, and a tag pushed by hand would both desync
+# .release-please-manifest.json and promote whatever it happened to point at.
+#
+# --ref is not optional: the esa-eve-staging environment accepts only refs matching v*, so a
+# dispatch defaulting to main is refused. Every step below reads inputs.version rather than the
+# ref, so a run started at the wrong ref fails loudly instead of quietly building main and
+# attaching it to a release tag.
 name: promote staging
-run-name: promote staging ${{ github.ref_name }}
+run-name: promote staging ${{ inputs.version }}
 
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version tag to promote, for example v0.0.7"
+        required: true
+        type: string
+
+permissions:
+  contents: read
 
 concurrency:
   group: deploy-staging
@@ -24,21 +42,22 @@ jobs:
       - name: Checkout tag
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.ref }}
+          ref: ${{ inputs.version }}
+          # rev-list below needs the tag object, which a shallow clone does not carry.
+          fetch-depth: 0
 
       - name: Extract metadata
         id: metadata
         env:
-          TAG_REF: ${{ github.ref }}
-          TAG_NAME: ${{ github.ref_name }}
+          VERSION_INPUT: ${{ inputs.version }}
         run: |
-          # Extract commit SHA from tag
-          COMMIT_SHA=$(git rev-list -n 1 "$TAG_REF")
+          set -euo pipefail
+          # Extract commit SHA from the tag
+          COMMIT_SHA=$(git rev-list -n 1 "$VERSION_INPUT")
           echo "commit-sha=${COMMIT_SHA}" >> $GITHUB_OUTPUT
 
-          # Extract version from tag ref (e.g. refs/tags/v1.0.0 -> 1.0.0)
-          VERSION="$TAG_NAME"
-          VERSION="${VERSION#v}"
+          # The input is accepted as v1.0.0 or 1.0.0; downstream wants it bare.
+          VERSION="${VERSION_INPUT#v}"
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
 
           echo "Releasing version: ${VERSION}"
@@ -62,7 +81,7 @@ jobs:
           # downloads and re-publishes this very same tarball from the GitHub
           # release instead of rebuilding, so prod inherits these values and is
           # guaranteed to display exactly what staging displayed.
-          VITE_APP_VERSION: ${{ github.ref_name }}
+          VITE_APP_VERSION: ${{ inputs.version }}
           VITE_APP_COMMIT: ${{ steps.metadata.outputs.commit-sha }}
 
       - name: Create distribution tarball
@@ -70,25 +89,26 @@ jobs:
           tar czf eve-frontend-${{ steps.metadata.outputs.version }}-dist.tar.gz dist/
           ls -lh eve-frontend-${{ steps.metadata.outputs.version }}-dist.tar.gz
 
-      - name: Create or update GitHub Release
+      # Attach only. release-please creates the release when its pull request is merged, so this
+      # step no longer has a create branch: creating one here would mean the release either did not
+      # exist or was made at the wrong ref, and gh release create without --target would have
+      # silently anchored it to the default branch head. Failing is the correct answer.
+      - name: Attach the bundle to the release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.metadata.outputs.version }}
         run: |
-          VERSION="${{ steps.metadata.outputs.version }}"
-
-          # Check if release exists
-          if gh release view "v${VERSION}" >/dev/null 2>&1; then
-            echo "Release v${VERSION} exists, uploading asset"
-            gh release upload "v${VERSION}" \
-              eve-frontend-${VERSION}-dist.tar.gz \
-              --clobber
-          else
-            echo "Creating release v${VERSION}"
-            gh release create "v${VERSION}" \
-              eve-frontend-${VERSION}-dist.tar.gz \
-              --title "Frontend v${VERSION}" \
-              --generate-notes
+          set -euo pipefail
+          if ! gh release view "v${VERSION}" >/dev/null 2>&1; then
+            echo "ERROR: no GitHub Release v${VERSION} to attach the bundle to."
+            echo "Releases are created by merging the release pull request, not by this workflow."
+            echo "If you are promoting by hand, check the tag exists and its release was published."
+            exit 1
           fi
+          gh release upload "v${VERSION}" \
+            "eve-frontend-${VERSION}-dist.tar.gz" \
+            --clobber
+          echo "Attached eve-frontend-${VERSION}-dist.tar.gz to v${VERSION}"
 
   publish:
     name: Publish to S3

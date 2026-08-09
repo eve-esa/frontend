@@ -105,7 +105,7 @@ Run `yarn lint` before committing to ensure ESLint passes.
 
 ## Versioning
 
-This project follows [Semantic Versioning](https://semver.org/). For the versions available, see the [tags on this repository](https://github.com/pischool/eve-fe/tags) and the [CHANGELOG.md](./CHANGELOG.md).
+This project follows [Semantic Versioning](https://semver.org/). For the versions available, see the [tags on this repository](https://github.com/eve-esa/frontend/tags) and the [CHANGELOG.md](./CHANGELOG.md).
 
 
 ## Git Workflow

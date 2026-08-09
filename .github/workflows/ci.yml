@@ -2,6 +2,11 @@ name: CI
 
 on:
   pull_request:
+  # Also on main, so a merge that combines two individually green branches is still tested. The
+  # release pull request is the exception: it is opened with GITHUB_TOKEN, which raises no workflow
+  # runs, so nothing reports on it.
+  push:
+    branches: [main]
 
 jobs:
   test:
