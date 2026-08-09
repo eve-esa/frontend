@@ -16,6 +16,16 @@ Release and promotes staging. Production is promoted from there by an explicit d
 The `[1.0.0]` entry below is historical and predates this repository's current version series. The
 released tags run `v0.0.1` through `v0.0.6`; no `v1.0.0` was ever tagged here.
 
+## [0.0.7](https://github.com/eve-esa/frontend/compare/v0.0.6...v0.0.7) (2026-08-09)
+
+### Added
+
+* Flags are named for the features they control, and configuration is applied at the release stage instead of being baked into the build ([#40](https://github.com/eve-esa/frontend/pull/40))
+
+### Removed
+
+* The delete control on artifacts. An uploaded file is permanent ([#41](https://github.com/eve-esa/frontend/pull/41))
+
 ## [1.0.0] - 2025-09-18
 
 ### Added - Initial EVE Frontend Release
