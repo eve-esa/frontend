@@ -10,7 +10,9 @@
 # dispatch defaulting to main is refused. Every step below reads inputs.version rather than the
 # ref, so a run started at the wrong ref fails loudly instead of quietly building main and
 # attaching it to a release tag.
-name: promote staging
+#
+# release.yml dispatches this workflow by filename, so renaming the file breaks that dispatch.
+name: "promote: staging"
 run-name: promote staging ${{ inputs.version }}
 
 on:
@@ -33,6 +35,7 @@ jobs:
   release-build:
     name: Build and Release
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: write
     outputs:
@@ -113,6 +116,7 @@ jobs:
   publish:
     name: Publish to S3
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: release-build
     environment: esa-eve-staging
     permissions:

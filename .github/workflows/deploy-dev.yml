@@ -1,4 +1,7 @@
-name: deploy dev
+# Triggers on push to main (with paths-ignore, so documentation only commits are
+# skipped) and on workflow_dispatch. Unlike the backend, this one is not called by
+# release.yml: the release commit lands on main and already triggers it.
+name: "deploy: dev"
 
 on:
   push:
@@ -17,6 +20,7 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     # Declared so the step below can read this environment's VITE_* variables.
     # A Vite build inlines them as constants, so the artifact is environment
     # specific from the moment it is produced, not from the moment it is
@@ -62,6 +66,7 @@ jobs:
   publish:
     name: Publish to S3
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: build
     environment: esa-eve-dev
     permissions:
