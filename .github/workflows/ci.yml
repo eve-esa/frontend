@@ -13,7 +13,7 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # .nvmrc, not a pinned 20: every deploy build uses node-version-file, so a
       # hardcoded version here means CI tests on a different Node major than the
