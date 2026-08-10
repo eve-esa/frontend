@@ -10,7 +10,7 @@
 # first. Here staging builds from source itself, and the release commit already triggers deploy
 # dev on its own because that workflow filters with paths-ignore rather than an allow-list. So
 # there is nothing to sequence.
-name: release
+name: "release: draft or cut"
 # GitHub titles a run with the commit subject, so this workflow and CI, which both fire on a
 # push to main, appeared as two identical rows. Same convention promote-staging.yml already uses.
 run-name: release on ${{ github.ref_name }}
@@ -30,6 +30,7 @@ jobs:
   release-please:
     name: Draft or cut the release
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: write
       issues: write
@@ -60,6 +61,7 @@ jobs:
     needs: release-please
     if: needs.release-please.outputs.released == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       actions: write
     steps:
@@ -70,5 +72,5 @@ jobs:
           TAG: ${{ needs.release-please.outputs.tag }}
         run: |
           set -euo pipefail
-          gh workflow run "promote staging" --ref "$TAG" -f version="$TAG"
+          gh workflow run promote-staging.yml --ref "$TAG" -f version="$TAG"
           echo "Dispatched promote staging for $TAG"

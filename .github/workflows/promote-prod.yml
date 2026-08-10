@@ -1,4 +1,8 @@
-name: promote prod
+# Manual dispatch only: there is no automatic trigger into production.
+# The --ref you dispatch with must be a v* tag, not a branch.
+# One approval is required (the esa-eve-prod environment gate).
+# This never builds: it republishes the tarball staging attached to the Release.
+name: "promote: prod"
 run-name: promote prod ${{ inputs.version }}
 
 on:
@@ -18,6 +22,7 @@ jobs:
   publish:
     name: Publish to S3
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     environment: esa-eve-prod
     permissions:
       id-token: write
