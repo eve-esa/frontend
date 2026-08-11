@@ -229,7 +229,9 @@ export const Message = ({
             <p className="text-danger-400">
               {message.metadata?.error?.code === "timeout"
                 ? "The model did not answer in time. It may be warming up: retry in a moment."
-                : "Something went wrong! Retry please your request."}
+                : message.metadata?.error?.code === "empty_answer"
+                  ? "The model returned an empty answer. Retry in a moment."
+                  : "Something went wrong! Retry please your request."}
             </p>
           ) : null}
         </div>

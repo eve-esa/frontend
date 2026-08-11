@@ -190,7 +190,7 @@ export const Chat = () => {
               isError={showRetry}
               scrollContainerRef={scrollContainerRef}
               onRetry={() => {
-                if (isRetry) {
+                if (showRetry) {
                   retryRequest({
                     message_id: messages?.[messages.length - 1]?.id,
                     conversationId,
@@ -213,11 +213,12 @@ export const Chat = () => {
           <FontAwesomeIcon icon={faChevronDown} className="size-4" />
         </div>
         {/* A failed last turn must not lock the composer: the user can retry
-            the failed message or simply move on with a new one. */}
+            the failed message or simply move on with a new one. Background
+            refetches (isFetchingMessages) must not lock it either. */}
         <MessageInput
           sendRequest={handleSendRequest}
           isLoading={isLoading}
-          disabled={isLoading}
+          disabled={isMutating || isLoadingMessages}
         />
       </div>
 
