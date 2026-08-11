@@ -72,6 +72,11 @@ export async function postStream<TPayload>({
   let lastProgressTime = Date.now();
   const PROGRESS_TIMEOUT = 60000;
 
+  // A stale flag from a previous stream (watchdog fired after the observer
+  // unmounted, or raced a completing response) must not misclassify this
+  // stream's outcome.
+  lastAbortWasWatchdogTimeout = false;
+
   const controller = new AbortController();
   currentStreamAbortController = controller;
 
@@ -152,13 +157,19 @@ export async function postStream<TPayload>({
   }
 
   if (buffer) {
+    // Same normalization as the in-progress parser: the terminal error event
+    // often sits here without a trailing newline, still data:-prefixed, and it
+    // must not be lost to a parse failure.
     const trimmed = buffer.trim();
-    if (trimmed) {
+    const content = trimmed.startsWith("data:")
+      ? trimmed.slice(5).trim()
+      : trimmed;
+    if (content.startsWith("{") && content.endsWith("}")) {
       try {
-        const evt = JSON.parse(trimmed) as StreamEvent;
+        const evt = JSON.parse(content) as StreamEvent;
         onEvent(evt);
       } catch {
-        console.error("Malformed JSON line:", trimmed);
+        console.error("Malformed JSON line:", content);
       }
     }
   }

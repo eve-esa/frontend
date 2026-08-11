@@ -159,7 +159,15 @@ export const Chat = () => {
   // Retry visibility must not depend on background refetch state: gating it on
   // isFetchingMessages hid the button behind every conversation refetch while
   // isRetry kept the composer locked, leaving no way out short of a reload.
-  const showRetry = isRetry && !isMutating;
+  // It does require a persisted message id, though: right after a failure the
+  // cache still holds the optimistic temp-/srv- entry, and a retry POST with
+  // that id would 404.
+  const lastMessageIsPersisted = Boolean(
+    lastMessage?.id &&
+      !lastMessage.id.startsWith("temp-") &&
+      !lastMessage.id.startsWith("srv-"),
+  );
+  const showRetry = isRetry && !isMutating && lastMessageIsPersisted;
 
   return (
     <div className="flex h-full w-full flex-col bg-natural-900 relative">

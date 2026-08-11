@@ -219,9 +219,13 @@ export const Message = ({
                 </>
               )}
             </div>
-          ) : message.stopped ? null : awaitingOutput &&
+          ) : message.stopped ? null : !message.output &&
             !isSending &&
-            !message.pre_answer_notices?.length ? (
+            (isLastMessage
+              ? !message.pre_answer_notices?.length
+              : // A failed turn the user moved past would otherwise render as
+                // a blank bubble with no trace of what happened.
+                Boolean(message.metadata?.error)) ? (
             <p className="text-danger-400">
               {message.metadata?.error?.code === "timeout"
                 ? "The model did not answer in time. It may be warming up: retry in a moment."

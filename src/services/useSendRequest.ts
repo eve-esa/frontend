@@ -287,14 +287,17 @@ export const useSendRequest = (conversationId?: string) => {
         name?: string;
         message?: string;
       };
-      // The watchdog abort raises the same CanceledError as a user stop;
-      // consume its flag first so a hung stream is treated as a failure, not
-      // filed as "user pressed stop" with the refetch skipped.
+      // Both flags are consumed unconditionally: short-circuiting past the
+      // suppress flag would leak it into the next send's classification. The
+      // watchdog wins because its abort raises the same CanceledError as a
+      // user stop, and a hung stream must be treated as a failure, not filed
+      // as "user pressed stop" with the refetch skipped.
       const watchdogTimedOut = consumeWatchdogTimeoutFlag();
+      const userSuppressed = consumeSuppressToastFlag();
       const msg = String(message || "").toLowerCase();
       const isCanceled =
         !watchdogTimedOut &&
-        (consumeSuppressToastFlag() ||
+        (userSuppressed ||
           name === "CanceledError" ||
           code === "ERR_CANCELED" ||
           code === "ECONNABORTED" ||
