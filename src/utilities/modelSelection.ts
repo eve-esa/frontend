@@ -2,11 +2,10 @@ import {
   LOCAL_STORAGE_LLM_TYPE,
   LOCAL_STORAGE_MODEL_SELECTION,
 } from "@/utilities/localStorage";
-import {
-  LLMType,
-  type ModelListResponse,
-  type ModelSelection,
-  type PlatformModel,
+import type {
+  ModelListResponse,
+  ModelSelection,
+  PlatformModel,
 } from "@/types";
 
 export const DEFAULT_MODEL_SELECTION: ModelSelection = {
@@ -17,11 +16,11 @@ export const DEFAULT_MODEL_SELECTION: ModelSelection = {
 function resolveDefaultModelSelection(
   models?: ModelListResponse,
 ): ModelSelection {
-  const mainModel = models?.platform.find(
-    (model) => model.llm_type === LLMType.Main,
-  );
-  if (mainModel) {
-    return { type: "platform", id: mainModel.id };
+  // The backend owns the default: /models lists platform models in order and
+  // the first one is it.
+  const first = models?.platform[0];
+  if (first) {
+    return { type: "platform", id: first.id };
   }
   return DEFAULT_MODEL_SELECTION;
 }
