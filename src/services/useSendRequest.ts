@@ -132,7 +132,12 @@ export const useSendRequest = (conversationId?: string) => {
 
         let finalAnswer: string | null = null;
         let finalArtifactIds: string[] | undefined;
-        let streamError: { code?: string; message?: string } | null = null;
+        // Holder object rather than a plain let: the assignment happens inside
+        // the onEvent closure, and control-flow narrowing would otherwise
+        // collapse the variable to null after the await.
+        const streamError: {
+          current: { code?: string; message?: string } | null;
+        } = { current: null };
 
         await postStream({
           url: streamUrl,
@@ -146,7 +151,7 @@ export const useSendRequest = (conversationId?: string) => {
               // so the mutation rejects instead of resolving into an empty
               // answer indistinguishable from success.
               const { code, message } = evt as Record<string, unknown>;
-              streamError = {
+              streamError.current = {
                 code: typeof code === "string" ? code : undefined,
                 message:
                   typeof message === "string"
@@ -183,11 +188,13 @@ export const useSendRequest = (conversationId?: string) => {
           },
         });
 
-        if (streamError && finalAnswer === null) {
-          const err = new Error(streamError.message || "Generation failed");
+        if (streamError.current && finalAnswer === null) {
+          const err = new Error(
+            streamError.current.message || "Generation failed",
+          );
           err.name = "GenerationError";
           (err as Error & { generationCode?: string }).generationCode =
-            streamError.code;
+            streamError.current.code;
           throw err;
         }
 
