@@ -476,15 +476,18 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
             >
               <span className="font-['NotesESA']">Hallucination Detector</span>
             </Button>
-            <div className="text-sm text-natural-500">
-              Answered by:{" "}
-              {getAnsweredByLabel(message, models) || "Unknown model"}
-              {message?.metadata?.generated_model_name &&
-                ` (${message.metadata.generated_model_name})`}
-              {message?.metadata?.prompts?.custom_model_name &&
-                !message?.metadata?.generated_model_name &&
-                ` (${message.metadata.prompts.custom_model_name})`}
-            </div>
+            {/* No label, no claim: an optimistic message has no attribution
+                data yet, and "Unknown model" read as an error. */}
+            {getAnsweredByLabel(message, models) && (
+              <div className="text-sm text-natural-500">
+                Answered by: {getAnsweredByLabel(message, models)}
+                {message?.metadata?.generated_model_name &&
+                  ` (${message.metadata.generated_model_name})`}
+                {message?.metadata?.prompts?.custom_model_name &&
+                  !message?.metadata?.generated_model_name &&
+                  ` (${message.metadata.prompts.custom_model_name})`}
+              </div>
+            )}
           </div>
         </div>
         <div className="self-end cursor-pointer flex items-center">

@@ -38,6 +38,7 @@ import {
   setStoredModelSelection,
 } from "@/utilities/modelSelection";
 import { useListModels } from "@/services/useListModels";
+import { updateLastTempMessage } from "@/services/agenticMessage";
 import { CustomModelsDialog } from "./CustomModelsDialog";
 import {
   CUSTOM_MODELS_ENABLED,
@@ -391,24 +392,14 @@ export const MessageInput = ({
   const handleStop = async () => {
     try {
       abortCurrentStream();
-      // Immediately mark the last message as stopped to halt smoothing UI
+      // Immediately mark the in-flight optimistic message as stopped to halt
+      // the smoothing UI. Temp-scoped on purpose: a stop clicked right after
+      // completion must not stamp "stopped" onto a finished answer.
       if (conversationId) {
-        queryClient.setQueryData<ChaMessageType>(
-          [QUERY_KEYS.conversation, conversationId],
-          (old) => {
-            if (!old || !old.messages?.length) return old;
-            const newMessages = [...old.messages];
-            const lastIndex = newMessages.length - 1;
-            if (lastIndex >= 0) {
-              const last = newMessages[lastIndex] as MessageType;
-              newMessages[lastIndex] = {
-                ...last,
-                stopped: true,
-              } as MessageType;
-            }
-            return { ...old, messages: newMessages };
-          },
-        );
+        updateLastTempMessage(queryClient, conversationId, (message) => ({
+          ...message,
+          stopped: true,
+        }));
       }
       if (conversationId) {
         const result = await stopConversationApi({ conversationId });

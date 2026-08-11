@@ -1,4 +1,5 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useRef } from "react";
+import { useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { MUTATION_KEYS, QUERY_KEYS } from "./keys";
 import { toast } from "sonner";
 import type { AdvancedSettingsValidation } from "@/components/chat/SettingsForm";
@@ -71,9 +72,39 @@ export const sendRequest = async ({
   return mapCreateMessageResponse(response.data);
 };
 
+// After a user stop, the backend persists the final state (stopped flag plus
+// the partial output) only at the generation loop's next cooperative
+// checkpoint, which can be seconds away mid tool call. Refetching before that
+// would replace the visible partial with the mid-generation row (empty output,
+// stopped unset) and paint the stop as an error. Poll the server directly,
+// outside the cache, and reconcile once the truth exists (bounded, then
+// reconcile regardless so the cache always converges).
+const reconcileAfterStop = async (
+  queryClient: QueryClient,
+  conversationId: string,
+) => {
+  for (let attempt = 0; attempt < 6; attempt++) {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      const { data } = await api.get<ChaMessageType>(
+        `/conversations/${conversationId}`,
+      );
+      const last = data.messages?.[data.messages.length - 1];
+      if (last && (last.stopped || last.output)) break;
+    } catch {
+      break;
+    }
+  }
+  queryClient.invalidateQueries({
+    queryKey: [QUERY_KEYS.conversation, conversationId],
+  });
+};
+
 export const useSendRequest = (conversationId?: string) => {
   const queryClient = useQueryClient();
-  let lastWasCanceled = false;
+  // Ref, not a plain let: the hook body re-runs on every render, and a
+  // re-render between onError and onSettled would reset a local flag.
+  const canceledRef = useRef(false);
 
   return useMutation({
     mutationKey: [MUTATION_KEYS.sendRequest, conversationId],
@@ -306,7 +337,7 @@ export const useSendRequest = (conversationId?: string) => {
           msg.includes("aborted"));
 
       if (isCanceled) {
-        lastWasCanceled = true;
+        canceledRef.current = true;
         updateLastTempMessage(queryClient, conversationId, (message) => ({
           ...message,
           stopped: true,
@@ -347,14 +378,19 @@ export const useSendRequest = (conversationId?: string) => {
       );
     },
     onSettled: () => {
-      if (lastWasCanceled) {
-        lastWasCanceled = false;
+      void invalidateTokenUsage(queryClient);
+      // A stop must still reconcile (the old skip left the temp message
+      // frozen forever), but only once the backend has persisted the stop:
+      // see reconcileAfterStop.
+      if (canceledRef.current && conversationId) {
+        canceledRef.current = false;
+        void reconcileAfterStop(queryClient, conversationId);
         return;
       }
+      canceledRef.current = false;
       queryClient.invalidateQueries({
         queryKey: [QUERY_KEYS.conversation, conversationId],
       });
-      void invalidateTokenUsage(queryClient);
     },
   });
 };
