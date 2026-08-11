@@ -554,6 +554,11 @@ export const MessageInput = ({
                       <Select
                         value={modelSelectionValue}
                         onValueChange={(value) => {
+                          // Radix's hidden native select emits "" on remount.
+                          // No item carries that value, so persisting it would
+                          // record a selection the user never made and blank
+                          // the trigger.
+                          if (!value) return;
                           setModelSelectionValue(value);
                           setStoredModelSelection(
                             parseModelSelectionValue(value),
