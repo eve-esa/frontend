@@ -156,6 +156,10 @@ export const Chat = () => {
   const isStopped = Boolean(data?.stopped || lastMessage?.stopped);
   const isRetry = !lastMessage?.output && !isStopped;
   const isLoading = isMutating || isLoadingMessages || isFetchingMessages;
+  // Retry visibility must not depend on background refetch state: gating it on
+  // isFetchingMessages hid the button behind every conversation refetch while
+  // isRetry kept the composer locked, leaving no way out short of a reload.
+  const showRetry = isRetry && !isMutating;
 
   return (
     <div className="flex h-full w-full flex-col bg-natural-900 relative">
@@ -175,7 +179,7 @@ export const Chat = () => {
             <MessageList
               messages={messages || []}
               isSending={isMutating}
-              isError={isRetry && !isMutating && !isLoading}
+              isError={showRetry}
               scrollContainerRef={scrollContainerRef}
               onRetry={() => {
                 if (isRetry) {
@@ -200,10 +204,12 @@ export const Chat = () => {
         >
           <FontAwesomeIcon icon={faChevronDown} className="size-4" />
         </div>
+        {/* A failed last turn must not lock the composer: the user can retry
+            the failed message or simply move on with a new one. */}
         <MessageInput
           sendRequest={handleSendRequest}
           isLoading={isLoading}
-          disabled={isLoading || isRetry}
+          disabled={isLoading}
         />
       </div>
 

@@ -31,6 +31,10 @@ export type PostStreamOptions<TPayload> = {
 let currentStreamAbortController: AbortController | null = null;
 // Flag to inform downstream error handlers that the next error was caused by a user stop action.
 let nextErrorShouldSuppressToast = false;
+// Set by the progress watchdog: its abort raises the same CanceledError as a
+// user stop, and without this flag the two are indistinguishable downstream,
+// so a hung stream would be silently filed as "user pressed stop".
+let lastAbortWasWatchdogTimeout = false;
 
 export function markNextErrorAsUserCanceled() {
   nextErrorShouldSuppressToast = true;
@@ -40,6 +44,12 @@ export function consumeSuppressToastFlag(): boolean {
   const shouldSuppress = nextErrorShouldSuppressToast;
   nextErrorShouldSuppressToast = false;
   return shouldSuppress;
+}
+
+export function consumeWatchdogTimeoutFlag(): boolean {
+  const wasTimeout = lastAbortWasWatchdogTimeout;
+  lastAbortWasWatchdogTimeout = false;
+  return wasTimeout;
 }
 
 export function abortCurrentStream() {
@@ -76,6 +86,7 @@ export async function postStream<TPayload>({
         timeSinceLastProgress,
         "ms"
       );
+      lastAbortWasWatchdogTimeout = true;
       controller.abort();
       clearInterval(progressTimeout);
     }

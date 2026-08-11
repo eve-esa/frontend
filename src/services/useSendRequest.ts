@@ -11,7 +11,11 @@ import type {
   ModelSelection,
 } from "@/types";
 import api from "./axios";
-import { postStream, consumeSuppressToastFlag } from "./streaming";
+import {
+  postStream,
+  consumeSuppressToastFlag,
+  consumeWatchdogTimeoutFlag,
+} from "./streaming";
 import { handleApiError } from "@/utilities/helpers";
 import { logError } from "./errorLogging";
 import { invalidateTokenUsage } from "./useTokenUsage";
@@ -128,6 +132,7 @@ export const useSendRequest = (conversationId?: string) => {
 
         let finalAnswer: string | null = null;
         let finalArtifactIds: string[] | undefined;
+        let streamError: { code?: string; message?: string } | null = null;
 
         await postStream({
           url: streamUrl,
@@ -135,7 +140,22 @@ export const useSendRequest = (conversationId?: string) => {
           onEvent: (evt) => {
             const { type, content, answer } = evt as Record<string, unknown>;
 
-            if (type === "token" && typeof content === "string") {
+            if (type === "error") {
+              // Terminal event: the backend persists the failure and closes
+              // the stream right after. Captured here, thrown after postStream
+              // so the mutation rejects instead of resolving into an empty
+              // answer indistinguishable from success.
+              const { code, message } = evt as Record<string, unknown>;
+              streamError = {
+                code: typeof code === "string" ? code : undefined,
+                message:
+                  typeof message === "string"
+                    ? message
+                    : typeof content === "string"
+                      ? content
+                      : undefined,
+              };
+            } else if (type === "token" && typeof content === "string") {
               updateTemp((msg) => ({
                 ...msg,
                 output: (msg.output || "") + content,
@@ -162,6 +182,14 @@ export const useSendRequest = (conversationId?: string) => {
             }
           },
         });
+
+        if (streamError && finalAnswer === null) {
+          const err = new Error(streamError.message || "Generation failed");
+          err.name = "GenerationError";
+          (err as Error & { generationCode?: string }).generationCode =
+            streamError.code;
+          throw err;
+        }
 
         const now = new Date();
         const payloadFields = modelSelectionToPayload(
@@ -243,7 +271,7 @@ export const useSendRequest = (conversationId?: string) => {
 
       return { previousData };
     },
-    onError: (error: ApiError, _, context) => {
+    onError: (error: ApiError) => {
       // AxiosError carries code/name/message, but a cancellation can also
       // surface as a bare DOMException, so read the three fields structurally
       // rather than asserting either shape.
@@ -252,15 +280,20 @@ export const useSendRequest = (conversationId?: string) => {
         name?: string;
         message?: string;
       };
+      // The watchdog abort raises the same CanceledError as a user stop;
+      // consume its flag first so a hung stream is treated as a failure, not
+      // filed as "user pressed stop" with the refetch skipped.
+      const watchdogTimedOut = consumeWatchdogTimeoutFlag();
       const msg = String(message || "").toLowerCase();
       const isCanceled =
-        consumeSuppressToastFlag() ||
-        name === "CanceledError" ||
-        code === "ERR_CANCELED" ||
-        code === "ECONNABORTED" ||
-        msg.includes("canceled") ||
-        msg.includes("cancelled") ||
-        msg.includes("aborted");
+        !watchdogTimedOut &&
+        (consumeSuppressToastFlag() ||
+          name === "CanceledError" ||
+          code === "ERR_CANCELED" ||
+          code === "ECONNABORTED" ||
+          msg.includes("canceled") ||
+          msg.includes("cancelled") ||
+          msg.includes("aborted"));
 
       if (isCanceled) {
         lastWasCanceled = true;
@@ -271,19 +304,20 @@ export const useSendRequest = (conversationId?: string) => {
         return;
       }
 
-      const errorMessage = handleApiError(error);
+      const generationCode = (error as Error & { generationCode?: string })
+        .generationCode;
+      const errorMessage =
+        watchdogTimedOut || generationCode === "timeout"
+          ? "The model did not answer in time. It may be warming up: retry in a moment."
+          : name === "GenerationError"
+            ? "Generation failed. Retry in a moment."
+            : handleApiError(error);
       console.error("Streaming error:", error);
       toast.error(errorMessage);
-      if (context?.previousData) {
-        queryClient.setQueryData(
-          [QUERY_KEYS.conversation, conversationId],
-          context.previousData,
-        );
-      } else {
-        queryClient.removeQueries({
-          queryKey: [QUERY_KEYS.conversation, conversationId],
-        });
-      }
+      // No cache rollback: removing the failed turn would hide what happened.
+      // onSettled invalidates the conversation, and the refetch brings in the
+      // persisted failure state (output "" plus metadata.error) that drives
+      // the inline error text and the Retry affordance.
     },
     onSuccess: (data: MessageType) => {
       queryClient.setQueryData<ChaMessageType>(

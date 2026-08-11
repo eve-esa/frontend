@@ -98,6 +98,13 @@ export type MessageType = {
       agentic_llm_resolved?: string | null;
       used_fallback_llm?: boolean | null;
     };
+    // Written by the backend when generation failed; its presence is the
+    // frontend's signal that empty output means failure, not an empty answer.
+    error?: {
+      code?: "timeout" | "upstream_error" | string;
+      type?: string;
+      message?: string;
+    };
   };
 };
 

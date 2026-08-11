@@ -478,7 +478,7 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
             </Button>
             <div className="text-sm text-natural-500">
               Answered by:{" "}
-              {getAnsweredByLabel(message, models) || "EVE-Instruct"}
+              {getAnsweredByLabel(message, models) || "Unknown model"}
               {message?.metadata?.generated_model_name &&
                 ` (${message.metadata.generated_model_name})`}
               {message?.metadata?.prompts?.custom_model_name &&
