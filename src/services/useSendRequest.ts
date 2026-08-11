@@ -73,7 +73,6 @@ export const sendRequest = async ({
 
 export const useSendRequest = (conversationId?: string) => {
   const queryClient = useQueryClient();
-  let lastWasCanceled = false;
 
   return useMutation({
     mutationKey: [MUTATION_KEYS.sendRequest, conversationId],
@@ -306,7 +305,6 @@ export const useSendRequest = (conversationId?: string) => {
           msg.includes("aborted"));
 
       if (isCanceled) {
-        lastWasCanceled = true;
         updateLastTempMessage(queryClient, conversationId, (message) => ({
           ...message,
           stopped: true,
@@ -347,10 +345,10 @@ export const useSendRequest = (conversationId?: string) => {
       );
     },
     onSettled: () => {
-      if (lastWasCanceled) {
-        lastWasCanceled = false;
-        return;
-      }
+      // Also after a user stop: the backend persists the truth (stopped flag,
+      // the partial or even completed answer, no stale tool notices), and
+      // skipping this refetch left the optimistic temp message frozen on
+      // screen until an unrelated refetch happened to run.
       queryClient.invalidateQueries({
         queryKey: [QUERY_KEYS.conversation, conversationId],
       });

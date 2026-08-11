@@ -135,8 +135,14 @@ export const useSmoothStream = (
     const drainWithElapsed = (elapsedMs: number) => {
       if (stoppedRef.current) return;
       if (queueRef.current.length === 0) return;
-      budgetRef.current += (ratePerSecond * elapsedMs) / 1000;
-      const maxBurst = Math.max(chunkSize * 50, 200);
+      // Adaptive catch-up: a long backlog means the model is far ahead of the
+      // animation (large final chunks, hidden tab, a fast endpoint). Cap the
+      // lag so the tail drains within about two seconds instead of minutes,
+      // while short backlogs keep the configured typing pace.
+      const backlog = queueRef.current.length;
+      const effectiveRate = Math.max(ratePerSecond, backlog / 2);
+      budgetRef.current += (effectiveRate * elapsedMs) / 1000;
+      const maxBurst = Math.max(chunkSize * 50, 200, Math.ceil(backlog / 4));
       const toAppend = Math.min(queueRef.current.length, Math.floor(budgetRef.current), maxBurst);
       if (toAppend <= 0) return;
       const nextChunk = queueRef.current.slice(0, toAppend);

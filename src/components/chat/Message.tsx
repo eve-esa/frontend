@@ -194,7 +194,14 @@ export const Message = ({
       <div className="bg-natural-900 rounded-tl-[20px] rounded-br-[20px] pb-4 pt-0 relative">
         <div className="md:pt-8 pt-4 px-[1px]">
           {effectiveOutput ? (
-            <SmartText text={`${isRequery ? requery : ""}${displayOutput}`} />
+            <>
+              <SmartText text={`${isRequery ? requery : ""}${displayOutput}`} />
+              {message.stopped && (
+                <p className="mt-2 text-sm text-natural-500 italic">
+                  Generation stopped
+                </p>
+              )}
+            </>
           ) : showLoading ? (
             <div className="flex flex-col gap-2 text-natural-600">
               {message.pre_answer_notices?.length ? (
@@ -219,7 +226,11 @@ export const Message = ({
                 </>
               )}
             </div>
-          ) : message.stopped ? null : !message.output &&
+          ) : message.stopped ? (
+            <p className="text-sm text-natural-500 italic">
+              Generation stopped
+            </p>
+          ) : !message.output &&
             !isSending &&
             (isLastMessage
               ? !message.pre_answer_notices?.length
