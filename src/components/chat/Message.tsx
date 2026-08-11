@@ -219,18 +219,30 @@ export const Message = ({
                 </>
               )}
             </div>
-          ) : message.stopped ? null : awaitingOutput &&
+          ) : message.stopped ? null : !message.output &&
             !isSending &&
-            !message.pre_answer_notices?.length ? (
+            (isLastMessage
+              ? !message.pre_answer_notices?.length
+              : // A failed turn the user moved past would otherwise render as
+                // a blank bubble with no trace of what happened.
+                Boolean(message.metadata?.error)) ? (
             <p className="text-danger-400">
-              Something went wrong! Retry please your request.
+              {message.metadata?.error?.code === "timeout"
+                ? "The model did not answer in time. It may be warming up: retry in a moment."
+                : message.metadata?.error?.code === "empty_answer"
+                  ? "The model returned an empty answer. Retry in a moment."
+                  : "Something went wrong! Retry please your request."}
             </p>
           ) : null}
         </div>
 
         {/* FOOTER SECTION */}
         <div className="pt-8">
-          {!showLoading && <MessageFooter message={message} />}
+          {/* A turn that produced no output has nothing to attribute or
+              hallucination-check: no footer. */}
+          {!showLoading && Boolean(message.output) && (
+            <MessageFooter message={message} />
+          )}
         </div>
       </div>
 

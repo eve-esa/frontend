@@ -31,6 +31,10 @@ export type PostStreamOptions<TPayload> = {
 let currentStreamAbortController: AbortController | null = null;
 // Flag to inform downstream error handlers that the next error was caused by a user stop action.
 let nextErrorShouldSuppressToast = false;
+// Set by the progress watchdog: its abort raises the same CanceledError as a
+// user stop, and without this flag the two are indistinguishable downstream,
+// so a hung stream would be silently filed as "user pressed stop".
+let lastAbortWasWatchdogTimeout = false;
 
 export function markNextErrorAsUserCanceled() {
   nextErrorShouldSuppressToast = true;
@@ -40,6 +44,12 @@ export function consumeSuppressToastFlag(): boolean {
   const shouldSuppress = nextErrorShouldSuppressToast;
   nextErrorShouldSuppressToast = false;
   return shouldSuppress;
+}
+
+export function consumeWatchdogTimeoutFlag(): boolean {
+  const wasTimeout = lastAbortWasWatchdogTimeout;
+  lastAbortWasWatchdogTimeout = false;
+  return wasTimeout;
 }
 
 export function abortCurrentStream() {
@@ -62,6 +72,11 @@ export async function postStream<TPayload>({
   let lastProgressTime = Date.now();
   const PROGRESS_TIMEOUT = 60000;
 
+  // A stale flag from a previous stream (watchdog fired after the observer
+  // unmounted, or raced a completing response) must not misclassify this
+  // stream's outcome.
+  lastAbortWasWatchdogTimeout = false;
+
   const controller = new AbortController();
   currentStreamAbortController = controller;
 
@@ -76,6 +91,7 @@ export async function postStream<TPayload>({
         timeSinceLastProgress,
         "ms"
       );
+      lastAbortWasWatchdogTimeout = true;
       controller.abort();
       clearInterval(progressTimeout);
     }
@@ -141,13 +157,19 @@ export async function postStream<TPayload>({
   }
 
   if (buffer) {
+    // Same normalization as the in-progress parser: the terminal error event
+    // often sits here without a trailing newline, still data:-prefixed, and it
+    // must not be lost to a parse failure.
     const trimmed = buffer.trim();
-    if (trimmed) {
+    const content = trimmed.startsWith("data:")
+      ? trimmed.slice(5).trim()
+      : trimmed;
+    if (content.startsWith("{") && content.endsWith("}")) {
       try {
-        const evt = JSON.parse(trimmed) as StreamEvent;
+        const evt = JSON.parse(content) as StreamEvent;
         onEvent(evt);
       } catch {
-        console.error("Malformed JSON line:", trimmed);
+        console.error("Malformed JSON line:", content);
       }
     }
   }

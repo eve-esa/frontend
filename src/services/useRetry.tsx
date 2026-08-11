@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 import api from "./axios";
 import type { MessageType } from "@/types";
@@ -28,6 +29,11 @@ export const useRetry = ({ conversationId }: SendRequestProps) => {
       return sendRequest({ message_id, conversationId });
     },
 
+    onError: () => {
+      // Without this a failed retry was silent: no toast, no state change,
+      // just the same error card after the refetch.
+      toast.error("Retry failed. The model may still be warming up.");
+    },
     onSettled: () => {
       queryClient.invalidateQueries({
         queryKey: [QUERY_KEYS.conversation, conversationId],

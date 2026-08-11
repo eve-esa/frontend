@@ -156,6 +156,18 @@ export const Chat = () => {
   const isStopped = Boolean(data?.stopped || lastMessage?.stopped);
   const isRetry = !lastMessage?.output && !isStopped;
   const isLoading = isMutating || isLoadingMessages || isFetchingMessages;
+  // Retry visibility must not depend on background refetch state: gating it on
+  // isFetchingMessages hid the button behind every conversation refetch while
+  // isRetry kept the composer locked, leaving no way out short of a reload.
+  // It does require a persisted message id, though: right after a failure the
+  // cache still holds the optimistic temp-/srv- entry, and a retry POST with
+  // that id would 404.
+  const lastMessageIsPersisted = Boolean(
+    lastMessage?.id &&
+      !lastMessage.id.startsWith("temp-") &&
+      !lastMessage.id.startsWith("srv-"),
+  );
+  const showRetry = isRetry && !isMutating && lastMessageIsPersisted;
 
   return (
     <div className="flex h-full w-full flex-col bg-natural-900 relative">
@@ -175,10 +187,10 @@ export const Chat = () => {
             <MessageList
               messages={messages || []}
               isSending={isMutating}
-              isError={isRetry && !isMutating && !isLoading}
+              isError={showRetry}
               scrollContainerRef={scrollContainerRef}
               onRetry={() => {
-                if (isRetry) {
+                if (showRetry) {
                   retryRequest({
                     message_id: messages?.[messages.length - 1]?.id,
                     conversationId,
@@ -200,10 +212,13 @@ export const Chat = () => {
         >
           <FontAwesomeIcon icon={faChevronDown} className="size-4" />
         </div>
+        {/* A failed last turn must not lock the composer: the user can retry
+            the failed message or simply move on with a new one. Background
+            refetches (isFetchingMessages) must not lock it either. */}
         <MessageInput
           sendRequest={handleSendRequest}
           isLoading={isLoading}
-          disabled={isLoading || isRetry}
+          disabled={isMutating || isLoadingMessages}
         />
       </div>
 
