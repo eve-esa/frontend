@@ -306,7 +306,11 @@ export const ImageLightbox = ({
           <div
             ref={setViewportEl}
             className={cn(
-              "overflow-hidden rounded-lg touch-none select-none",
+              // The dialog is w-fit, so a tiny image (a 30px tool output)
+              // would otherwise size the whole lightbox to itself and end up
+              // underneath the floating toolbar and the close button. The
+              // minimum canvas keeps the chrome clear of the centered image.
+              "flex min-h-[260px] min-w-[320px] items-center justify-center overflow-hidden rounded-lg touch-none select-none",
               isZoomed
                 ? isDragging
                   ? "cursor-grabbing"
