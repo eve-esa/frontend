@@ -33,6 +33,7 @@ import {
   reconcileModelSelection,
 } from "@/utilities/modelSelection";
 import { getSelectedMcpServerNames } from "@/utilities/mcpServers";
+import { applyToolCall, applyToolResult } from "@/utilities/toolActivity";
 import { resolveMessageEndpoint } from "@/utilities/messageEndpoint";
 import { STREAMING_ENABLED } from "@/utilities/features";
 
@@ -158,9 +159,6 @@ export const useSendRequest = (conversationId?: string) => {
             pre_answer_notices: [...(msg.pre_answer_notices ?? []), notice],
           }));
 
-        const truncate = (s: string, max: number) =>
-          s.length > max ? s.slice(0, max) + "…" : s;
-
         let finalAnswer: string | null = null;
         let finalArtifactIds: string[] | undefined;
         // Holder object rather than a plain let: the assignment happens inside
@@ -209,12 +207,25 @@ export const useSendRequest = (conversationId?: string) => {
               typeof content === "string"
             ) {
               addNotice(content);
-            } else if (type === "tool_call" && typeof content === "string") {
-              // Agentic pipeline is invoking an MCP tool; reuse the same
-              // in-stream status mechanism as "status"/"requery" notices.
-              addNotice(`${truncate(content, 100)}`);
-            } else if (type === "tool_result" && typeof content === "string") {
-              addNotice(`${truncate(content, 100)}`);
+            } else if (type === "tool_call") {
+              // Agentic pipeline is invoking an MCP tool: feed the structured
+              // activity list that drives the tool activity bar. No content
+              // gate: newer backends may carry only the structured fields.
+              updateTemp((msg) => ({
+                ...msg,
+                tool_activity: applyToolCall(
+                  msg.tool_activity,
+                  evt as Record<string, unknown>,
+                ),
+              }));
+            } else if (type === "tool_result") {
+              updateTemp((msg) => ({
+                ...msg,
+                tool_activity: applyToolResult(
+                  msg.tool_activity,
+                  evt as Record<string, unknown>,
+                ),
+              }));
             }
           },
         });

@@ -13,8 +13,24 @@ export type StreamEvent =
   | { type: "requery"; content: string }
   // Agentic pipeline only (stream-generate-agentic): emitted when the agent
   // invokes an MCP tool ("tool_call") or the tool returns ("tool_result").
-  | { type: "tool_call"; content?: string; [key: string]: unknown }
-  | { type: "tool_result"; content?: string; preview?: string; [key: string]: unknown }
+  // tool/label/query/status are structured fields newer backends add; older
+  // backends send only `content`, so all of them stay optional.
+  | {
+      type: "tool_call";
+      content?: string;
+      tool?: string;
+      label?: string;
+      query?: string | null;
+      [key: string]: unknown;
+    }
+  | {
+      type: "tool_result";
+      content?: string;
+      preview?: string;
+      tool?: string | null;
+      status?: string;
+      [key: string]: unknown;
+    }
   | { type: "stopped" }
   | { type: "error"; content?: string; [key: string]: unknown }
   | { type: "label"; content: number | string }

@@ -10,6 +10,7 @@ import { ImageLightbox } from "@/components/ui/ImageLightbox";
 import { ArtifactDownloadChip } from "@/components/ui/ArtifactDownloadChip";
 import { toImageAttachment } from "@/utilities/attachments";
 import { stripIncompleteImage } from "@/utilities/stripIncompleteImage";
+import { ToolActivityBar } from "./ToolActivityBar";
 
 type MessageProps = {
   message: MessageType;
@@ -42,12 +43,19 @@ export const Message = ({
     (a) => !(a.content_type ?? "").startsWith("image/"),
   );
 
+  const isStreamingTarget = isSending && isLastMessage;
+
+  // Tool activity only renders on the active streaming target: once the turn
+  // is persisted the bar disappears (the trace footer takes over from there).
+  const toolActivity = message.tool_activity ?? [];
+  const showToolActivity = isStreamingTarget && toolActivity.length > 0;
+
   const awaitingOutput = isLastMessage && !message?.output;
   const showLoading =
     awaitingOutput &&
-    (isSending || Boolean(message.pre_answer_notices?.length));
-
-  const isStreamingTarget = isSending && isLastMessage;
+    (isSending ||
+      Boolean(message.pre_answer_notices?.length) ||
+      showToolActivity);
   const persistKey = `${message.conversation_id ?? ""}:${String(
     messageIndex ?? (isLastMessage ? "last" : ""),
   )}`;
@@ -195,6 +203,13 @@ export const Message = ({
         <div className="md:pt-8 pt-4 px-[1px]">
           {effectiveOutput ? (
             <>
+              {/* Above the answer so the chips stay visible while tokens
+                  stream, instead of vanishing at the first token. */}
+              {showToolActivity && (
+                <div className="mb-3">
+                  <ToolActivityBar activity={toolActivity} />
+                </div>
+              )}
               <SmartText text={`${isRequery ? requery : ""}${displayOutput}`} />
               {message.stopped && (
                 <p className="mt-2 text-sm text-natural-500 italic">
@@ -216,7 +231,8 @@ export const Message = ({
                   ))}
                 </div>
               ) : null}
-              {!message.pre_answer_notices?.length && (
+              {showToolActivity && <ToolActivityBar activity={toolActivity} />}
+              {!message.pre_answer_notices?.length && !showToolActivity && (
                 <>
                   <Skeleton className="w-full h-2 max-w-[98%]" />
                   <Skeleton className="w-full h-2 max-w-[100%]" />
