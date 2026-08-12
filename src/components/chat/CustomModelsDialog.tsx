@@ -21,6 +21,11 @@ import {
   useDeleteCustomModel,
   useUpdateCustomModel,
 } from "@/services/useCustomModels";
+import {
+  buildUpdatePayload,
+  emptyCustomModelForm,
+  type CustomModelFormState,
+} from "@/utilities/customModelForm";
 import type { CustomModel } from "@/types";
 
 type CustomModelsDialogProps = {
@@ -28,27 +33,13 @@ type CustomModelsDialogProps = {
   onOpenChange: (open: boolean) => void;
 };
 
-type FormState = {
-  display_name: string;
-  provider_id: string;
-  catalog_model_id: string;
-  api_key: string;
-};
-
-const emptyForm = (): FormState => ({
-  display_name: "",
-  provider_id: "",
-  catalog_model_id: "",
-  api_key: "",
-});
-
 export const CustomModelsDialog = ({
   isOpen,
   onOpenChange,
 }: CustomModelsDialogProps) => {
   const { data: models } = useListModels();
   const [editing, setEditing] = useState<CustomModel | null>(null);
-  const [form, setForm] = useState<FormState>(emptyForm);
+  const [form, setForm] = useState<CustomModelFormState>(emptyCustomModelForm);
   const [providerSelectOpen, setProviderSelectOpen] = useState(false);
   const [catalogSelectOpen, setCatalogSelectOpen] = useState(false);
   const isSelectOpen = providerSelectOpen || catalogSelectOpen;
@@ -73,7 +64,7 @@ export const CustomModelsDialog = ({
 
   const resetForm = () => {
     setEditing(null);
-    setForm(emptyForm());
+    setForm(emptyCustomModelForm());
   };
 
   const { mutate: createModel, isPending: isCreating } = useCreateCustomModel(
@@ -87,12 +78,7 @@ export const CustomModelsDialog = ({
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
     if (editing) {
-      updateModel({
-        id: editing.id,
-        display_name: form.display_name,
-        catalog_model_id: form.catalog_model_id,
-        ...(form.api_key ? { api_key: form.api_key } : {}),
-      });
+      updateModel(buildUpdatePayload(editing.id, form));
       return;
     }
     createModel(form);
@@ -181,6 +167,11 @@ export const CustomModelsDialog = ({
               {editing ? "Edit model" : "Add model"}
             </p>
             <Input
+              name="eve-custom-model-name"
+              autoComplete="off"
+              data-1p-ignore="true"
+              data-lpignore="true"
+              className="placeholder:text-natural-200"
               placeholder="Display name"
               value={form.display_name}
               onChange={(e) =>
@@ -193,6 +184,9 @@ export const CustomModelsDialog = ({
               onOpenChange={setProviderSelectOpen}
               value={form.provider_id}
               onValueChange={(providerId) => {
+                // Radix's hidden native select emits "" on remount; no item
+                // carries that value, so persisting it would blank the field.
+                if (!providerId) return;
                 const provider = providers.find((item) => item.id === providerId);
                 setForm((prev) => ({
                   ...prev,
@@ -202,7 +196,7 @@ export const CustomModelsDialog = ({
               }}
               disabled={Boolean(editing)}
             >
-              <SelectTrigger>
+              <SelectTrigger className="h-12 bg-primary-200 border border-primary-400 shadow-xs text-natural-100 data-[placeholder]:text-natural-200">
                 <SelectValue placeholder="Provider" />
               </SelectTrigger>
               <SelectContent portalled={false}>
@@ -217,14 +211,18 @@ export const CustomModelsDialog = ({
               open={catalogSelectOpen}
               onOpenChange={setCatalogSelectOpen}
               value={form.catalog_model_id}
-              onValueChange={(catalogModelId) =>
+              onValueChange={(catalogModelId) => {
+                // Radix's hidden native select emits "" on remount; ignoring it
+                // keeps the current model instead of blanking the dropdown and
+                // sending an empty catalog_model_id the backend rejects.
+                if (!catalogModelId) return;
                 setForm((prev) => ({
                   ...prev,
                   catalog_model_id: catalogModelId,
-                }))
-              }
+                }));
+              }}
             >
-              <SelectTrigger>
+              <SelectTrigger className="h-12 bg-primary-200 border border-primary-400 shadow-xs text-natural-100 data-[placeholder]:text-natural-200">
                 <SelectValue placeholder="Model" />
               </SelectTrigger>
               <SelectContent portalled={false}>
@@ -237,6 +235,11 @@ export const CustomModelsDialog = ({
             </Select>
             <Input
               type="password"
+              name="eve-custom-model-api-key"
+              autoComplete="new-password"
+              data-1p-ignore="true"
+              data-lpignore="true"
+              className="placeholder:text-natural-200"
               placeholder={
                 editing
                   ? "New API key (leave blank to keep current)"
