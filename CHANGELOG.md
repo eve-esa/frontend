@@ -16,6 +16,25 @@ Release and promotes staging. Production is promoted from there by an explicit d
 The `[1.0.0]` entry below is historical and predates this repository's current version series. The
 released tags run `v0.0.1` through `v0.0.6`; no `v1.0.0` was ever tagged here.
 
+## [0.0.8](https://github.com/eve-esa/frontend/compare/v0.0.7...v0.0.8) (2026-08-12)
+
+
+### Added
+
+* default chat model is the first platform model ([#50](https://github.com/eve-esa/frontend/issues/50)) ([3ddf456](https://github.com/eve-esa/frontend/commit/3ddf4563f27f2cd751ee757dd9bed1de4b193a7c))
+* tool activity bar during agentic turns ([#56](https://github.com/eve-esa/frontend/issues/56)) ([d1ba05c](https://github.com/eve-esa/frontend/commit/d1ba05c0f263dfc6115164ee431f18577e07425a))
+
+
+### Fixed
+
+* **deps:** clear the dependency vulnerabilities and automate updates ([#62](https://github.com/eve-esa/frontend/issues/62)) ([7c27fb3](https://github.com/eve-esa/frontend/commit/7c27fb342d4b77e29146f349dc8a03fb79a3532a))
+* failed generations stay retryable and never lock the chat ([#53](https://github.com/eve-esa/frontend/issues/53)) ([2426311](https://github.com/eve-esa/frontend/commit/2426311108b27902da30678963fe7fd633cee347))
+* give the lightbox a minimum canvas for tiny images ([#55](https://github.com/eve-esa/frontend/issues/55)) ([f191a38](https://github.com/eve-esa/frontend/commit/f191a38fa4b8fd72e95446490c7b506311b7b854))
+* ignore the empty value the model select emits on remount ([#51](https://github.com/eve-esa/frontend/issues/51)) ([5f3946b](https://github.com/eve-esa/frontend/commit/5f3946bb88113e6801c3478f5c5c3ac0e2a82e6c))
+* let the user scroll up while the answer streams ([#57](https://github.com/eve-esa/frontend/issues/57)) ([9deeaca](https://github.com/eve-esa/frontend/commit/9deeacae59a54b5b975faa4c60820d4910496064))
+* no error toast over a visible partial answer ([#58](https://github.com/eve-esa/frontend/issues/58)) ([8d4dde9](https://github.com/eve-esa/frontend/commit/8d4dde931b76974dc08d57c0eeafdc2b2a51a913))
+* reconcile the chat after a stop ([#54](https://github.com/eve-esa/frontend/issues/54)) ([2b602e8](https://github.com/eve-esa/frontend/commit/2b602e846dd85f8431d23b028afe1ca1b7217f63))
+
 ## [0.0.7](https://github.com/eve-esa/frontend/compare/v0.0.6...v0.0.7) (2026-08-09)
 
 ### Added
