@@ -3,6 +3,17 @@ import { z } from "zod";
 
 export type AgenticTraceStep = Record<string, unknown>;
 
+// One MCP tool invocation within the streaming turn: appended as "running" on
+// a tool_call event and flipped to "done" by the matching tool_result. `tool`
+// and `query` come from the structured event fields newer backends emit, so
+// both are optional.
+export type ToolActivityEntry = {
+  label: string;
+  tool?: string;
+  query?: string;
+  state: "running" | "done";
+};
+
 export type Document = {
   id: string | number;
   text: string;
@@ -64,6 +75,9 @@ export type MessageType = {
   } | null;
   // Transient notices to show before the final answer while streaming
   pre_answer_notices?: string[];
+  // Live MCP tool activity for the streaming turn (agentic pipeline only).
+  // Exists only on the optimistic temp message; never persisted.
+  tool_activity?: ToolActivityEntry[];
   trace?: AgenticTraceStep[] | null;
   request_input: {
     llm_type: string | null;
