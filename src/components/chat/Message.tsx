@@ -10,6 +10,7 @@ import { ImageLightbox } from "@/components/ui/ImageLightbox";
 import { ArtifactDownloadChip } from "@/components/ui/ArtifactDownloadChip";
 import { toImageAttachment } from "@/utilities/attachments";
 import { stripIncompleteImage } from "@/utilities/stripIncompleteImage";
+import { createAutoFollow } from "@/utilities/autoFollow";
 import { ToolActivityBar } from "./ToolActivityBar";
 
 type MessageProps = {
@@ -86,26 +87,36 @@ export const Message = ({
       ? stripIncompleteImage(effectiveOutput)
       : effectiveOutput;
 
-  // Track whether the user is near the bottom of the scroll container
-  const [isUserNearBottom, setIsUserNearBottom] = useState(true);
+  // Whether autoscroll should keep the view pinned to the bottom. A closure
+  // behind a ref, not state: the autoscroll effect below runs on every
+  // smooth-stream frame and needs the current value synchronously, while a
+  // state read is one render stale and its own scrollTo re-latched it, which
+  // is what made scroll-up during streaming snap back (20 = px buffer from
+  // the bottom that still counts as "near bottom").
+  const autoFollowRef = useRef(createAutoFollow(20));
 
   useEffect(() => {
     if (!isLastMessage) return; // only one listener for the list
     const container = scrollContainerRef?.current;
     if (!container) return;
 
-    const threshold = 20; // px buffer from bottom to still consider "near bottom"
     const handleScroll = () => {
       const distanceFromBottom =
         container.scrollHeight - (container.scrollTop + container.clientHeight);
-      setIsUserNearBottom(distanceFromBottom <= threshold);
+      autoFollowRef.current.onScroll(distanceFromBottom);
+    };
+    const handleWheel = (e: WheelEvent) => {
+      autoFollowRef.current.onWheel(e.deltaY);
     };
 
-    // Initialize state immediately in case we're already scrolled
+    // Initialize immediately in case we're already scrolled: no
+    // markProgrammatic has run yet, so this just measures.
     handleScroll();
     container.addEventListener("scroll", handleScroll, { passive: true });
+    container.addEventListener("wheel", handleWheel, { passive: true });
     return () => {
       container.removeEventListener("scroll", handleScroll as EventListener);
+      container.removeEventListener("wheel", handleWheel as EventListener);
     };
   }, [scrollContainerRef, isLastMessage]);
 
@@ -114,11 +125,14 @@ export const Message = ({
     const container = scrollContainerRef?.current;
     if (!container) return;
 
-    // Only auto-scroll if user hasn't scrolled away from the bottom area
-    if (isUserNearBottom) {
+    if (autoFollowRef.current.shouldFollow()) {
+      // This scrollTo fires the scroll handler above; arming the one-shot
+      // flag keeps that programmatic event from re-engaging follow over a
+      // user's scroll-up.
+      autoFollowRef.current.markProgrammatic();
       container.scrollTo({ top: container.scrollHeight, behavior: "auto" });
     }
-  }, [effectiveOutput, scrollContainerRef, isUserNearBottom]);
+  }, [effectiveOutput, scrollContainerRef]);
 
   // Check if text overflows
   useEffect(() => {
