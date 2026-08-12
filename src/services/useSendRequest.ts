@@ -35,6 +35,7 @@ import {
 import { getSelectedMcpServerNames } from "@/utilities/mcpServers";
 import { applyToolCall, applyToolResult } from "@/utilities/toolActivity";
 import { resolveMessageEndpoint } from "@/utilities/messageEndpoint";
+import { shouldToastStreamError } from "@/utilities/streamError";
 import { STREAMING_ENABLED } from "@/utilities/features";
 
 type SendRequestProps = {
@@ -138,6 +139,12 @@ export const useSendRequest = (conversationId?: string) => {
         ...mcpPayload,
       };
 
+      // Everything the stream has painted into the bubble so far. Declared
+      // outside the try so the catch can stamp it onto the outgoing error:
+      // onError uses it to decide whether a failure toast would contradict a
+      // partial answer the user is already reading.
+      let streamedOutput = "";
+
       try {
         if (!STREAMING_ENABLED) {
           return sendRequest({
@@ -190,12 +197,14 @@ export const useSendRequest = (conversationId?: string) => {
                       : undefined,
               };
             } else if (type === "token" && typeof content === "string") {
+              streamedOutput += content;
               updateTemp((msg) => ({
                 ...msg,
                 output: (msg.output || "") + content,
               }));
             } else if (type === "final" && typeof answer === "string") {
               finalAnswer = answer;
+              streamedOutput = answer;
               const artifactIds = (evt as Record<string, unknown>)
                 .artifact_ids;
               if (Array.isArray(artifactIds)) {
@@ -267,6 +276,11 @@ export const useSendRequest = (conversationId?: string) => {
         });
       } catch (e) {
         console.error("streaming error", e);
+        if (e && typeof e === "object") {
+          // Structural check instead of instanceof: a cancellation can be a
+          // DOMException, whose Error lineage varies by browser.
+          (e as { streamedOutput?: string }).streamedOutput = streamedOutput;
+        }
         logError({
           error_message: String(e || "Unknown error"),
           error_stack: new Error().stack,
@@ -353,6 +367,17 @@ export const useSendRequest = (conversationId?: string) => {
           ...message,
           stopped: true,
         }));
+        return;
+      }
+
+      const streamedOutput =
+        (error as Error & { streamedOutput?: string }).streamedOutput ?? "";
+      if (!shouldToastStreamError(streamedOutput)) {
+        // The stream died after painting a visible partial answer: a red
+        // toast beside it would contradict what the user is reading. End the
+        // turn quietly (the error is already in logError) and let onSettled's
+        // refetch bring the persisted truth, partial plus metadata.error.
+        console.error("Streaming error (toast suppressed, partial answer visible):", error);
         return;
       }
 
