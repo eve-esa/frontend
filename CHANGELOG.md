@@ -16,6 +16,14 @@ Release and promotes staging. Production is promoted from there by an explicit d
 The `[1.0.0]` entry below is historical and predates this repository's current version series. The
 released tags run `v0.0.1` through `v0.0.6`; no `v1.0.0` was ever tagged here.
 
+## [0.0.9](https://github.com/eve-esa/frontend/compare/v0.0.8...v0.0.9) (2026-08-13)
+
+
+### Fixed
+
+* hallucination copy and streaming flicker ([#66](https://github.com/eve-esa/frontend/issues/66)) ([966fa3b](https://github.com/eve-esa/frontend/commit/966fa3b06248a5a2b245411d526eaba7d83711c1))
+* repair the custom models add/edit form ([#64](https://github.com/eve-esa/frontend/issues/64)) ([3cbf4fa](https://github.com/eve-esa/frontend/commit/3cbf4faa6b6056cdfa549519d3d2b69ed357ad81))
+
 ## [0.0.8](https://github.com/eve-esa/frontend/compare/v0.0.7...v0.0.8) (2026-08-12)
 
 
