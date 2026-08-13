@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { computeDrainStep } from "@/utilities/smoothStreamDrain";
 
 type UseSmoothStreamOptions = {
   ratePerSecond?: number; // characters per second
@@ -136,18 +137,21 @@ export const useSmoothStream = (
       if (stoppedRef.current) return;
       if (queueRef.current.length === 0) return;
       // Adaptive catch-up: a long backlog means the model is far ahead of the
-      // animation (large final chunks, hidden tab, a fast endpoint). Cap the
-      // lag so the tail drains within about two seconds instead of minutes,
-      // while short backlogs keep the configured typing pace.
-      const backlog = queueRef.current.length;
-      const effectiveRate = Math.max(ratePerSecond, backlog / 2);
-      budgetRef.current += (effectiveRate * elapsedMs) / 1000;
-      const maxBurst = Math.max(chunkSize * 50, 200, Math.ceil(backlog / 4));
-      const toAppend = Math.min(queueRef.current.length, Math.floor(budgetRef.current), maxBurst);
+      // animation (large final chunks, hidden tab, a fast endpoint). The drain
+      // step caps both the rate and the per-frame burst so the tail drains over
+      // several frames rather than one giant append that reparses the whole
+      // markdown tree at once, while short backlogs keep the typing pace.
+      const { toAppend, nextBudget } = computeDrainStep({
+        backlogLength: queueRef.current.length,
+        budget: budgetRef.current,
+        elapsedMs,
+        ratePerSecond,
+        chunkSize,
+      });
+      budgetRef.current = nextBudget;
       if (toAppend <= 0) return;
       const nextChunk = queueRef.current.slice(0, toAppend);
       queueRef.current = queueRef.current.slice(toAppend);
-      budgetRef.current -= toAppend;
       setDisplayed((d) => d + nextChunk);
       if (persistKey) {
         PERSIST_STORE.set(persistKey, {
