@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
@@ -238,6 +238,10 @@ const extractGalleryImages = (
 
 const SmartText: React.FC<SmartTextProps> = ({ text, className }) => {
   const { copyToClipboard } = useClipboard();
+  // useClipboard returns a fresh function each render; keep it behind a ref so
+  // the memoized `components` below don't churn on every streamed frame.
+  const copyRef = useRef(copyToClipboard);
+  copyRef.current = copyToClipboard;
   const [copiedContent, setCopiedContent] = useState<string | null>(null);
   // Single shared lightbox for gallery-grid paragraphs (2+ images): clicking
   // any tile opens the same instance seeded with the full image list and the
@@ -252,7 +256,11 @@ const SmartText: React.FC<SmartTextProps> = ({ text, className }) => {
   const baseBlock = cn(baseText, "mb-4 last:mb-0");
   const baseHeading = cn(baseText, "font-bold");
 
-  const components: Components = {
+  // Memoized so its identity is stable across streamed frames: the markdown
+  // element below is keyed on it, so a stable `components` lets an unchanged
+  // text skip a full reparse. Only interaction state (a code block being
+  // copied) and the theme-independent styles change it.
+  const components: Components = useMemo(() => ({
     a: ({ href, children }) => {
       if (isArtifactDownloadLink(href)) {
         return (
@@ -327,7 +335,7 @@ const SmartText: React.FC<SmartTextProps> = ({ text, className }) => {
       }
 
       const handleCopy = () => {
-        copyToClipboard(content);
+        copyRef.current(content);
         setCopiedContent(content);
         // Reset copied state after 1 second
         setTimeout(() => {
@@ -468,13 +476,21 @@ const SmartText: React.FC<SmartTextProps> = ({ text, className }) => {
     td: ({ children }) => (
       <td className="px-4 py-2 border-b border-natural-200">{children}</td>
     ),
-  };
+  }), [copiedContent, baseText, baseBlock, baseHeading]);
 
-  // Prepare content to handle LaTeX delimiters
-  const preparedText = prepareLatexContent(stripArtifactMetadata(text));
+  // Prepare content to handle LaTeX delimiters. Memoized on `text` so the
+  // markdown element below only rebuilds when the text actually grows.
+  const preparedText = useMemo(
+    () => prepareLatexContent(stripArtifactMetadata(text)),
+    [text],
+  );
 
-  return (
-    <div className={cn(baseText, "smarttext", className)}>
+  // The heavy bit: parsing markdown + GFM + KaTeX. Keyed on the text and the
+  // component overrides, so a re-render that doesn't change either (e.g. a
+  // parent re-render on a frame that appended nothing) reuses the same element
+  // and React skips reconciling the whole tree.
+  const markdown = useMemo(
+    () => (
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath]}
         rehypePlugins={[rehypeKatex, rehypeRaw, [rehypeSanitize, sanitizeSchema]]}
@@ -482,6 +498,13 @@ const SmartText: React.FC<SmartTextProps> = ({ text, className }) => {
       >
         {preparedText}
       </ReactMarkdown>
+    ),
+    [preparedText, components],
+  );
+
+  return (
+    <div className={cn(baseText, "smarttext", className)}>
+      {markdown}
       {galleryLightbox && (
         <ImageLightbox
           images={galleryLightbox.images}
@@ -494,4 +517,6 @@ const SmartText: React.FC<SmartTextProps> = ({ text, className }) => {
   );
 };
 
-export default SmartText;
+// Memoized so a parent re-render with the same `text`/`className` (the chat list
+// re-rendering on every smooth-stream frame) doesn't reparse the markdown tree.
+export default React.memo(SmartText);

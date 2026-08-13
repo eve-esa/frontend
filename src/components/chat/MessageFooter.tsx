@@ -36,6 +36,7 @@ import { toast } from "sonner";
 import { handleApiError } from "@/utilities/helpers";
 import { useListModels } from "@/services/useListModels";
 import { resolveCustomModelDisplayName } from "@/utilities/modelSelection";
+import { buildHallucinationCopyText } from "@/utilities/buildHallucinationCopyText";
 
 type Hallucination = NonNullable<MessageType["hallucination"]>;
 
@@ -259,6 +260,17 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
     { ratePerSecond: 100, chunkSize: 1 },
     `${conversationId ?? ""}:${message?.id ?? ""}:hallucination:alt`,
   );
+
+  // Mirror what the panel renders so the copy button never copies an empty
+  // string. The old button copied only `alternativeRaw`, which is populated
+  // only when a hallucination is flagged, so the common "no hallucination"
+  // result copied "" while still flashing a checkmark.
+  const hallucinationCopyText = buildHallucinationCopyText({
+    label: hallucinationLabel,
+    reason: hallucinationRaw,
+    rewrittenQuery,
+    alternativeAnswer: alternativeRaw,
+  });
 
   const handleHallucinationDetect = async () => {
     if (!conversationId || !message?.id) return;
@@ -694,9 +706,10 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
 
                 <Button
                   variant="icon"
+                  disabled={!hallucinationCopyText}
                   onClick={() => {
-                    const textToCopy = alternativeRaw || "";
-                    copyToClipboardHallucination(textToCopy);
+                    if (!hallucinationCopyText) return;
+                    copyToClipboardHallucination(hallucinationCopyText);
                     if (!hallucWasCopied) {
                       sendFeedback({
                         messageId: message?.id,

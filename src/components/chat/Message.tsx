@@ -11,6 +11,10 @@ import { ArtifactDownloadChip } from "@/components/ui/ArtifactDownloadChip";
 import { toImageAttachment } from "@/utilities/attachments";
 import { stripIncompleteImage } from "@/utilities/stripIncompleteImage";
 import { createAutoFollow } from "@/utilities/autoFollow";
+import {
+  monotonicStreamingOutput,
+  selectStreamingCandidate,
+} from "@/utilities/streamingOutput";
 import { ToolActivityBar } from "./ToolActivityBar";
 
 type MessageProps = {
@@ -70,14 +74,29 @@ export const Message = ({
     },
     persistKey,
   );
-  const effectiveOutput =
-    smoothed.length >= (message.output?.length || 0)
-      ? message.output
-      : smoothed.length > 0
-        ? smoothed
-        : !isStreamingTarget && message.output
-          ? message.output
-          : smoothed;
+  // The rendered length must never go backward. When the smooth-stream queue
+  // momentarily empties the candidate below flips from the full `output` to a
+  // shorter `smoothed` prefix; showing that made the tail characters appear,
+  // vanish, and re-type. Hold the high-water mark in a ref and slice the fuller
+  // source so the answer only ever grows. Reset it when this slot switches to a
+  // different message (persistKey changes) so a new turn types from the start.
+  const shownLengthRef = useRef(0);
+  const lastPersistKeyRef = useRef(persistKey);
+  if (lastPersistKeyRef.current !== persistKey) {
+    lastPersistKeyRef.current = persistKey;
+    shownLengthRef.current = 0;
+  }
+  const candidateOutput = selectStreamingCandidate(
+    smoothed,
+    message.output || "",
+    isStreamingTarget,
+  );
+  const { text: effectiveOutput, shownLength } = monotonicStreamingOutput(
+    candidateOutput,
+    message.output || "",
+    shownLengthRef.current,
+  );
+  shownLengthRef.current = shownLength;
 
   // While this message is the active streaming target, drop a trailing
   // half-typed image token so no raw markdown flashes and no partial URL is
@@ -94,6 +113,9 @@ export const Message = ({
   // is what made scroll-up during streaming snap back (20 = px buffer from
   // the bottom that still counts as "near bottom").
   const autoFollowRef = useRef(createAutoFollow(20));
+  // Coalesces autoscroll to one scrollTo per animation frame (see the effect
+  // below); holds the pending frame id, or null when none is queued.
+  const scrollRafRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!isLastMessage) return; // only one listener for the list
@@ -120,19 +142,39 @@ export const Message = ({
     };
   }, [scrollContainerRef, isLastMessage]);
 
-  // Autoscroll while streaming so the newest tokens remain visible
+  // Autoscroll while streaming so the newest tokens remain visible, coalesced
+  // to one scrollTo per animation frame. effectiveOutput can change up to
+  // ~100x/second; a synchronous scrollTo on each change thrashed layout on the
+  // streaming hot path. The guard drops extra changes within the same frame,
+  // and the queued frame scrolls once to the latest bottom.
   useEffect(() => {
     const container = scrollContainerRef?.current;
     if (!container) return;
+    if (scrollRafRef.current !== null) return; // a scroll is already queued
+    if (!autoFollowRef.current.shouldFollow()) return;
 
-    if (autoFollowRef.current.shouldFollow()) {
-      // This scrollTo fires the scroll handler above; arming the one-shot
-      // flag keeps that programmatic event from re-engaging follow over a
-      // user's scroll-up.
+    scrollRafRef.current = requestAnimationFrame(() => {
+      scrollRafRef.current = null;
+      const el = scrollContainerRef?.current;
+      if (!el) return;
+      // Re-check: the user may have scrolled up between scheduling and now.
+      if (!autoFollowRef.current.shouldFollow()) return;
+      // This scrollTo fires the scroll handler above; arming the one-shot flag
+      // keeps that programmatic event from re-engaging follow over a scroll-up.
       autoFollowRef.current.markProgrammatic();
-      container.scrollTo({ top: container.scrollHeight, behavior: "auto" });
-    }
+      el.scrollTo({ top: el.scrollHeight, behavior: "auto" });
+    });
   }, [effectiveOutput, scrollContainerRef]);
+
+  // Cancel any queued autoscroll frame on unmount.
+  useEffect(
+    () => () => {
+      if (scrollRafRef.current !== null) {
+        cancelAnimationFrame(scrollRafRef.current);
+      }
+    },
+    [],
+  );
 
   // Check if text overflows
   useEffect(() => {
