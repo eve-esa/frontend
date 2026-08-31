@@ -1,14 +1,10 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronRight } from "@fortawesome/free-solid-svg-icons";
-import { useState } from "react";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Switch } from "@/components/ui/Switch";
 import type { CollectionType } from "@/services/useGetMyCollections";
 import useInfinityLoading from "@/hooks/useInfinityLoading";
-import {
-  getEnabledCollectionIds,
-  toggleCollectionInStorage,
-} from "@/utilities/collections";
+import { useStoredSelection } from "@/hooks/useStoredSelection";
 import { LOCAL_STORAGE_PRIVATE_COLLECTIONS } from "@/utilities/localStorage";
 
 type CollectionsListProps = {
@@ -31,19 +27,9 @@ export const CollectionsList = ({
     dependencies: [hasNextPage],
   });
 
-  const [enabledPrivateCollections, setEnabledPrivateCollections] = useState<
-    string[]
-  >(() => getEnabledCollectionIds(LOCAL_STORAGE_PRIVATE_COLLECTIONS));
-
-  const toggleCollection = (collectionId: string) => {
-    setEnabledPrivateCollections((prev) =>
-      toggleCollectionInStorage(
-        LOCAL_STORAGE_PRIVATE_COLLECTIONS,
-        prev,
-        collectionId,
-      ),
-    );
-  };
+  const { isSelected, setSelected } = useStoredSelection(
+    LOCAL_STORAGE_PRIVATE_COLLECTIONS,
+  );
 
   return (
     <>
@@ -63,8 +49,10 @@ export const CollectionsList = ({
             >
               <div className="flex min-w-0 flex-1 items-center gap-2">
                 <Switch
-                  checked={enabledPrivateCollections.includes(collection.id)}
-                  onCheckedChange={() => toggleCollection(collection.id)}
+                  checked={isSelected(collection.id)}
+                  onCheckedChange={(checked) =>
+                    setSelected(collection.id, checked)
+                  }
                 />
                 <span
                   className="relative cursor-pointer group-hover:text-primary-300"

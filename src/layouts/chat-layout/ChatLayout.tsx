@@ -4,7 +4,7 @@ import { Outlet } from "react-router-dom";
 import { DynamicSidebarProvider } from "@/components/chat/DynamicSidebarProvider";
 import { ConversationsMenuSidebar } from "@/components/chat/ConversationsMenuSidebar";
 import { DynamicSidebar } from "@/components/chat/DynamicSidebar";
-import { messageDefaultSettings } from "@/utilities/messageDefaultSettings";
+import { readStoredSettings } from "@/utilities/messageDefaultSettings";
 import {
   LOCAL_STORAGE_PRIVATE_COLLECTIONS,
   LOCAL_STORAGE_PUBLIC_COLLECTIONS,
@@ -15,50 +15,59 @@ import { steps } from "@/utilities/onboardingSteps";
 import { useJoyride } from "@/hooks/useJoyride";
 import { useGetSharedCollection } from "@/services/useGetSharedCollection";
 import { useGetMyCollections } from "@/services/useGetMyCollections";
-import { migrateCollectionStorage } from "@/utilities/collections";
+import {
+  getCompleteCatalog,
+  reconcileCollectionStorage,
+} from "@/utilities/collections";
 
 export const ChatLayout = () => {
   const { run, stepIndex, handleJoyrideCallback } = useJoyride();
-  const storedPublicCollections = localStorage.getItem(
-    LOCAL_STORAGE_PUBLIC_COLLECTIONS
-  );
-  const storedPrivateCollections = localStorage.getItem(
-    LOCAL_STORAGE_PRIVATE_COLLECTIONS
-  );
-  const { data: publicCollections } = useGetSharedCollection();
-  const { data: myCollections } = useGetMyCollections({});
+  const {
+    data: publicCollections,
+    hasNextPage: publicHasNextPage,
+    isFetchingNextPage: publicIsFetchingNextPage,
+    fetchNextPage: fetchNextPublicPage,
+  } = useGetSharedCollection();
+  const {
+    data: myCollections,
+    hasNextPage: myHasNextPage,
+    isFetchingNextPage: myIsFetchingNextPage,
+    fetchNextPage: fetchNextMyPage,
+  } = useGetMyCollections({});
 
+  // Reconcile only against the full catalog: a partial one would drop the
+  // stored ids that live on pages not fetched yet. Pull every page first.
   useEffect(() => {
-    if (!publicCollections) return;
-
-    const allCollections = publicCollections.pages.flatMap((page) => page.data);
-    migrateCollectionStorage(
-      LOCAL_STORAGE_PUBLIC_COLLECTIONS,
-      storedPublicCollections,
-      allCollections,
-    );
-  }, [publicCollections, storedPublicCollections]);
-
-  useEffect(() => {
-    if (!myCollections) return;
-
-    const allCollections = myCollections.pages.flatMap((page) => page.data);
-    migrateCollectionStorage(
-      LOCAL_STORAGE_PRIVATE_COLLECTIONS,
-      storedPrivateCollections,
-      allCollections,
-    );
-  }, [myCollections, storedPrivateCollections]);
-
-  useEffect(() => {
-    const settings = localStorage.getItem(LOCAL_STORAGE_SETTINGS);
-
-    if (!settings) {
-      localStorage.setItem(
-        LOCAL_STORAGE_SETTINGS,
-        JSON.stringify(messageDefaultSettings)
-      );
+    if (publicHasNextPage && !publicIsFetchingNextPage) {
+      void fetchNextPublicPage();
     }
+  }, [publicHasNextPage, publicIsFetchingNextPage, fetchNextPublicPage]);
+
+  useEffect(() => {
+    if (myHasNextPage && !myIsFetchingNextPage) {
+      void fetchNextMyPage();
+    }
+  }, [myHasNextPage, myIsFetchingNextPage, fetchNextMyPage]);
+
+  useEffect(() => {
+    const catalog = getCompleteCatalog(publicCollections, publicHasNextPage);
+    if (!catalog) return;
+    reconcileCollectionStorage(LOCAL_STORAGE_PUBLIC_COLLECTIONS, catalog);
+  }, [publicCollections, publicHasNextPage]);
+
+  useEffect(() => {
+    const catalog = getCompleteCatalog(myCollections, myHasNextPage);
+    if (!catalog) return;
+    reconcileCollectionStorage(LOCAL_STORAGE_PRIVATE_COLLECTIONS, catalog);
+  }, [myCollections, myHasNextPage]);
+
+  useEffect(() => {
+    // Seed and repair stored settings: fills missing keys with defaults and
+    // clamps out-of-range values, so every reader sees a complete object.
+    localStorage.setItem(
+      LOCAL_STORAGE_SETTINGS,
+      JSON.stringify(readStoredSettings())
+    );
   }, []);
 
   return (

@@ -1,6 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, Controller } from "react-hook-form";
-import { z } from "zod";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleInfo, faTimes } from "@fortawesome/free-solid-svg-icons";
 import { Tooltip } from "@/components/ui/Tooltip";
@@ -12,7 +11,14 @@ import {
   type YearRange,
 } from "@/components/ui/YearRangePicker";
 import { LOCAL_STORAGE_SETTINGS } from "@/utilities/localStorage";
-import { messageDefaultSettings } from "@/utilities/messageDefaultSettings";
+import {
+  messageDefaultSettings,
+  readStoredSettings,
+} from "@/utilities/messageDefaultSettings";
+import {
+  AdvancedSettingsSchema,
+  type AdvancedSettingsValidation,
+} from "@/utilities/advancedSettingsSchema";
 import { toast } from "sonner";
 import { SettingsSelect } from "./SettingsSelect";
 import {
@@ -20,43 +26,19 @@ import {
   scientificAndTechnicalOptions,
   thematicPerspectiveOptions,
 } from "@/utilities/filtersSelectOptions";
-import { OptionSchema } from "@/types";
 import { Autocomplete } from "../ui/Autocomplete";
 import { AnimatedLink } from "../ui/AnimatedLink";
 import { settingsTooltipExplanation } from "@/utilities/settingsTooltipExplanation";
 import { journalOptions } from "@/utilities/journalOptions";
 import { CLASSIFICATION_FILTERS_ENABLED } from "@/utilities/features";
 
-const AdvancedSettingsSchema = z.object({
-  score_threshold: z.number(),
-  temperature: z.number(),
-  year: z
-    .object({
-      startYear: z.number().optional(),
-      endYear: z.number().optional(),
-    })
-    .optional(),
-  journal: z.string().optional(),
-  thematic_perspective: OptionSchema.optional(),
-  scientific_and_technical: OptionSchema.optional(),
-  market_perspective: OptionSchema.optional(),
-  n_citations: z
-    .number()
-    .max(500000, { message: "Value must be less than 500000" })
-    .optional(),
-  k: z.number().optional(),
-});
-
-export type AdvancedSettingsValidation = z.infer<typeof AdvancedSettingsSchema>;
 
 type SettingsFormProps = {
   onToggle: () => void;
 };
 
 export const SettingsForm = ({ onToggle }: SettingsFormProps) => {
-  const settings = JSON.parse(
-    localStorage.getItem(LOCAL_STORAGE_SETTINGS) ?? "{}"
-  );
+  const settings = readStoredSettings();
 
   const {
     handleSubmit,
@@ -65,22 +47,7 @@ export const SettingsForm = ({ onToggle }: SettingsFormProps) => {
     control,
     formState: { errors, isValid },
   } = useForm<AdvancedSettingsValidation>({
-    defaultValues: {
-      score_threshold: settings?.score_threshold ?? 0.3,
-      temperature: settings?.temperature ?? 0.3,
-      year: settings?.year
-        ? {
-            startYear: settings.year.startYear,
-            endYear: settings.year.endYear,
-          }
-        : undefined,
-      journal: settings?.journal ?? undefined,
-      thematic_perspective: settings?.thematic_perspective ?? undefined,
-      scientific_and_technical: settings?.scientific_and_technical ?? undefined,
-      market_perspective: settings?.market_perspective ?? undefined,
-      n_citations: settings?.n_citations ?? 1,
-      k: settings?.k ?? 1,
-    },
+    defaultValues: settings,
     mode: "onChange",
     resolver: zodResolver(AdvancedSettingsSchema),
   });

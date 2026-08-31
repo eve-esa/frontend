@@ -2,7 +2,7 @@ import { useRef } from "react";
 import { useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { MUTATION_KEYS, QUERY_KEYS } from "./keys";
 import { toast } from "sonner";
-import type { AdvancedSettingsValidation } from "@/components/chat/SettingsForm";
+import type { AdvancedSettingsValidation } from "@/utilities/advancedSettingsSchema";
 import type {
   ApiError,
   ChaMessageType,

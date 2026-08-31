@@ -1,4 +1,4 @@
-import type { AdvancedSettingsValidation } from "@/components/chat/SettingsForm";
+import type { AdvancedSettingsValidation } from "./advancedSettingsSchema";
 import { filters } from "./filters";
 import type { ApiError } from "@/types";
 
@@ -87,8 +87,10 @@ export const adaptSettingsForRequest = (
     });
   }
 
-  // Min citations filter (range)
-  if (n_citations !== 0) {
+  // Min citations filter (range): only when the user asked for a minimum.
+  // Sending it for 0 or undefined would exclude every point lacking the
+  // n_citations payload field and make the backend skip Wiley retrieval.
+  if (typeof n_citations === "number" && Number.isFinite(n_citations) && n_citations > 0) {
     filtersArray.push({
       ...filters.n_citations,
       range: {
@@ -106,12 +108,15 @@ export const adaptSettingsForRequest = (
     scientific_and_technical: undefined,
     market_perspective: undefined,
     n_citations: undefined,
-    filters: {
-      should: null,
-      min_should: null,
-      must: filtersArray,
-      must_not: null,
-    },
+    filters:
+      filtersArray.length > 0
+        ? {
+            should: null,
+            min_should: null,
+            must: filtersArray,
+            must_not: null,
+          }
+        : undefined,
   };
 };
 

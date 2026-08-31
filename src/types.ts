@@ -43,6 +43,8 @@ export type MessageType = {
   stopped?: boolean;
   timestamp: Date;
   documents: Document[];
+  // Whether the backend used retrieval or tools for this turn.
+  use_rag?: boolean;
   // Images attached to the user turn. Stored in the canonical frontend shape
   // (`ImageAttachment`) for optimistic messages, but the backend persists them
   // with different keys (`image_id`/`size_bytes`) — see `RawMessageAttachment`
