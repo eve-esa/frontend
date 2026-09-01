@@ -7,10 +7,8 @@ import { faChevronDown } from "@fortawesome/free-solid-svg-icons";
 import { useGetConversation } from "@/services/useGetConversation";
 import { useSendRequest } from "@/services/useSendRequest";
 import { useNavigate, useParams } from "react-router-dom";
-import {
-  LOCAL_STORAGE_SETTINGS,
-  LOCAL_STORAGE_DRAFT_NEW_CONVERSATION,
-} from "@/utilities/localStorage";
+import { LOCAL_STORAGE_DRAFT_NEW_CONVERSATION } from "@/utilities/localStorage";
+import { readStoredSettings } from "@/utilities/messageDefaultSettings";
 import { useScrollToBottom } from "@/hooks/useScrollToBottom";
 import { useNavigationBlocker } from "@/hooks/useNavigationBlocker";
 import { MessageSkeleton } from "./MessageSkeleton";
@@ -118,9 +116,7 @@ export const Chat = () => {
     (input: string, attachments?: ImageAttachment[]) => {
       if (!conversationId) return;
 
-      const settings = JSON.parse(
-        localStorage.getItem(LOCAL_STORAGE_SETTINGS) ?? "{}",
-      );
+      const settings = readStoredSettings();
       const modelSelection = reconcileModelSelection(
         getStoredModelSelection(models),
         models,

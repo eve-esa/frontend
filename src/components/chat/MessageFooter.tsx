@@ -34,6 +34,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { QUERY_KEYS } from "@/services/keys";
 import { toast } from "sonner";
 import { handleApiError } from "@/utilities/helpers";
+import { getRenderableDocuments } from "@/utilities/messageDocuments";
 import { useListModels } from "@/services/useListModels";
 import { resolveCustomModelDisplayName } from "@/utilities/modelSelection";
 import { buildHallucinationCopyText } from "@/utilities/buildHallucinationCopyText";
@@ -411,8 +412,13 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
     }
   };
 
-  const hasSources = message?.documents?.length;
+  const renderableDocuments = getRenderableDocuments(message?.documents);
+  const hasSources = renderableDocuments.length > 0;
   const hasTrace = message?.trace?.length;
+  const generatedWithTools =
+    !hasSources &&
+    message?.use_rag === true &&
+    (Boolean(hasTrace) || (message?.tool_activity?.length ?? 0) > 0);
 
   const toggleMessageSidebar = (
     panelType: Extract<SidebarContent["type"], "sources" | "trace">,
@@ -445,7 +451,7 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
                 variant="primary"
                 onClick={() =>
                   toggleMessageSidebar("sources", {
-                    sources: message?.documents || [],
+                    sources: renderableDocuments,
                     messageId: message?.id,
                   })
                 }
@@ -453,14 +459,16 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
                 <FontAwesomeIcon icon={faBullseye} className="size-4" />
                 <span className="font-['NotesESA']">Sources</span>
                 <span className="font-['NotesESA']">
-                  ({message?.documents?.length})
+                  ({renderableDocuments.length})
                 </span>
               </Button>
             ) : (
               <div className="flex items-center gap-2">
                 <FontAwesomeIcon icon={faBullseye} className="size-3" />
                 <span className="font-['NotesESA'] text-sm">
-                  The message was generated without using sources
+                  {generatedWithTools
+                    ? "This answer was generated with tools"
+                    : "The message was generated without using sources"}
                 </span>
               </div>
             )}

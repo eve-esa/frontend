@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect } from "react";
 import { type Document } from "@/types";
 import SmartText from "@/components/ui/SmartText";
+import { getSourceText } from "@/utilities/messageDocuments";
 
 export const SourceContent = ({ source }: { source: Document }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [contentHeight, setContentHeight] = useState<number>(0);
   const contentRef = useRef<HTMLDivElement>(null);
-  const text = source?.payload?.content ?? source?.text ?? "No text";
+  const text = getSourceText(source);
 
   useEffect(() => {
     if (contentRef.current) {

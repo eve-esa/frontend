@@ -1,5 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
-import type { AdvancedSettingsValidation } from "@/components/chat/SettingsForm";
+import type { AdvancedSettingsValidation } from "@/utilities/advancedSettingsSchema";
 import type {
   AgenticTraceStep,
   ChaMessageType,
