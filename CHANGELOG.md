@@ -16,6 +16,13 @@ Release and promotes staging. Production is promoted from there by an explicit d
 The `[1.0.0]` entry below is historical and predates this repository's current version series. The
 released tags run `v0.0.1` through `v0.0.6`; no `v1.0.0` was ever tagged here.
 
+## [0.0.10](https://github.com/eve-esa/frontend/compare/v0.0.9...v0.0.10) (2026-09-01)
+
+
+### Fixed
+
+* honour the UI collection selection and settings on agentic retrieval ([#69](https://github.com/eve-esa/frontend/issues/69)) ([f4cf49a](https://github.com/eve-esa/frontend/commit/f4cf49a1efb55dcbaabc8cf121c415bfe9bd60d3))
+
 ## [0.0.9](https://github.com/eve-esa/frontend/compare/v0.0.8...v0.0.9) (2026-08-13)
 
 
