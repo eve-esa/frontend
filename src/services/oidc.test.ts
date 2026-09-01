@@ -8,6 +8,10 @@ vi.mock("oidc-client-ts", () => {
     settings: Record<string, unknown>;
     signinSilent = vi.fn();
     signoutRedirect = vi.fn(() => Promise.resolve());
+    removeUser = vi.fn(() => Promise.resolve());
+    events = {
+      addAccessTokenExpiring: vi.fn(),
+    };
 
     constructor(settings: Record<string, unknown>) {
       this.settings = settings;
@@ -20,6 +24,8 @@ type MockedUserManager = {
   settings: Record<string, unknown>;
   signinSilent: Mock;
   signoutRedirect: Mock;
+  removeUser: Mock;
+  events: { addAccessTokenExpiring: Mock };
 };
 
 const ORIGIN = "https://app.example.com";
@@ -57,7 +63,7 @@ describe("userManager settings", () => {
       redirect_uri: `${ORIGIN}/callback`,
       post_logout_redirect_uri: ORIGIN,
       scope: "openid email",
-      automaticSilentRenew: true,
+      automaticSilentRenew: false,
     });
   });
 
@@ -109,6 +115,44 @@ describe("renewToken", () => {
     await expect(renewToken()).resolves.toEqual({ access_token: "token" });
     expect(manager.signinSilent).toHaveBeenCalledTimes(2);
   });
+
+  it("funnels the expiring event through the same single-flight path", async () => {
+    const { manager } = await loadOidc({});
+    expect(manager.events.addAccessTokenExpiring).toHaveBeenCalledTimes(1);
+    const onExpiring = manager.events.addAccessTokenExpiring.mock
+      .calls[0][0] as () => void;
+
+    let resolve!: (value: unknown) => void;
+    manager.signinSilent.mockReturnValue(
+      new Promise((res) => {
+        resolve = res;
+      })
+    );
+
+    onExpiring();
+    onExpiring();
+    expect(manager.signinSilent).toHaveBeenCalledTimes(1);
+    resolve({ access_token: "token" });
+  });
+
+  it("swallows a failed background renew from the expiring event", async () => {
+    const { manager } = await loadOidc({});
+    const onExpiring = manager.events.addAccessTokenExpiring.mock
+      .calls[0][0] as () => void;
+    manager.signinSilent.mockRejectedValue(new Error("renew failed"));
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+
+    onExpiring();
+    await vi.waitFor(() => {
+      expect(consoleError).toHaveBeenCalledWith(
+        "Proactive token renew failed:",
+        expect.any(Error)
+      );
+    });
+    consoleError.mockRestore();
+  });
 });
 
 describe("signoutRedirect", () => {
@@ -128,19 +172,38 @@ describe("signoutRedirect", () => {
     });
   });
 
-  it("uses the plain RP-initiated logout for any other issuer", async () => {
+  it("identifies the client without the hint for any other issuer", async () => {
     const { signoutRedirect, manager } = await loadOidc({
       AUTH_ISSUER: "https://idp.example.com/realms/eve",
       AUTH_CLIENT_ID: "eve-frontend",
     });
 
     await signoutRedirect();
-    expect(manager.signoutRedirect).toHaveBeenCalledWith(undefined);
+    expect(manager.signoutRedirect).toHaveBeenCalledWith({
+      extraQueryParams: { client_id: "eve-frontend" },
+    });
+  });
+
+  it("removes the stored user before redirecting, keeping the id_token out of the URL", async () => {
+    const { signoutRedirect, manager } = await loadOidc({
+      AUTH_ISSUER: "https://idp.example.com/realms/eve",
+      AUTH_CLIENT_ID: "eve-frontend",
+    });
+
+    await signoutRedirect();
+    expect(manager.removeUser).toHaveBeenCalledTimes(1);
+    expect(manager.removeUser.mock.invocationCallOrder[0]).toBeLessThan(
+      manager.signoutRedirect.mock.invocationCallOrder[0]
+    );
   });
 
   it("treats an unparseable issuer as a generic provider", async () => {
     const { buildSignoutArgs } = await loadOidc({});
-    expect(buildSignoutArgs("", "client", ORIGIN)).toBeUndefined();
-    expect(buildSignoutArgs("not a url", "client", ORIGIN)).toBeUndefined();
+    expect(buildSignoutArgs("", "client", ORIGIN)).toEqual({
+      extraQueryParams: { client_id: "client" },
+    });
+    expect(buildSignoutArgs("not a url", "client", ORIGIN)).toEqual({
+      extraQueryParams: { client_id: "client" },
+    });
   });
 });
