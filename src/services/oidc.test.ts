@@ -172,16 +172,14 @@ describe("signoutRedirect", () => {
     });
   });
 
-  it("identifies the client without the hint for any other issuer", async () => {
+  it("uses the plain RP-initiated logout for any other issuer", async () => {
     const { signoutRedirect, manager } = await loadOidc({
       AUTH_ISSUER: "https://idp.example.com/realms/eve",
       AUTH_CLIENT_ID: "eve-frontend",
     });
 
     await signoutRedirect();
-    expect(manager.signoutRedirect).toHaveBeenCalledWith({
-      extraQueryParams: { client_id: "eve-frontend" },
-    });
+    expect(manager.signoutRedirect).toHaveBeenCalledWith(undefined);
   });
 
   it("removes the stored user before redirecting, keeping the id_token out of the URL", async () => {
@@ -199,11 +197,7 @@ describe("signoutRedirect", () => {
 
   it("treats an unparseable issuer as a generic provider", async () => {
     const { buildSignoutArgs } = await loadOidc({});
-    expect(buildSignoutArgs("", "client", ORIGIN)).toEqual({
-      extraQueryParams: { client_id: "client" },
-    });
-    expect(buildSignoutArgs("not a url", "client", ORIGIN)).toEqual({
-      extraQueryParams: { client_id: "client" },
-    });
+    expect(buildSignoutArgs("", "client", ORIGIN)).toBeUndefined();
+    expect(buildSignoutArgs("not a url", "client", ORIGIN)).toBeUndefined();
   });
 });

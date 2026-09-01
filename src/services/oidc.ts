@@ -70,19 +70,19 @@ const isCognitoIssuer = (issuer: string): boolean => {
  * The arguments `signoutRedirect` needs for a given issuer, exported for
  * tests. Cognito's `/logout` does not honour the standard
  * `post_logout_redirect_uri` / `id_token_hint` pair; it wants `client_id` +
- * `logout_uri` instead. Every other provider gets `client_id` too: the user
- * is removed from the store before the redirect (see below), and without an
- * id_token_hint Keycloak only accepts `post_logout_redirect_uri` when the
- * client identifies itself.
+ * `logout_uri` instead. Every other provider gets the plain RP-initiated
+ * logout: the library already sends `client_id` alongside
+ * `post_logout_redirect_uri`, which Keycloak accepts without an
+ * id_token_hint.
  */
 export const buildSignoutArgs = (
   issuer: string,
   clientId: string,
   origin: string
-): SignoutRedirectArgs =>
+): SignoutRedirectArgs | undefined =>
   isCognitoIssuer(issuer)
     ? { extraQueryParams: { client_id: clientId, logout_uri: origin } }
-    : { extraQueryParams: { client_id: clientId } };
+    : undefined;
 
 /**
  * End the IdP session and redirect back to the app origin.
