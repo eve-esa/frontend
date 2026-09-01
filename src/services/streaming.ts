@@ -1,4 +1,5 @@
 import api from "./axios";
+import { renewToken, userManager } from "./oidc";
 import type { AxiosProgressEvent } from "axios";
 
 export type StreamEvent =
@@ -83,6 +84,15 @@ export async function postStream<TPayload>({
   payload,
   onEvent,
 }: PostStreamOptions<TPayload>): Promise<void> {
+  // A stream cannot be retried after a mid-flight 401 the way a normal
+  // request can, so start it with a token that will outlive the handshake.
+  // This protects stream start only; mid-run backend tool calls rely on the
+  // token's full lifetime.
+  const user = await userManager.getUser();
+  if (!user || user.expired || (user.expires_in ?? 0) < 120) {
+    await renewToken();
+  }
+
   let buffer = "";
   let lastIndex = 0;
   let lastProgressTime = Date.now();

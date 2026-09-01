@@ -1,28 +1,40 @@
-import {
-  LOCAL_STORAGE_ACCESS_TOKEN,
-  LOCAL_STORAGE_REFRESH_TOKEN,
-} from "@/utilities/localStorage";
-import { routes } from "@/utilities/routes";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router";
+import { signoutRedirect } from "./oidc";
+import {
+  LOCAL_STORAGE_DRAFT_NEW_CONVERSATION,
+  LOCAL_STORAGE_MCP_SERVERS,
+  LOCAL_STORAGE_PRIVATE_COLLECTIONS,
+  LOCAL_STORAGE_PUBLIC_COLLECTIONS,
+  LOCAL_STORAGE_SETTINGS,
+} from "@/utilities/localStorage";
 
-export const httpLogout = async () => {
-  await localStorage.removeItem(LOCAL_STORAGE_ACCESS_TOKEN);
-  await localStorage.removeItem(LOCAL_STORAGE_REFRESH_TOKEN);
-};
+// Everything localStorage holds that belongs to the signed-in user rather
+// than to the browser. Cleared on logout so the next account on this machine
+// does not inherit it. "login_email" is a leftover key from the pre-OIDC
+// login form; nothing writes it anymore but old profiles may still carry it.
+const PER_USER_STORAGE_KEYS = [
+  LOCAL_STORAGE_SETTINGS,
+  LOCAL_STORAGE_PUBLIC_COLLECTIONS,
+  LOCAL_STORAGE_PRIVATE_COLLECTIONS,
+  LOCAL_STORAGE_MCP_SERVERS,
+  LOCAL_STORAGE_DRAFT_NEW_CONVERSATION,
+  "login_email",
+];
 
 export const useLogout = (onSuccess?: () => void) => {
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
 
   return useMutation({
-    mutationFn: httpLogout,
-    onSuccess: () => {
+    mutationFn: async () => {
       queryClient.clear();
-      localStorage.removeItem(LOCAL_STORAGE_ACCESS_TOKEN);
-      localStorage.removeItem(LOCAL_STORAGE_REFRESH_TOKEN);
+      for (const key of PER_USER_STORAGE_KEYS) {
+        localStorage.removeItem(key);
+      }
+      // Ends the IdP session and leaves the page; no navigation after this.
+      await signoutRedirect();
+    },
+    onSuccess: () => {
       onSuccess?.();
-      void navigate(routes.LOGIN.path);
     },
   });
 };

@@ -1,25 +1,11 @@
-import axios from "axios";
-import {
-  LOCAL_STORAGE_ACCESS_TOKEN,
-  LOCAL_STORAGE_REFRESH_TOKEN,
-} from "@/utilities/localStorage";
-import { routes } from "@/utilities/routes";
+import axios, { type InternalAxiosRequestConfig } from "axios";
+import { CALLBACK_PATH, renewToken, userManager } from "./oidc";
 import { isTrustedRequestUrl, resolveApiOrigin } from "@/utilities/sameOrigin";
 
 const baseURL = import.meta.env.VITE_API_URL;
 const PAGE_ORIGIN =
   typeof window !== "undefined" ? window.location.origin : "";
 const API_ORIGIN = resolveApiOrigin(baseURL, PAGE_ORIGIN);
-
-// Public endpoints that don't require authentication
-const PUBLIC_ENDPOINTS = [
-  "/login",
-  "/signup",
-  "/verify",
-  "/forgot-password",
-  "/reset-password",
-  "/refresh",
-];
 
 const api = axios.create({
   baseURL,
@@ -31,53 +17,22 @@ const api = axios.create({
 
 api.interceptors.request.use(
   async (config) => {
-    const isPublicEndpoint = PUBLIC_ENDPOINTS.some((endpoint) =>
-      config.url?.includes(endpoint)
-    );
-
-    let token = localStorage.getItem(LOCAL_STORAGE_ACCESS_TOKEN);
-    const refreshToken = localStorage.getItem(LOCAL_STORAGE_REFRESH_TOKEN);
-
-    // Skip authentication logic for public endpoints
-    if (isPublicEndpoint) {
-      return config;
-    }
-
-    // Defense-in-depth: never attach credentials (or run refresh/redirect logic)
-    // for requests that don't target our own origin or the API origin. This
-    // prevents the bearer token from leaking to a foreign host even if a caller
-    // is tricked into requesting a cross-origin/protocol-relative URL.
+    // Defense-in-depth: never attach credentials for requests that don't
+    // target our own origin or the API origin. This prevents the bearer token
+    // from leaking to a foreign host even if a caller is tricked into
+    // requesting a cross-origin/protocol-relative URL.
     if (
       !isTrustedRequestUrl(config.url, config.baseURL, PAGE_ORIGIN, API_ORIGIN)
     ) {
       return config;
     }
 
-    // For protected endpoints: if no access token but refresh token exists, try to refresh
-    if (!token && refreshToken) {
-      try {
-        token = await refreshAccessToken();
-      } catch (error) {
-        console.error("Failed to refresh token during request:", error);
-        // If refresh fails, redirect to login (refresh token is invalid)
-        if (window.location.pathname !== routes.LOGIN.path) {
-          window.location.href = routes.LOGIN.path;
-        }
-        return Promise.reject(new Error("Invalid refresh token"));
-      }
+    const user = await userManager.getUser();
+    if (user && !user.expired) {
+      config.headers.Authorization = `Bearer ${user.access_token}`;
     }
-
-    // If no tokens at all for protected endpoints, redirect to login
-    if (!token && !refreshToken) {
-      if (window.location.pathname !== routes.LOGIN.path) {
-        window.location.href = routes.LOGIN.path;
-      }
-      return Promise.reject(new Error("No authentication tokens available"));
-    }
-
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+    // No stored user, or an expired one: proceed without the header and let
+    // the 401 below drive recovery.
     return config;
   },
   (error) => {
@@ -85,26 +40,8 @@ api.interceptors.request.use(
   }
 );
 
-const refreshAccessToken = async () => {
-  const refreshToken = localStorage.getItem(LOCAL_STORAGE_REFRESH_TOKEN);
-  if (!refreshToken) {
-    console.error("No refresh token available");
-    return null;
-  }
-
-  try {
-    const response = await axios.post(`${baseURL}/refresh`, {
-      refresh_token: refreshToken,
-    });
-
-    const { access_token } = response.data;
-    localStorage.setItem(LOCAL_STORAGE_ACCESS_TOKEN, access_token);
-    return access_token;
-  } catch (error) {
-    localStorage.removeItem(LOCAL_STORAGE_ACCESS_TOKEN);
-    localStorage.removeItem(LOCAL_STORAGE_REFRESH_TOKEN);
-    throw error;
-  }
+type RetriableRequestConfig = InternalAxiosRequestConfig & {
+  _retry?: boolean;
 };
 
 api.interceptors.response.use(
@@ -112,50 +49,41 @@ api.interceptors.response.use(
     return response;
   },
   async (error) => {
-    const originalRequest = error.config;
+    const originalRequest = error.config as RetriableRequestConfig | undefined;
 
-    // Handle 401 Unauthorized - try to refresh token
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      const isPublicEndpoint = PUBLIC_ENDPOINTS.some((endpoint) =>
-        originalRequest.url?.includes(endpoint)
-      );
-
-      // Skip refresh logic for public endpoints
-      if (isPublicEndpoint) {
-        return Promise.reject(error);
-      }
-
+    if (
+      error.response?.status === 401 &&
+      originalRequest &&
+      !originalRequest._retry &&
+      isTrustedRequestUrl(
+        originalRequest.url,
+        originalRequest.baseURL,
+        PAGE_ORIGIN,
+        API_ORIGIN
+      )
+    ) {
       originalRequest._retry = true;
 
       try {
-        const newToken = await refreshAccessToken();
-        if (newToken) {
-          originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        const user = await renewToken();
+        if (user) {
+          originalRequest.headers.Authorization = `Bearer ${user.access_token}`;
           return api(originalRequest);
-        } else {
-          localStorage.removeItem(LOCAL_STORAGE_ACCESS_TOKEN);
-
-          if (window.location.pathname !== routes.LOGIN.path) {
-            window.location.href = routes.LOGIN.path;
-          }
-          return Promise.reject(new Error("No refresh token available"));
         }
-      } catch (refreshError) {
-        if (window.location.pathname !== routes.LOGIN.path) {
-          window.location.href = routes.LOGIN.path;
-        }
-        return Promise.reject(refreshError);
+      } catch (renewError) {
+        console.error("Silent token renew failed:", renewError);
       }
-    }
 
-    // Handle 403 Forbidden
-    if (error.response?.status === 403) {
-      console.error("Access forbidden");
-    }
-
-    // Handle network errors
-    if (!error.response) {
-      console.error("Network error:", error.message);
+      // Renew failed: only an interactive sign-in can recover. Never start
+      // one from the callback route, where the exchange in progress would
+      // loop forever.
+      if (window.location.pathname !== CALLBACK_PATH) {
+        void userManager.signinRedirect({
+          state: {
+            returnTo: window.location.pathname + window.location.search,
+          },
+        });
+      }
     }
 
     return Promise.reject(error);
