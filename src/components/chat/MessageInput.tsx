@@ -671,6 +671,8 @@ export const MessageInput = ({
                     type="button"
                     variant="icon"
                     size="sm"
+                    aria-label="Stop generating"
+                    data-testid="composer-stop"
                     className="h-8 w-8 p-0 cursor-pointer"
                     onMouseDown={(e) => {
                       e.preventDefault();
@@ -691,6 +693,8 @@ export const MessageInput = ({
                     }
                     variant="icon"
                     size="sm"
+                    aria-label="Send message"
+                    data-testid="composer-send"
                     className="h-8 w-8 p-0 cursor-pointer"
                     onMouseDown={(e) => {
                       e.preventDefault();

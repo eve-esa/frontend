@@ -36,6 +36,7 @@ import { getSelectedMcpServerNames } from "@/utilities/mcpServers";
 import { applyToolCall, applyToolResult } from "@/utilities/toolActivity";
 import { resolveMessageEndpoint } from "@/utilities/messageEndpoint";
 import { shouldToastStreamError } from "@/utilities/streamError";
+import { rememberStoppedPartial } from "@/utilities/stoppedPartials";
 import { STREAMING_ENABLED } from "@/utilities/features";
 
 type SendRequestProps = {
@@ -361,8 +362,29 @@ export const useSendRequest = (conversationId?: string) => {
           msg.includes("cancelled") ||
           msg.includes("aborted"));
 
+      const streamedOutput =
+        (error as Error & { streamedOutput?: string }).streamedOutput ?? "";
+
       if (isCanceled) {
         canceledRef.current = true;
+        // Remember what the aborted stream had painted, keyed by the position
+        // the turn occupies. The refetch that follows this handler brings back
+        // the mid-generation row (output ""), which would replace the visible
+        // partial with nothing; the conversation queryFn puts it back until
+        // the backend has persisted its own copy.
+        if (conversationId) {
+          const cached = queryClient.getQueryData<ChaMessageType>([
+            QUERY_KEYS.conversation,
+            conversationId,
+          ]);
+          const lastIndex = (cached?.messages?.length ?? 0) - 1;
+          // Same guard updateLastTempMessage uses: only the optimistic row
+          // marks the turn that was streaming, and its position is the one the
+          // persisted row will take.
+          if (cached?.messages?.[lastIndex]?.id?.startsWith("temp-")) {
+            rememberStoppedPartial(conversationId, lastIndex, streamedOutput);
+          }
+        }
         updateLastTempMessage(queryClient, conversationId, (message) => ({
           ...message,
           stopped: true,
@@ -370,8 +392,6 @@ export const useSendRequest = (conversationId?: string) => {
         return;
       }
 
-      const streamedOutput =
-        (error as Error & { streamedOutput?: string }).streamedOutput ?? "";
       if (!shouldToastStreamError(streamedOutput)) {
         // The stream died after painting a visible partial answer: a red
         // toast beside it would contradict what the user is reading. End the
