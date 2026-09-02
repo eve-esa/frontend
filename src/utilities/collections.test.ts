@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { installMemoryLocalStorage } from "@/test-utils/memoryLocalStorage";
+import { stubRuntimeConfig } from "@/test-utils/runtimeConfigStub";
 import {
   getCompleteCatalog,
   getKnownCollectionsKey,
-  getMessageCollectionPayload,
   reconcileCollectionStorage,
 } from "./collections";
 import {
@@ -40,6 +40,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
 });
 
 describe("reconcileCollectionStorage", () => {
@@ -187,12 +188,22 @@ describe("getCompleteCatalog", () => {
   });
 });
 
+// The payload is the one function here that reads a flag, and it reads it at
+// module scope, so each case loads the module against an explicit config.
+const loadPayload = async (privateCollections: "true" | "false") => {
+  stubRuntimeConfig({ FEATURE_PRIVATE_COLLECTIONS: privateCollections });
+  const { getMessageCollectionPayload } = await import("./collections");
+  return getMessageCollectionPayload;
+};
+
 describe("getMessageCollectionPayload", () => {
-  it("sends only the enabled ids after a toggle", () => {
+  it("sends only the enabled ids after a toggle", async () => {
     reconcileCollectionStorage(PUBLIC, CATALOG);
     seed(PRIVATE, ["mine"]);
 
     toggleOff(PUBLIC, "EVE open access");
+
+    const getMessageCollectionPayload = await loadPayload("true");
 
     expect(getMessageCollectionPayload()).toEqual({
       public_collections: ["wikipedia-512"],
@@ -200,12 +211,27 @@ describe("getMessageCollectionPayload", () => {
     });
   });
 
-  it("sends an empty list, not a missing field, when everything is off", () => {
+  it("sends an empty list, not a missing field, when everything is off", async () => {
     seed(PUBLIC, []);
+
+    const getMessageCollectionPayload = await loadPayload("true");
 
     expect(getMessageCollectionPayload()).toEqual({
       public_collections: [],
       private_collections: [],
     });
+  });
+
+  it("sends private_collections: [] when the feature is off, keeping the ids stored", async () => {
+    seed(PUBLIC, ["wikipedia-512"]);
+    seed(PRIVATE, ["mine"]);
+
+    const getMessageCollectionPayload = await loadPayload("false");
+
+    expect(getMessageCollectionPayload()).toEqual({
+      public_collections: ["wikipedia-512"],
+      private_collections: [],
+    });
+    expect(localStorage.getItem(PRIVATE)).toBe(JSON.stringify(["mine"]));
   });
 });

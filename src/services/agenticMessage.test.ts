@@ -1,9 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { installMemoryLocalStorage } from "@/test-utils/memoryLocalStorage";
+import { stubRuntimeConfig } from "@/test-utils/runtimeConfigStub";
 import type { AdvancedSettingsValidation } from "@/utilities/advancedSettingsSchema";
 import type { ModelListResponse } from "@/types";
-import { buildGenerationPayload } from "./agenticMessage";
-import { getSelectedMcpServerNames } from "@/utilities/mcpServers";
 import { resolveMessageEndpoint } from "@/utilities/messageEndpoint";
 import {
   LOCAL_STORAGE_MCP_SERVERS,
@@ -30,6 +29,12 @@ const SETTINGS: AdvancedSettingsValidation = {
 const seed = (key: string, value: unknown) =>
   localStorage.setItem(key, JSON.stringify(value));
 
+// What these suites describe is the request an enabled toolkit selection and an
+// enabled private collection produce, so both flags are on for every case here.
+// The flags themselves are covered in utilities/runtimeConfig.test.
+let buildGenerationPayload: typeof import("./agenticMessage").buildGenerationPayload;
+let getSelectedMcpServerNames: typeof import("@/utilities/mcpServers").getSelectedMcpServerNames;
+
 // Mirrors useSendRequest: settings come from the caller (read from storage),
 // the MCP selection picks the endpoint, collections are read by the builder.
 const buildRequest = (conversationId: string) => {
@@ -51,7 +56,14 @@ const buildRequest = (conversationId: string) => {
   };
 };
 
-beforeEach(() => {
+beforeEach(async () => {
+  stubRuntimeConfig({
+    FEATURE_TOOLKITS: "true",
+    FEATURE_PRIVATE_COLLECTIONS: "true",
+  });
+  ({ buildGenerationPayload } = await import("./agenticMessage"));
+  ({ getSelectedMcpServerNames } = await import("@/utilities/mcpServers"));
+
   installMemoryLocalStorage();
   seed(LOCAL_STORAGE_SETTINGS, SETTINGS);
   seed(LOCAL_STORAGE_MODEL_SELECTION, { type: "platform", id: "eve-instruct" });
@@ -61,6 +73,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
 });
 
 describe("classic request (no MCP servers)", () => {

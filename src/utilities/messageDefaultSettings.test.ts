@@ -1,5 +1,6 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { installMemoryLocalStorage } from "@/test-utils/memoryLocalStorage";
+import { stubRuntimeConfig } from "@/test-utils/runtimeConfigStub";
 import { LOCAL_STORAGE_SETTINGS } from "./localStorage";
 import {
   DEFAULT_SCORE_THRESHOLD,
@@ -85,5 +86,59 @@ describe("readStoredSettings", () => {
       startYear: 2019,
       endYear: undefined,
     });
+  });
+});
+
+describe("readStoredSettings and the classification filters flag", () => {
+  const STORED = {
+    thematic_perspective: { label: "Climate", value: "climate" },
+    scientific_and_technical: { label: "Sensors", value: "sensors" },
+    market_perspective: { label: "Agriculture", value: "agriculture" },
+    journal: "Nature",
+  };
+
+  const load = async (classificationFilters: "true" | "false") => {
+    stubRuntimeConfig({
+      FEATURE_CLASSIFICATION_FILTERS: classificationFilters,
+    });
+    installMemoryLocalStorage();
+    localStorage.setItem(LOCAL_STORAGE_SETTINGS, JSON.stringify(STORED));
+    const module = await import("./messageDefaultSettings");
+    return module.readStoredSettings();
+  };
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
+  it("keeps the three perspectives when the flag is on", async () => {
+    const settings = await load("true");
+
+    expect(settings.thematic_perspective).toEqual(STORED.thematic_perspective);
+    expect(settings.scientific_and_technical).toEqual(
+      STORED.scientific_and_technical,
+    );
+    expect(settings.market_perspective).toEqual(STORED.market_perspective);
+  });
+
+  it("strips the three perspectives when the flag is off", async () => {
+    // helpers.ts turns each set perspective into a filters.must[] entry, so
+    // undefined here is what keeps them out of the request.
+    const settings = await load("false");
+
+    expect(settings.thematic_perspective).toBeUndefined();
+    expect(settings.scientific_and_technical).toBeUndefined();
+    expect(settings.market_perspective).toBeUndefined();
+  });
+
+  it("leaves the rest of the stored settings untouched", async () => {
+    const settings = await load("false");
+
+    expect(settings.journal).toBe("Nature");
+    expect(settings.k).toBe(messageDefaultSettings.k);
+    expect(settings.score_threshold).toBe(
+      messageDefaultSettings.score_threshold,
+    );
   });
 });

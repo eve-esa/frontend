@@ -73,4 +73,38 @@ describe("getSourceText", () => {
     expect(getSourceText(d)).toBe("No text");
     expect(getSourceText(undefined)).toBe("No text");
   });
+
+  // The types call these fields strings; persisted documents disagree, and an
+  // object used to travel unchecked to stripArtifactMetadata's .split.
+  it("falls through to payload.text when content is an object", () => {
+    const d = doc("a");
+    d.payload.content = { body: "text" } as unknown as string;
+    d.payload.text = "payload text";
+    expect(getSourceText(d)).toBe("payload text");
+  });
+
+  it("falls through when content is blank or an empty list", () => {
+    const d = doc("a");
+    d.payload.text = "payload text";
+    d.payload.content = "";
+    expect(getSourceText(d)).toBe("payload text");
+    d.payload.content = "   ";
+    expect(getSourceText(d)).toBe("payload text");
+    d.payload.content = [] as unknown as string;
+    expect(getSourceText(d)).toBe("payload text");
+  });
+
+  it("joins a list of strings with newlines", () => {
+    const d = doc("a");
+    d.payload.content = ["a", "b"] as unknown as string;
+    expect(getSourceText(d)).toBe("a\nb");
+  });
+
+  it("returns \"No text\" when every field is unrenderable", () => {
+    const d = doc("a");
+    d.payload.content = { body: "text" } as unknown as string;
+    d.payload.text = 42 as unknown as string;
+    d.text = [{ chunk: 1 }] as unknown as string;
+    expect(getSourceText(d)).toBe("No text");
+  });
 });
