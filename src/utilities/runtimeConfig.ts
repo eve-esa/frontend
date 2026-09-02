@@ -41,6 +41,14 @@ export type ConfigKey =
   | "FEATURE_CUSTOM_MODELS"
   | "FEATURE_STREAMING"
   | "FEATURE_CLASSIFICATION_FILTERS"
+  // Opening-scope switches. Same shape as the four above, opposite default:
+  // off unless an environment opts in (see features.ts for why).
+  | "FEATURE_ARTIFACTS"
+  | "FEATURE_TOOLKITS"
+  | "FEATURE_PRIVATE_COLLECTIONS"
+  | "FEATURE_ATTACHMENTS"
+  | "FEATURE_ANSWERED_BY"
+  | "FEATURE_BETA_BADGE"
   // Not switches. They are here because they are per-environment values that a
   // promoted artifact cannot carry, which is the same problem the flags have.
   // They were build-time only, set on deploy-dev and on nothing else, so
@@ -78,6 +86,13 @@ const BUILD_TIME: Record<ConfigKey, string | undefined> = {
   FEATURE_STREAMING: import.meta.env.VITE_FEATURE_STREAMING,
   FEATURE_CLASSIFICATION_FILTERS:
     import.meta.env.VITE_FEATURE_CLASSIFICATION_FILTERS,
+  FEATURE_ARTIFACTS: import.meta.env.VITE_FEATURE_ARTIFACTS,
+  FEATURE_TOOLKITS: import.meta.env.VITE_FEATURE_TOOLKITS,
+  FEATURE_PRIVATE_COLLECTIONS: import.meta.env
+    .VITE_FEATURE_PRIVATE_COLLECTIONS,
+  FEATURE_ATTACHMENTS: import.meta.env.VITE_FEATURE_ATTACHMENTS,
+  FEATURE_ANSWERED_BY: import.meta.env.VITE_FEATURE_ANSWERED_BY,
+  FEATURE_BETA_BADGE: import.meta.env.VITE_FEATURE_BETA_BADGE,
   CONTACT_URL: import.meta.env.VITE_CONTACT_URL,
   PRIVACY_POLICY_URL: import.meta.env.VITE_PRIVACY_POLICY_URL,
   ABOUT_US_URL: import.meta.env.VITE_ABOUT_US_URL,
@@ -95,7 +110,8 @@ const injected = (): Partial<Record<ConfigKey, string>> =>
  * Blank counts as absent, so `defaultOn` still applies. That matters because an undefined
  * GitHub Actions `${{ vars.X }}` expands to the empty string rather than to nothing: the value
  * arrives set and empty, and treating it as "off" is how a feature disappears from every
- * environment without anyone deciding it should.
+ * environment without anyone deciding it should. For the opening-scope flags the same rule
+ * points the other way: their default is off, so an unset variable hides the feature.
  */
 export const isEnabled = (key: ConfigKey, defaultOn: boolean): boolean => {
   const raw = (injected()[key] ?? BUILD_TIME[key] ?? "").trim().toLowerCase();
