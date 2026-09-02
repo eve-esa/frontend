@@ -13,6 +13,10 @@ import { Sources } from "./Sources";
 import { SharedCollections } from "./SharedCollections";
 import { MyCollections } from "./MyCollections";
 import { SharedToolkits } from "./SharedToolkits";
+import {
+  PRIVATE_COLLECTIONS_ENABLED,
+  TOOLKITS_ENABLED,
+} from "@/utilities/features";
 
 export type SidebarContentType =
   | "settings"
@@ -35,6 +39,15 @@ const MESSAGE_SCOPED_SIDEBARS = new Set<SidebarContentType>([
   "sources",
   "trace",
 ]);
+
+// The two flagged panels render nothing when their feature is off, and the
+// close control lives inside the panel, so opening the shell on one would
+// leave a blank drawer with no way to dismiss it.
+const isPanelEnabled = (type: SidebarContentType): boolean => {
+  if (type === "my-collections") return PRIVATE_COLLECTIONS_ENABLED;
+  if (type === "toolkits") return TOOLKITS_ENABLED;
+  return true;
+};
 
 type SidebarContextType = {
   isOpenDynamicSidebar: boolean;
@@ -75,6 +88,8 @@ export const DynamicSidebarProvider = ({ children }: SidebarProviderProps) => {
 
   const openDynamicSidebar = useCallback(
     (newContent: SidebarContent) => {
+      if (!isPanelEnabled(newContent.type)) return;
+
       if (
         content?.type === newContent.type &&
         isOpenDynamicSidebar &&
@@ -140,10 +155,17 @@ export const DynamicSidebarProvider = ({ children }: SidebarProviderProps) => {
         );
       case "shared-collections":
         return <SharedCollections onToggle={closeDynamicSidebar} />;
+      // Both panels stay reachable as a type so nothing else has to change.
+      // openDynamicSidebar already refuses a flagged-off one, so these two are
+      // the second line of defence rather than the only one.
       case "my-collections":
-        return <MyCollections onToggle={closeDynamicSidebar} />;
+        return isPanelEnabled("my-collections") ? (
+          <MyCollections onToggle={closeDynamicSidebar} />
+        ) : null;
       case "toolkits":
-        return <SharedToolkits onToggle={closeDynamicSidebar} />;
+        return isPanelEnabled("toolkits") ? (
+          <SharedToolkits onToggle={closeDynamicSidebar} />
+        ) : null;
       default:
         return null;
     }

@@ -11,7 +11,7 @@ import {
   LOCAL_STORAGE_SETTINGS,
 } from "@/utilities/localStorage";
 import { TourProvider } from "@/components/onboarding/TourContext";
-import { steps } from "@/utilities/onboardingSteps";
+import { buildTourSteps } from "@/utilities/onboardingSteps";
 import { useJoyride } from "@/hooks/useJoyride";
 import { useGetSharedCollection } from "@/services/useGetSharedCollection";
 import { useGetMyCollections } from "@/services/useGetMyCollections";
@@ -19,6 +19,11 @@ import {
   getCompleteCatalog,
   reconcileCollectionStorage,
 } from "@/utilities/collections";
+import { PRIVATE_COLLECTIONS_ENABLED } from "@/utilities/features";
+
+// Built once: the flags are module constants, and a stable array keeps Joyride
+// from restarting its step machine on every render.
+const steps = buildTourSteps();
 
 export const ChatLayout = () => {
   const { run, stepIndex, handleJoyrideCallback } = useJoyride();
@@ -33,7 +38,7 @@ export const ChatLayout = () => {
     hasNextPage: myHasNextPage,
     isFetchingNextPage: myIsFetchingNextPage,
     fetchNextPage: fetchNextMyPage,
-  } = useGetMyCollections({});
+  } = useGetMyCollections({ enabled: PRIVATE_COLLECTIONS_ENABLED });
 
   // Reconcile only against the full catalog: a partial one would drop the
   // stored ids that live on pages not fetched yet. Pull every page first.
@@ -56,6 +61,9 @@ export const ChatLayout = () => {
   }, [publicCollections, publicHasNextPage]);
 
   useEffect(() => {
+    // Nothing to reconcile against with the feature off: the query never runs,
+    // so an empty catalog here would mean "no data yet", not "no collections".
+    if (!PRIVATE_COLLECTIONS_ENABLED) return;
     const catalog = getCompleteCatalog(myCollections, myHasNextPage);
     if (!catalog) return;
     reconcileCollectionStorage(LOCAL_STORAGE_PRIVATE_COLLECTIONS, catalog);

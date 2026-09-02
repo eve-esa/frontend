@@ -1,3 +1,4 @@
+import { PRIVATE_COLLECTIONS_ENABLED } from "./features";
 import {
   LOCAL_STORAGE_PRIVATE_COLLECTIONS,
   LOCAL_STORAGE_PUBLIC_COLLECTIONS,
@@ -120,6 +121,10 @@ export function reconcileCollectionStorage(
 export function getMessageCollectionPayload() {
   return {
     public_collections: getEnabledCollectionIds(LOCAL_STORAGE_PUBLIC_COLLECTIONS),
-    private_collections: getEnabledCollectionIds(LOCAL_STORAGE_PRIVATE_COLLECTIONS),
+    // Empty rather than absent when the feature is off: the stored ids survive
+    // for a later flip, they simply do not reach the backend.
+    private_collections: PRIVATE_COLLECTIONS_ENABLED
+      ? getEnabledCollectionIds(LOCAL_STORAGE_PRIVATE_COLLECTIONS)
+      : [],
   };
 }

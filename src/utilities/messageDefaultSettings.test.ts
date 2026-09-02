@@ -1,5 +1,6 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { installMemoryLocalStorage } from "@/test-utils/memoryLocalStorage";
+import { stubRuntimeConfig } from "@/test-utils/runtimeConfigStub";
 import { LOCAL_STORAGE_SETTINGS } from "./localStorage";
 import {
   DEFAULT_SCORE_THRESHOLD,
@@ -85,5 +86,83 @@ describe("readStoredSettings", () => {
       startYear: 2019,
       endYear: undefined,
     });
+  });
+});
+
+describe("readStoredSettings and the classification filters flag", () => {
+  const STORED = {
+    thematic_perspective: { label: "Climate", value: "climate" },
+    scientific_and_technical: { label: "Sensors", value: "sensors" },
+    market_perspective: { label: "Agriculture", value: "agriculture" },
+    journal: "Nature",
+  };
+
+  const load = (classificationFilters: "true" | "false") => {
+    stubRuntimeConfig({
+      FEATURE_CLASSIFICATION_FILTERS: classificationFilters,
+    });
+    installMemoryLocalStorage();
+    localStorage.setItem(LOCAL_STORAGE_SETTINGS, JSON.stringify(STORED));
+    return import("./messageDefaultSettings");
+  };
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
+  it("keeps the three perspectives when the flag is on", async () => {
+    const module = await load("true");
+    const settings = module.readStoredSettings();
+
+    expect(settings.thematic_perspective).toEqual(STORED.thematic_perspective);
+    expect(settings.scientific_and_technical).toEqual(
+      STORED.scientific_and_technical,
+    );
+    expect(settings.market_perspective).toEqual(STORED.market_perspective);
+  });
+
+  it("reads past the flag rather than dropping the three perspectives", async () => {
+    // Withholding them is the payload boundary's job (see helpers.test): a
+    // read is not allowed to lose the user's choice.
+    const module = await load("false");
+    const settings = module.readStoredSettings();
+
+    expect(settings.thematic_perspective).toEqual(STORED.thematic_perspective);
+    expect(settings.scientific_and_technical).toEqual(
+      STORED.scientific_and_technical,
+    );
+    expect(settings.market_perspective).toEqual(STORED.market_perspective);
+  });
+
+  it("leaves the stored perspectives in place after a read with the flag off", async () => {
+    const module = await load("false");
+
+    // What ChatLayout does on every mount: read the settings, then write the
+    // result straight back. JSON.stringify omits undefined keys, so anything a
+    // read drops is deleted from storage rather than withheld.
+    localStorage.setItem(
+      LOCAL_STORAGE_SETTINGS,
+      JSON.stringify(module.readStoredSettings()),
+    );
+
+    expect(
+      JSON.parse(localStorage.getItem(LOCAL_STORAGE_SETTINGS) as string),
+    ).toMatchObject({
+      thematic_perspective: STORED.thematic_perspective,
+      scientific_and_technical: STORED.scientific_and_technical,
+      market_perspective: STORED.market_perspective,
+    });
+  });
+
+  it("leaves the rest of the stored settings untouched", async () => {
+    const module = await load("false");
+    const settings = module.readStoredSettings();
+
+    expect(settings.journal).toBe("Nature");
+    expect(settings.k).toBe(messageDefaultSettings.k);
+    expect(settings.score_threshold).toBe(
+      messageDefaultSettings.score_threshold,
+    );
   });
 });

@@ -11,6 +11,7 @@ import { KnowledgeBaseMenuBar } from "./KnowledgeBaseMenuBar";
 import { ToolkitsMenuBar } from "./ToolkitsMenuBar";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { routes } from "@/utilities/routes";
+import { ARTIFACTS_ENABLED, TOOLKITS_ENABLED } from "@/utilities/features";
 
 type SidebarMenuProps = {
   isOpen: boolean;
@@ -57,18 +58,23 @@ export const SidebarMenu = ({ isOpen }: SidebarMenuProps) => {
         className={`${baseStyles} ${layoutStyles} text-natural-50 hover:text-white`}
       />
 
-      <ToolkitsMenuBar
-        isOpen={isOpen}
-        className={`${baseStyles} ${layoutStyles} text-natural-50 hover:text-white`}
-      />
-
-      {isOpen ? (
-        artifactsItem
-      ) : (
-        <Tooltip side="right" disableClick={true} content={<>Artifacts</>}>
-          <div className="inline-block w-full">{artifactsItem}</div>
-        </Tooltip>
+      {/* Not rendered at all when off, so the entry point disappears together
+          with the GET /mcp-servers its catalog check would fire. */}
+      {TOOLKITS_ENABLED && (
+        <ToolkitsMenuBar
+          isOpen={isOpen}
+          className={`${baseStyles} ${layoutStyles} text-natural-50 hover:text-white`}
+        />
       )}
+
+      {ARTIFACTS_ENABLED &&
+        (isOpen ? (
+          artifactsItem
+        ) : (
+          <Tooltip side="right" disableClick={true} content={<>Artifacts</>}>
+            <div className="inline-block w-full">{artifactsItem}</div>
+          </Tooltip>
+        ))}
 
       <ProfileMenubar
         isLoadingProfile={isLoadingProfile}

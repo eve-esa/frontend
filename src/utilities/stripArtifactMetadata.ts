@@ -8,6 +8,11 @@
  * line (including the markdown link itself) untouched.
  */
 export const stripArtifactMetadata = (text: string): string => {
+  // Belt and braces next to getSourceText's asText: a persisted document can
+  // hold a non-string where the type says string, and `.split` on it would take
+  // the whole Sources panel down.
+  if (typeof text !== "string") return "";
+
   return text
     .split("\n")
     .filter((line) => {

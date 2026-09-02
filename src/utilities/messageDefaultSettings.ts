@@ -67,6 +67,12 @@ const parseStoredSettings = (): Record<string, unknown> => {
  * Settings as the user set them, merged over messageDefaultSettings so every
  * key is present, with numeric fields clamped to the ranges the UI allows.
  * Tolerates missing or corrupt localStorage content.
+ *
+ * The three classification perspectives are read past a flagged-off feature,
+ * not dropped here: ChatLayout re-serialises this result into localStorage on
+ * every mount and JSON.stringify omits undefined keys, so dropping them would
+ * erase the user's choice rather than withhold it. helpers.ts keeps them out of
+ * the request instead, the way collections.ts does for private collections.
  */
 export const readStoredSettings = (): AdvancedSettingsValidation => {
   const stored = parseStoredSettings();

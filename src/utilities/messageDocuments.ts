@@ -11,13 +11,42 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 export const NO_SOURCE_TEXT = "No text";
 
 /**
+ * A field that can actually be rendered as text: a non-empty string, or a list
+ * of strings joined by newline. Anything else is undefined, so the chain below
+ * keeps looking.
+ *
+ * The types say these fields are strings. Persisted documents disagree: a Wiley
+ * source can carry an object or a list in payload.content, which used to travel
+ * all the way to stripArtifactMetadata and take the whole Sources panel down on
+ * `text.split`.
+ */
+const asText = (value: unknown): string | undefined => {
+  if (typeof value === "string") {
+    return value.trim() ? value : undefined;
+  }
+  if (
+    Array.isArray(value) &&
+    value.length > 0 &&
+    value.every((entry) => typeof entry === "string")
+  ) {
+    const joined = (value as string[]).join("\n");
+    return joined.trim() ? joined : undefined;
+  }
+  return undefined;
+};
+
+/**
  * Text to render for a source. Backend versions differ in where the chunk
  * body lives: agentic messages persist payload.text (sometimes
  * payload.content), classic ones the top-level text. content wins, then
- * payload.text, then text; anything missing falls back to "No text".
+ * payload.text, then text; anything missing, blank or not renderable falls
+ * back to "No text".
  */
 export const getSourceText = (source: Document | null | undefined): string =>
-  source?.payload?.content ?? source?.payload?.text ?? source?.text ?? NO_SOURCE_TEXT;
+  asText(source?.payload?.content) ??
+  asText(source?.payload?.text) ??
+  asText(source?.text) ??
+  NO_SOURCE_TEXT;
 
 export const getRenderableDocuments = (documents: unknown): Document[] => {
   if (!Array.isArray(documents)) return [];
