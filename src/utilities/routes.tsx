@@ -1,34 +1,15 @@
 import { NotFound } from "@/pages/not-found/NotFound";
 import { ChatPage } from "@/pages/chat/ChatPage";
-import { Login } from "@/pages/login/Login";
-import { SignUp } from "@/pages/signup/Signup";
-import { ForgotPassword } from "@/pages/forgot-password/ForgotPassword";
-import { ResetPassword } from "@/pages/reset-password/ResetPassword";
-import { Verify } from "@/pages/verify/Verify";
+import { Callback } from "@/pages/callback/Callback";
 import { EmptyChat } from "@/pages/empty-chat/EmptyChat";
 import { OnboardingPage } from "@/pages/onboarding/OnboardingPage";
 import { ArtifactsPage } from "@/pages/artifacts/ArtifactsPage";
+import { CALLBACK_PATH } from "@/services/oidc";
 
 export const routes = {
-  SIGN_UP: {
-    path: "/signup",
-    element: <SignUp />,
-  },
-  LOGIN: {
-    path: "/login",
-    element: <Login />,
-  },
-  FORGOT_PASSWORD: {
-    path: "/forgot-password",
-    element: <ForgotPassword />,
-  },
-  RESET_PASSWORD: {
-    path: "/reset-password",
-    element: <ResetPassword />,
-  },
-  VERIFY: {
-    path: "/verify",
-    element: <Verify />,
+  CALLBACK: {
+    path: CALLBACK_PATH,
+    element: <Callback />,
   },
   EMPTY_CHAT: {
     path: "/",

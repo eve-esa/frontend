@@ -41,7 +41,6 @@ export type ConfigKey =
   | "FEATURE_CUSTOM_MODELS"
   | "FEATURE_STREAMING"
   | "FEATURE_CLASSIFICATION_FILTERS"
-  | "FEATURE_SELF_SIGNUP"
   // Not switches. They are here because they are per-environment values that a
   // promoted artifact cannot carry, which is the same problem the flags have.
   // They were build-time only, set on deploy-dev and on nothing else, so
@@ -50,7 +49,15 @@ export type ConfigKey =
   // through, since promote-prod republishes staging's tarball byte for byte.
   | "CONTACT_URL"
   | "PRIVACY_POLICY_URL"
-  | "ABOUT_US_URL";
+  | "ABOUT_US_URL"
+  // The OIDC provider coordinates. Per-environment by nature (each environment
+  // has its own issuer and app client), so they follow the same route as the
+  // URLs above: injected at the release stage, VITE_ fallback for local dev.
+  // Public values, not secrets: the client is a public OIDC client and both
+  // appear in every authorization redirect.
+  | "AUTH_ISSUER"
+  | "AUTH_CLIENT_ID"
+  | "AUTH_SCOPE";
 
 declare global {
   interface Window {
@@ -71,10 +78,12 @@ const BUILD_TIME: Record<ConfigKey, string | undefined> = {
   FEATURE_STREAMING: import.meta.env.VITE_FEATURE_STREAMING,
   FEATURE_CLASSIFICATION_FILTERS:
     import.meta.env.VITE_FEATURE_CLASSIFICATION_FILTERS,
-  FEATURE_SELF_SIGNUP: import.meta.env.VITE_FEATURE_SELF_SIGNUP,
   CONTACT_URL: import.meta.env.VITE_CONTACT_URL,
   PRIVACY_POLICY_URL: import.meta.env.VITE_PRIVACY_POLICY_URL,
   ABOUT_US_URL: import.meta.env.VITE_ABOUT_US_URL,
+  AUTH_ISSUER: import.meta.env.VITE_AUTH_ISSUER,
+  AUTH_CLIENT_ID: import.meta.env.VITE_AUTH_CLIENT_ID,
+  AUTH_SCOPE: import.meta.env.VITE_AUTH_SCOPE,
 };
 
 const injected = (): Partial<Record<ConfigKey, string>> =>
