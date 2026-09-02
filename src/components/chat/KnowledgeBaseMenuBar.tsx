@@ -11,6 +11,7 @@ import { useSidebar } from "./DynamicSidebarProvider";
 import { Tooltip } from "../ui/Tooltip";
 import { useTour } from "@/components/onboarding/TourContext";
 import { cn } from "@/lib/utils";
+import { PRIVATE_COLLECTIONS_ENABLED } from "@/utilities/features";
 
 type KnowledgeBaseMenuBarProps = {
   isOpen: boolean;
@@ -77,23 +78,27 @@ export const KnowledgeBaseMenuBar = ({
           >
             <span>Shared collections</span>
           </MenubarItem>
-          <div
-            className="my-collections-button-tour"
-            data-tour="my-collections-button"
-          >
-            <MenubarItem
-              onClick={() => openDynamicSidebar({ type: "my-collections" })}
+          {/* The data-tour wrapper goes with the item: an anchor left behind
+              with nothing in it is still a target the tour could point at. */}
+          {PRIVATE_COLLECTIONS_ENABLED && (
+            <div
+              className="my-collections-button-tour"
               data-tour="my-collections-button"
-              className={cn(
-                "my-collections-button-tour ",
-                content?.type === "my-collections"
-                  ? "bg-primary-500 text-white"
-                  : ""
-              )}
             >
-              <span>My collections</span>
-            </MenubarItem>
-          </div>
+              <MenubarItem
+                onClick={() => openDynamicSidebar({ type: "my-collections" })}
+                data-tour="my-collections-button"
+                className={cn(
+                  "my-collections-button-tour ",
+                  content?.type === "my-collections"
+                    ? "bg-primary-500 text-white"
+                    : ""
+                )}
+              >
+                <span>My collections</span>
+              </MenubarItem>
+            </div>
+          )}
         </MenubarContent>
       </MenubarMenu>
     </Menubar>

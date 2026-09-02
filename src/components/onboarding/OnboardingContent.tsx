@@ -5,6 +5,7 @@ import { useSidebar } from "../chat/DynamicSidebarProvider";
 import { useEffect, useState } from "react";
 import { useTour } from "@/components/onboarding/TourContext";
 import { WelcomeDialog } from "@/components/onboarding/WelcomeDialog";
+import { PRIVATE_COLLECTIONS_ENABLED } from "@/utilities/features";
 
 export const OnboardingContent = () => {
   const {
@@ -32,9 +33,11 @@ export const OnboardingContent = () => {
   }, []);
 
   const getSidebarType = (currentStep: number) => {
-    // Steps 0-4: settings sidebar
-    // Steps 5+: my-collections sidebar
-    if (currentStep <= 3) {
+    // Steps 0-3: settings sidebar
+    // Steps 4+: my-collections sidebar
+    // With private collections off those later steps are not in the tour at
+    // all (see buildTourSteps), so the settings panel stays for the whole run.
+    if (!PRIVATE_COLLECTIONS_ENABLED || currentStep <= 3) {
       return "settings";
     } else {
       return "my-collections";

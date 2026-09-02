@@ -6,6 +6,7 @@ import {
 import { routes } from "./utilities/routes";
 import { PrivateRoute } from "./route-guards/private-route/PrivateRoute";
 import { ChatLayout } from "./layouts/chat-layout/ChatLayout";
+import { ARTIFACTS_ENABLED } from "./utilities/features";
 
 export const router = createBrowserRouter(
   createRoutesFromElements(
@@ -14,7 +15,10 @@ export const router = createBrowserRouter(
         <Route element={<ChatLayout />}>
           <Route {...routes.EMPTY_CHAT} />
           <Route {...routes.CHAT} />
-          <Route {...routes.ARTIFACTS} />
+          {/* Off, the path falls through to the catch-all below and shows
+              Not found. Artifact links inside old messages go through the
+              API, not this route, so they keep working. */}
+          {ARTIFACTS_ENABLED && <Route {...routes.ARTIFACTS} />}
           <Route {...routes.ONBOARDING} />
         </Route>
       </Route>

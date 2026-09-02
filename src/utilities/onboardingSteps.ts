@@ -1,4 +1,13 @@
-export const steps = [
+import { PRIVATE_COLLECTIONS_ENABLED } from "./features";
+
+type TourStep = {
+  target: string;
+  content: string;
+  placement: "top" | "right" | "left";
+  disableBeacon: boolean;
+};
+
+const BASE_STEPS: TourStep[] = [
   {
     target: ".conversations-sidebar-tour",
     content:
@@ -25,6 +34,19 @@ export const steps = [
     placement: "left" as const,
     disableBeacon: true,
   },
+  {
+    target: ".start-new-chat-tour",
+    content:
+      "Start new chat. Write any question you have or select suggestions!",
+    placement: "top" as const,
+    disableBeacon: true,
+  },
+];
+
+// The five steps that walk through personal collections. Dropped, not skipped:
+// the tour numbers its steps from the array it is given, so leaving holes in it
+// would break every index derived from the length.
+const PRIVATE_COLLECTION_STEPS: TourStep[] = [
   {
     target: ".my-collections-button-tour",
     content:
@@ -60,11 +82,13 @@ export const steps = [
     placement: "left" as const,
     disableBeacon: true,
   },
-  {
-    target: ".start-new-chat-tour",
-    content:
-      "Start new chat. Write any question you have or select suggestions!",
-    placement: "top" as const,
-    disableBeacon: true,
-  },
 ];
+
+/**
+ * The tour, built rather than declared, because its length is what the rest of
+ * the onboarding counts from: the last step is `totalSteps - 1`, not step 9.
+ */
+export const buildTourSteps = (): TourStep[] =>
+  PRIVATE_COLLECTIONS_ENABLED
+    ? [...BASE_STEPS.slice(0, 4), ...PRIVATE_COLLECTION_STEPS, ...BASE_STEPS.slice(4)]
+    : BASE_STEPS;

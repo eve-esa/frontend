@@ -13,6 +13,10 @@ import { Sources } from "./Sources";
 import { SharedCollections } from "./SharedCollections";
 import { MyCollections } from "./MyCollections";
 import { SharedToolkits } from "./SharedToolkits";
+import {
+  PRIVATE_COLLECTIONS_ENABLED,
+  TOOLKITS_ENABLED,
+} from "@/utilities/features";
 
 export type SidebarContentType =
   | "settings"
@@ -140,10 +144,16 @@ export const DynamicSidebarProvider = ({ children }: SidebarProviderProps) => {
         );
       case "shared-collections":
         return <SharedCollections onToggle={closeDynamicSidebar} />;
+      // Both panels stay reachable as a type so nothing else has to change,
+      // but a flagged-off one renders nothing rather than its content.
       case "my-collections":
-        return <MyCollections onToggle={closeDynamicSidebar} />;
+        return PRIVATE_COLLECTIONS_ENABLED ? (
+          <MyCollections onToggle={closeDynamicSidebar} />
+        ) : null;
       case "toolkits":
-        return <SharedToolkits onToggle={closeDynamicSidebar} />;
+        return TOOLKITS_ENABLED ? (
+          <SharedToolkits onToggle={closeDynamicSidebar} />
+        ) : null;
       default:
         return null;
     }

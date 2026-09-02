@@ -41,6 +41,7 @@ import { useListModels } from "@/services/useListModels";
 import { updateLastTempMessage } from "@/services/agenticMessage";
 import { CustomModelsDialog } from "./CustomModelsDialog";
 import {
+  ATTACHMENTS_ENABLED,
   CUSTOM_MODELS_ENABLED,
   MODEL_PICKER_ENABLED,
 } from "@/utilities/features";
@@ -132,7 +133,7 @@ export const MessageInput = ({
   sendRequest,
   suggestions,
 }: MessageInputProps) => {
-  const { isRunning, currentStep } = useTour();
+  const { isRunning, currentStep, totalSteps } = useTour();
   const { handleSubmit, reset, setValue, control } = useForm({
     defaultValues: {
       input: "",
@@ -277,6 +278,10 @@ export const MessageInput = ({
   }, []);
 
   const handlePaste = (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    // Third of the four ways in. Returning early leaves the paste as a normal
+    // text paste rather than swallowing the event.
+    if (!ATTACHMENTS_ENABLED) return;
+
     const images = Array.from(event.clipboardData?.items ?? [])
       .filter((item) => item.kind === "file" && item.type.startsWith("image/"))
       .map((item) => item.getAsFile())
@@ -326,6 +331,9 @@ export const MessageInput = ({
     multiple: true,
     noClick: true,
     noKeyboard: true,
+    // Same option DocumentUploader uses: the root props stay in place, the drop
+    // is inert and the drag highlight never turns on.
+    disabled: !ATTACHMENTS_ENABLED,
   });
 
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -431,7 +439,9 @@ export const MessageInput = ({
   };
 
   useEffect(() => {
-    if (currentStep === 9 && isRunning) {
+    // The last step is the "start new chat" one, wherever it lands: the tour is
+    // shorter when private collections are off, so its index is derived, not 9.
+    if (currentStep === totalSteps - 1 && isRunning) {
       setShowSuggestions(true);
     }
   }, [currentStep]);
@@ -479,18 +489,20 @@ export const MessageInput = ({
             )}
             data-tour="start-new-chat-tour"
           >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,text/csv,text/plain,application/json,.pdf,.csv,.txt,.json,.geojson"
-              multiple
-              className="hidden"
-              data-testid="attach-image-input"
-              onChange={(e) => {
-                addFiles(Array.from(e.target.files ?? []));
-                e.target.value = "";
-              }}
-            />
+            {ATTACHMENTS_ENABLED && (
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,text/csv,text/plain,application/json,.pdf,.csv,.txt,.json,.geojson"
+                multiple
+                className="hidden"
+                data-testid="attach-image-input"
+                onChange={(e) => {
+                  addFiles(Array.from(e.target.files ?? []));
+                  e.target.value = "";
+                }}
+              />
+            )}
             <Textarea
               ref={textareaRef}
               value={inputValue}
@@ -632,23 +644,25 @@ export const MessageInput = ({
                     <FontAwesomeIcon icon={faSliders} className="size-4" />
                   </Button>
                 </Tooltip>
-                <Tooltip content={<>Attach files</>} disableClick={true}>
-                  <Button
-                    type="button"
-                    variant="icon"
-                    size="sm"
-                    aria-label="Attach files"
-                    data-testid="attach-image-button"
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      fileInputRef.current?.click();
-                    }}
-                    className="h-8 w-8 p-0 cursor-pointer"
-                  >
-                    <FontAwesomeIcon icon={faPaperclip} className="size-4" />
-                  </Button>
-                </Tooltip>
+                {ATTACHMENTS_ENABLED && (
+                  <Tooltip content={<>Attach files</>} disableClick={true}>
+                    <Button
+                      type="button"
+                      variant="icon"
+                      size="sm"
+                      aria-label="Attach files"
+                      data-testid="attach-image-button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        fileInputRef.current?.click();
+                      }}
+                      className="h-8 w-8 p-0 cursor-pointer"
+                    >
+                      <FontAwesomeIcon icon={faPaperclip} className="size-4" />
+                    </Button>
+                  </Tooltip>
+                )}
               </div>
               <div className="pointer-events-auto flex items-center gap-1">
                 {tokenRing}

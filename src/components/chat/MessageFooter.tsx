@@ -38,6 +38,7 @@ import { getRenderableDocuments } from "@/utilities/messageDocuments";
 import { useListModels } from "@/services/useListModels";
 import { resolveCustomModelDisplayName } from "@/utilities/modelSelection";
 import { buildHallucinationCopyText } from "@/utilities/buildHallucinationCopyText";
+import { ANSWERED_BY_ENABLED } from "@/utilities/features";
 
 type Hallucination = NonNullable<MessageType["hallucination"]>;
 
@@ -437,6 +438,11 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
     openDynamicSidebar({ type: panelType, props });
   };
 
+  // Once, not twice: the label was computed again inside its own guard.
+  const answeredByLabel = ANSWERED_BY_ENABLED
+    ? getAnsweredByLabel(message, models)
+    : undefined;
+
   return (
     <div>
       <div
@@ -498,9 +504,9 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
             </Button>
             {/* No label, no claim: an optimistic message has no attribution
                 data yet, and "Unknown model" read as an error. */}
-            {getAnsweredByLabel(message, models) && (
+            {answeredByLabel && (
               <div className="text-sm text-natural-500">
-                Answered by: {getAnsweredByLabel(message, models)}
+                Answered by: {answeredByLabel}
                 {message?.metadata?.generated_model_name &&
                   ` (${message.metadata.generated_model_name})`}
                 {message?.metadata?.prompts?.custom_model_name &&
