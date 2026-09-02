@@ -84,3 +84,12 @@ export const ANSWERED_BY_ENABLED = isEnabled("FEATURE_ANSWERED_BY", false);
 
 /** The beta badge next to the logo in the sidebar header. */
 export const BETA_BADGE_ENABLED = isEnabled("FEATURE_BETA_BADGE", false);
+
+/**
+ * The "Welcome to EVE" dialog shown once per browser on the empty chat screen.
+ *
+ * Seventh opening-scope flag, same default-off shape as the six above. The dialog is a pilot-era
+ * introduction: useful while the audience is the team, noise for anyone arriving at a public
+ * opening, and it is the first thing a new user sees before they have typed anything.
+ */
+export const WELCOME_DIALOG_ENABLED = isEnabled("FEATURE_WELCOME_DIALOG", false);

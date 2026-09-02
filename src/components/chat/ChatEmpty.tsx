@@ -14,6 +14,7 @@ import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { prefetchTokenUsage } from "@/services/useTokenUsage";
 import { WelcomeDialog } from "../onboarding/WelcomeDialog";
+import { WELCOME_DIALOG_ENABLED } from "@/utilities/features";
 
 export const ChatEmpty = () => {
   const navigate = useNavigate();
@@ -69,7 +70,7 @@ export const ChatEmpty = () => {
         </div>
       </div>
 
-      {isOpenWelcomeDialog && (
+      {WELCOME_DIALOG_ENABLED && isOpenWelcomeDialog && (
         <WelcomeDialog
           isOpen={isOpenWelcomeDialog}
           onOpenChange={handleWelcomeDialogClose}

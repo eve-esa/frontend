@@ -153,3 +153,20 @@ describe("the opening-scope flags", () => {
     expect(features.CLASSIFICATION_FILTERS_ENABLED).toBe(true);
   });
 });
+
+describe("FEATURE_WELCOME_DIALOG", () => {
+  it("is off when nothing sets it", async () => {
+    const { WELCOME_DIALOG_ENABLED } = await loadFeatures({});
+    expect(WELCOME_DIALOG_ENABLED).toBe(false);
+  });
+
+  it("is off when the injected value is blank, which is what an unset GitHub variable sends", async () => {
+    const { WELCOME_DIALOG_ENABLED } = await loadFeatures({ FEATURE_WELCOME_DIALOG: "" });
+    expect(WELCOME_DIALOG_ENABLED).toBe(false);
+  });
+
+  it("is on only when an environment opts in", async () => {
+    const { WELCOME_DIALOG_ENABLED } = await loadFeatures({ FEATURE_WELCOME_DIALOG: "true" });
+    expect(WELCOME_DIALOG_ENABLED).toBe(true);
+  });
+});
