@@ -167,3 +167,87 @@ describe("settings pass-through", () => {
     expect(payload.score_threshold).toBe(0.9);
   });
 });
+
+describe("classification filters with the flag off", () => {
+  const PERSPECTIVES = {
+    thematic_perspective: { label: "Climate", value: "climate" },
+    scientific_and_technical: { label: "Sensors", value: "sensors" },
+    market_perspective: { label: "Agriculture", value: "agriculture" },
+  };
+
+  let adaptSettingsForRequest: typeof import("@/utilities/helpers").adaptSettingsForRequest;
+  let readStoredSettings: typeof import("@/utilities/messageDefaultSettings").readStoredSettings;
+
+  // The whole path a perspective would have to travel to reach the backend:
+  // Chat reads storage and adapts, useSendRequest builds the payload from what
+  // it is handed. Both endpoints run through it, only the MCP selection differs.
+  const sentRequest = (conversationId: string) => {
+    const settings = { ...adaptSettingsForRequest(readStoredSettings()) };
+    const { url, extraPayload } = resolveMessageEndpoint(
+      conversationId,
+      getSelectedMcpServerNames(),
+      "stream",
+    );
+    const payload: Record<string, unknown> = {
+      ...buildGenerationPayload({ query: "hello", settings, models: MODELS }),
+      ...extraPayload,
+    };
+    return { url, payload };
+  };
+
+  const mustKeys = (payload: Record<string, unknown>) => {
+    const requestFilters = payload.filters as
+      | { must?: { key: string }[] }
+      | undefined;
+    return (requestFilters?.must ?? []).map((entry) => entry.key);
+  };
+
+  beforeEach(async () => {
+    stubRuntimeConfig({
+      FEATURE_TOOLKITS: "true",
+      FEATURE_CLASSIFICATION_FILTERS: "false",
+    });
+    ({ buildGenerationPayload } = await import("./agenticMessage"));
+    ({ getSelectedMcpServerNames } = await import("@/utilities/mcpServers"));
+    ({ adaptSettingsForRequest } = await import("@/utilities/helpers"));
+    ({ readStoredSettings } = await import(
+      "@/utilities/messageDefaultSettings"
+    ));
+
+    installMemoryLocalStorage();
+    // journal is the control: an unrelated filter the flag must not touch.
+    seed(LOCAL_STORAGE_SETTINGS, {
+      ...SETTINGS,
+      ...PERSPECTIVES,
+      journal: "Nature",
+    });
+    seed(LOCAL_STORAGE_MODEL_SELECTION, {
+      type: "platform",
+      id: "eve-instruct",
+    });
+  });
+
+  it("keeps the three perspectives out of the classic request", () => {
+    const { url, payload } = sentRequest("conv-1");
+
+    expect(url).toBe("/conversations/conv-1/stream_messages");
+    expect(mustKeys(payload)).toEqual(["journal"]);
+  });
+
+  it("keeps them out of the agentic request too", () => {
+    seed(LOCAL_STORAGE_MCP_SERVERS, ["weather"]);
+
+    const { url, payload } = sentRequest("conv-2");
+
+    expect(url).toBe("/conversations/conv-2/stream-generate-agentic");
+    expect(mustKeys(payload)).toEqual(["journal"]);
+  });
+
+  it("leaves the stored perspectives where they are", () => {
+    sentRequest("conv-1");
+
+    expect(
+      JSON.parse(localStorage.getItem(LOCAL_STORAGE_SETTINGS) as string),
+    ).toMatchObject(PERSPECTIVES);
+  });
+});

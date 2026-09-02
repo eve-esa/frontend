@@ -1,5 +1,4 @@
 import type { AdvancedSettingsValidation } from "./advancedSettingsSchema";
-import { CLASSIFICATION_FILTERS_ENABLED } from "./features";
 import { LOCAL_STORAGE_SETTINGS } from "./localStorage";
 
 // Frontend defaults are the source of truth for the chat (k=10,
@@ -69,12 +68,11 @@ const parseStoredSettings = (): Record<string, unknown> => {
  * key is present, with numeric fields clamped to the ranges the UI allows.
  * Tolerates missing or corrupt localStorage content.
  *
- * The one place the three classification perspectives are dropped when the flag
- * is off. They are not a top-level payload field: helpers.ts turns each set one
- * into a filters.must[] entry, so undefined here is what keeps them out of both
- * the classic and the agentic request. A value left in localStorage from before
- * the flag flipped is cleaned up by ChatLayout, which re-serialises this on
- * mount.
+ * The three classification perspectives are read past a flagged-off feature,
+ * not dropped here: ChatLayout re-serialises this result into localStorage on
+ * every mount and JSON.stringify omits undefined keys, so dropping them would
+ * erase the user's choice rather than withhold it. helpers.ts keeps them out of
+ * the request instead, the way collections.ts does for private collections.
  */
 export const readStoredSettings = (): AdvancedSettingsValidation => {
   const stored = parseStoredSettings();
@@ -82,14 +80,6 @@ export const readStoredSettings = (): AdvancedSettingsValidation => {
     string,
     unknown
   >;
-
-  const classification = CLASSIFICATION_FILTERS_ENABLED
-    ? {}
-    : {
-        thematic_perspective: undefined,
-        scientific_and_technical: undefined,
-        market_perspective: undefined,
-      };
 
   return {
     ...(merged as AdvancedSettingsValidation),
@@ -109,6 +99,5 @@ export const readStoredSettings = (): AdvancedSettingsValidation => {
       clampNumber(merged.k, 0, MAX_K, messageDefaultSettings.k ?? MAX_K),
     ),
     year: normalizeYear(merged.year),
-    ...classification,
   };
 };

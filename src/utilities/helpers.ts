@@ -1,4 +1,5 @@
 import type { AdvancedSettingsValidation } from "./advancedSettingsSchema";
+import { CLASSIFICATION_FILTERS_ENABLED } from "./features";
 import { filters } from "./filters";
 import type { ApiError } from "@/types";
 
@@ -54,37 +55,43 @@ export const adaptSettingsForRequest = (
     });
   }
 
-  // Thematic perspective filter (match)
-  if (thematic_perspective) {
-    filtersArray.push({
-      ...filters.thematic_perspective,
-      match: {
-        ...filters.thematic_perspective.match,
-        value: thematic_perspective.label,
-      },
-    });
-  }
+  // The three classification perspectives, behind one flag. This is where they
+  // are withheld rather than in readStoredSettings: it is the only boundary
+  // they cross on the way out, for the classic and the agentic pipeline alike,
+  // and the stored values survive here for a later flip.
+  if (CLASSIFICATION_FILTERS_ENABLED) {
+    // Thematic perspective filter (match)
+    if (thematic_perspective) {
+      filtersArray.push({
+        ...filters.thematic_perspective,
+        match: {
+          ...filters.thematic_perspective.match,
+          value: thematic_perspective.label,
+        },
+      });
+    }
 
-  // Scientific and technical filter (match)
-  if (scientific_and_technical) {
-    filtersArray.push({
-      ...filters.scientific_and_technical,
-      match: {
-        ...filters.scientific_and_technical.match,
-        value: scientific_and_technical.label,
-      },
-    });
-  }
+    // Scientific and technical filter (match)
+    if (scientific_and_technical) {
+      filtersArray.push({
+        ...filters.scientific_and_technical,
+        match: {
+          ...filters.scientific_and_technical.match,
+          value: scientific_and_technical.label,
+        },
+      });
+    }
 
-  // Market perspective filter (match)
-  if (market_perspective) {
-    filtersArray.push({
-      ...filters.market_perspective,
-      match: {
-        ...filters.market_perspective.match,
-        value: market_perspective.label,
-      },
-    });
+    // Market perspective filter (match)
+    if (market_perspective) {
+      filtersArray.push({
+        ...filters.market_perspective,
+        match: {
+          ...filters.market_perspective.match,
+          value: market_perspective.label,
+        },
+      });
+    }
   }
 
   // Min citations filter (range): only when the user asked for a minimum.
