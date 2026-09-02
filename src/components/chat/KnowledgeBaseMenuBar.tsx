@@ -53,7 +53,12 @@ export const KnowledgeBaseMenuBar = ({
 
   return (
     <Menubar>
-      <MenubarMenu {...(isRunning && { open: isRunning })}>
+      {/* The dropdown is pinned open for the tour because five of its steps
+          point inside it. With private collections off those steps are gone,
+          and a menu left open would only overlap the steps that remain. */}
+      <MenubarMenu
+        {...(PRIVATE_COLLECTIONS_ENABLED && isRunning && { open: isRunning })}
+      >
         {!isOpen ? (
           <Tooltip
             side="right"
