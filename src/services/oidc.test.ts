@@ -200,4 +200,25 @@ describe("signoutRedirect", () => {
     expect(buildSignoutArgs("", "client", ORIGIN)).toBeUndefined();
     expect(buildSignoutArgs("not a url", "client", ORIGIN)).toBeUndefined();
   });
+
+  it("is not fooled by hosts that merely contain amazonaws.com", async () => {
+    const { buildSignoutArgs } = await loadOidc({});
+    expect(
+      buildSignoutArgs("https://evil-amazonaws.com/pool", "client", ORIGIN)
+    ).toBeUndefined();
+    expect(
+      buildSignoutArgs(
+        "https://amazonaws.com.attacker.com/pool",
+        "client",
+        ORIGIN
+      )
+    ).toBeUndefined();
+    expect(
+      buildSignoutArgs(
+        "https://attacker.com/cognito-idp.eu-west-1.amazonaws.com",
+        "client",
+        ORIGIN
+      )
+    ).toBeUndefined();
+  });
 });

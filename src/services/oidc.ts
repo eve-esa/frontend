@@ -58,10 +58,15 @@ export const renewToken = (): Promise<User | null> => {
   return renewInFlight;
 };
 
+// Anchored on the parsed hostname with a leading dot: a bare
+// endsWith("amazonaws.com") would also match evil-amazonaws.com, and testing
+// the raw issuer string would match amazonaws.com.attacker.com paths
+// (CodeQL js/incomplete-url-substring-sanitization).
 const isCognitoIssuer = (issuer: string): boolean => {
   try {
-    return new URL(issuer).hostname.endsWith("amazonaws.com");
+    return new URL(issuer).hostname.endsWith(".amazonaws.com");
   } catch {
+    // Not a URL at all: treat as a generic provider.
     return false;
   }
 };
