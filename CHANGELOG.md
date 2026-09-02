@@ -16,6 +16,19 @@ Release and promotes staging. Production is promoted from there by an explicit d
 The `[1.0.0]` entry below is historical and predates this repository's current version series. The
 released tags run `v0.0.1` through `v0.0.6`; no `v1.0.0` was ever tagged here.
 
+## [0.0.11](https://github.com/eve-esa/frontend/compare/v0.0.10...v0.0.11) (2026-09-02)
+
+
+### Added
+
+* **flags:** six opening-scope feature flags, and four fixes ([#73](https://github.com/eve-esa/frontend/issues/73)) ([9ded935](https://github.com/eve-esa/frontend/commit/9ded9353479c5e728bbd66c9349e256d6fb7df0f))
+* sign in through the identity provider ([#71](https://github.com/eve-esa/frontend/issues/71)) ([4b9f39b](https://github.com/eve-esa/frontend/commit/4b9f39b4ec5cedc45bd23764427a1867cc3f0ecf))
+
+
+### Fixed
+
+* **chat:** keep the partial answer visible after a stop ([#74](https://github.com/eve-esa/frontend/issues/74)) ([5d98164](https://github.com/eve-esa/frontend/commit/5d98164ebc89d6f64be8f9515c0c5266286cf382))
+
 ## [0.0.10](https://github.com/eve-esa/frontend/compare/v0.0.9...v0.0.10) (2026-09-01)
 
 
