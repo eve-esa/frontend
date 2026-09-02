@@ -10,8 +10,8 @@ inputs:
     description: >-
       The configuration, as a JSON object of string values. Keys must match ConfigKey in
       src/utilities/runtimeConfig.ts. Blank values are treated as absent by the app, so a key
-      whose GitHub variable is undefined falls back to the code's default rather than reading
-      as "off".
+      whose GitHub variable is undefined falls back to the code's default: ON for the four
+      original flags, OFF for the six opening-scope flags.
     required: true
   dist-path:
     description: Directory holding the built site.

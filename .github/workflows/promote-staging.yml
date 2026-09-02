@@ -144,7 +144,8 @@ jobs:
       # The release stage: one build is promoted unchanged across environments, so anything
       # that differs between them is combined with the artifact here rather than baked in.
       # An undefined variable expands to the empty string, which the app treats as absent and
-      # falls back to the code's default -- it does not read as "off".
+      # falls back to the code's default: ON for the four original flags, OFF for the six
+      # opening-scope flags.
       - name: Inject runtime config
         uses: ./.github/actions/inject-runtime-config
         with:
@@ -154,6 +155,12 @@ jobs:
               "FEATURE_CUSTOM_MODELS": "${{ vars.FEATURE_CUSTOM_MODELS }}",
               "FEATURE_STREAMING": "${{ vars.FEATURE_STREAMING }}",
               "FEATURE_CLASSIFICATION_FILTERS": "${{ vars.FEATURE_CLASSIFICATION_FILTERS }}",
+              "FEATURE_ARTIFACTS": "${{ vars.FEATURE_ARTIFACTS }}",
+              "FEATURE_TOOLKITS": "${{ vars.FEATURE_TOOLKITS }}",
+              "FEATURE_PRIVATE_COLLECTIONS": "${{ vars.FEATURE_PRIVATE_COLLECTIONS }}",
+              "FEATURE_ATTACHMENTS": "${{ vars.FEATURE_ATTACHMENTS }}",
+              "FEATURE_ANSWERED_BY": "${{ vars.FEATURE_ANSWERED_BY }}",
+              "FEATURE_BETA_BADGE": "${{ vars.FEATURE_BETA_BADGE }}",
               "CONTACT_URL": "${{ vars.VITE_CONTACT_URL }}",
               "PRIVACY_POLICY_URL": "${{ vars.VITE_PRIVACY_POLICY_URL }}",
               "ABOUT_US_URL": "${{ vars.VITE_ABOUT_US_URL }}",
