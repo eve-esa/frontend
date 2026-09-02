@@ -20,29 +20,22 @@ export const WelcomeDialog = ({ isOpen, onOpenChange }: WelcomeDialogProps) => {
           <DialogTitle>Welcome to the pilot program of EVE!</DialogTitle>
         </DialogHeader>
         <DialogDescription>
-          Meet EVE, your intelligent companion for exploring the world of Earth
-          Observation and Earth Sciences. Powered by the Mistral 3.1 24B model,
-          fine-tuned specifically for ESA, EVE helps you uncover insights,
-          connect knowledge, and ask questions in natural language — just like
-          talking to a domain expert.
+          Meet EVE, your intelligent companion for exploring Earth Observation
+          and Earth Sciences. EVE helps you uncover insights, connect knowledge
+          and ask questions in natural language, much like talking to a domain
+          expert.
           <br />
           <br />
-          With its advanced Retrieval-Augmented Generation (RAG) system, EVE
-          combines cutting-edge reasoning with access to trusted sources such as
-          ESA’s own portals, high-quality datasets, and the latest peer-reviewed
-          research, ensuring your answers are both relevant and up to date.
+          With its Retrieval-Augmented Generation (RAG) system, EVE combines
+          reasoning with access to trusted sources such as ESA&rsquo;s own
+          portals, high-quality datasets and recent peer-reviewed research, so
+          answers stay relevant and current.
           <br />
           <br />
-          As part of this pilot phase running until the end of 2025, you’ll have
-          early access to the platform’s newest features — an intuitive chat
-          interface, session memory, and integrated feedback tools. You’ll also
-          be invited to share your experience through quick surveys, interviews,
-          and online or in-person workshops. Your participation will directly
-          shape the future of EVE — and the next generation of AI for Earth.
-          <br />
-          <br />
-          Your participation will directly shape the future of EVE — and the
-          next generation of AI for Earth.
+          You will have early access to the newest features, and you are invited
+          to share your experience through surveys, interviews and workshops.
+          Your participation will directly shape the future of EVE, and the next
+          generation of AI for Earth.
         </DialogDescription>
         <div className="flex gap-2 justify-end">
           <Button
