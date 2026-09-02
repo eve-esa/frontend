@@ -320,13 +320,15 @@ export const Message = ({
         </div>
 
         {/* FOOTER SECTION */}
-        <div className="pt-8">
-          {/* A turn that produced no output has nothing to attribute or
-              hallucination-check: no footer. */}
-          {!showLoading && Boolean(message.output) && (
+        {/* A turn that produced no output has nothing to attribute or
+            hallucination-check: no footer, and no padding for it either. The
+            spacer used to render unconditionally, leaving 2rem of nothing
+            under a stopped or failed message. */}
+        {!showLoading && Boolean(message.output) && (
+          <div className="pt-8">
             <MessageFooter message={message} />
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {lightboxIndex !== null && (
