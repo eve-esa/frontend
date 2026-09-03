@@ -81,6 +81,20 @@
     }
   }
 }
+
+/* Page canvas */
+@layer base {
+  html,
+  body {
+    /* The app is a fixed 100dvh shell that never scrolls: every list scrolls
+       inside it. Without these two, hitting the end of one of those lists
+       chains the overscroll up to the document, and the elastic bounce drags
+       the whole page down to show the white canvas underneath. */
+    overscroll-behavior: none;
+    background-color: var(--color-primary-600);
+  }
+}
+
 /* Custom Scrollbar Styles */
 @layer components {
   ::-webkit-scrollbar {
