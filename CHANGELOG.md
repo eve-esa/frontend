@@ -16,6 +16,13 @@ Release and promotes staging. Production is promoted from there by an explicit d
 The `[1.0.0]` entry below is historical and predates this repository's current version series. The
 released tags run `v0.0.1` through `v0.0.6`; no `v1.0.0` was ever tagged here.
 
+## [0.0.13](https://github.com/eve-esa/frontend/compare/v0.0.12...v0.0.13) (2026-09-03)
+
+
+### Fixed
+
+* **ui:** stop the page bouncing past the app and showing white ([#77](https://github.com/eve-esa/frontend/issues/77)) ([49894c9](https://github.com/eve-esa/frontend/commit/49894c95bba6540d44f13b8e0a2a7b579fba44bb))
+
 ## [0.0.12](https://github.com/eve-esa/frontend/compare/v0.0.11...v0.0.12) (2026-09-02)
 
 
