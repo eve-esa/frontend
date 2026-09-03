@@ -16,6 +16,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect } from "react";
 import { useUpdateProfile } from "@/services/useUpdateProfile";
+import { AppVersion } from "@/components/ui/AppVersion";
 
 type ProfileDialogProps = {
   isOpen: boolean;
@@ -127,23 +128,37 @@ export const ProfileDialog = ({ isOpen, onOpenChange }: ProfileDialogProps) => {
             </div>
           </div>
 
-          <div className="flex gap-2 justify-end mt-4">
-            <Button
-              tabIndex={-1}
-              variant="ghost"
-              size="md"
-              onClick={() => onOpenChange(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              disabled={isPending || !isValid || !isDirty}
-              tabIndex={-1}
-              size="md"
-              type="submit"
-            >
-              Update Profile
-            </Button>
+          {/* The running version and commit. They used to sit in the footer of
+              the app's own login page, which moving sign-in to the identity
+              provider deleted, leaving AppVersion imported by nothing and
+              therefore tree-shaken out of the bundle entirely. Sharing the
+              button row costs no vertical space and keeps it out of the way.
+
+              ml-auto on the buttons rather than justify-end on the row:
+              AppVersion renders nothing when neither value is set, which is
+              every local build, and justify-between would then pull the buttons
+              to the left. */}
+          <div className="flex items-center gap-2 mt-4">
+            <AppVersion className="text-left" />
+
+            <div className="flex gap-2 ml-auto">
+              <Button
+                tabIndex={-1}
+                variant="ghost"
+                size="md"
+                onClick={() => onOpenChange(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                disabled={isPending || !isValid || !isDirty}
+                tabIndex={-1}
+                size="md"
+                type="submit"
+              >
+                Update Profile
+              </Button>
+            </div>
           </div>
         </form>
       </DialogContent>
