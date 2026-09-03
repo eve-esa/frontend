@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useTour } from "@/components/onboarding/TourContext";
 import { WelcomeDialog } from "@/components/onboarding/WelcomeDialog";
 import { PRIVATE_COLLECTIONS_ENABLED } from "@/utilities/features";
+import { LOCAL_STORAGE_WELCOME_DIALOG_VIEWED } from "@/utilities/localStorage";
 
 export const OnboardingContent = () => {
   const {
@@ -19,8 +20,16 @@ export const OnboardingContent = () => {
   const [isOpenWelcomeDialog, setIsOpenWelcomeDialog] = useState(true);
 
   const handleWelcomeDialogClose = () => {
+    // ChatEmpty mounts this same dialog on "/" and decides whether to open it by
+    // reading this key, and the tour navigates to "/" the moment it is skipped
+    // or finished. Without this write the user closes the dialog here and meets
+    // it again seconds later, which is exactly what 1745786 introduced when it
+    // dropped the line. It does not conflict with the dialog always appearing on
+    // /onboarding: that is the useState above, which never reads the key.
+    localStorage.setItem(LOCAL_STORAGE_WELCOME_DIALOG_VIEWED, "true");
     setIsOpenWelcomeDialog(false);
-    // Signal joyride to start without persisting any state
+    // The tour's only trigger: useJoyride listens for this event and has no
+    // other way to start on this page.
     window.dispatchEvent(new CustomEvent("welcome-dialog-closed"));
   };
 
