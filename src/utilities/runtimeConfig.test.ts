@@ -170,3 +170,24 @@ describe("FEATURE_WELCOME_DIALOG", () => {
     expect(WELCOME_DIALOG_ENABLED).toBe(true);
   });
 });
+
+describe("FEATURE_STREAM_STATUS_NOTICES", () => {
+  it("is off when nothing sets it", async () => {
+    const { STREAM_STATUS_NOTICES_ENABLED } = await loadFeatures({});
+    expect(STREAM_STATUS_NOTICES_ENABLED).toBe(false);
+  });
+
+  it("is off when the injected value is blank, which is what an unset GitHub variable sends", async () => {
+    const { STREAM_STATUS_NOTICES_ENABLED } = await loadFeatures({
+      FEATURE_STREAM_STATUS_NOTICES: "",
+    });
+    expect(STREAM_STATUS_NOTICES_ENABLED).toBe(false);
+  });
+
+  it("is on only when an environment opts in", async () => {
+    const { STREAM_STATUS_NOTICES_ENABLED } = await loadFeatures({
+      FEATURE_STREAM_STATUS_NOTICES: "true",
+    });
+    expect(STREAM_STATUS_NOTICES_ENABLED).toBe(true);
+  });
+});
