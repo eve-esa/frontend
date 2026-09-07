@@ -18,7 +18,7 @@ export const LogoutDialog = ({ isOpen, onOpenChange }: LogoutDialogProps) => {
   const onSuccess = () => {
     onOpenChange(false);
   };
-  const { mutate: logout, isPending } = useLogout(onSuccess);
+  const { mutate: logout, isPending, isError } = useLogout(onSuccess);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -27,6 +27,11 @@ export const LogoutDialog = ({ isOpen, onOpenChange }: LogoutDialogProps) => {
           <DialogTitle>Logout</DialogTitle>
         </DialogHeader>
         <DialogDescription>Are you sure you want to logout?</DialogDescription>
+        {isError && (
+          <p className="text-sm text-danger-400">
+            Logout failed. Please try again.
+          </p>
+        )}
         <div className="flex gap-2 justify-end">
           <Button
             variant="ghost"

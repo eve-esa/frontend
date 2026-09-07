@@ -89,19 +89,42 @@ export const buildSignoutArgs = (
     ? { extraQueryParams: { client_id: clientId, logout_uri: origin } }
     : undefined;
 
+let signoutInProgress = false;
+
 /**
- * End the IdP session and redirect back to the app origin.
- *
- * The stored user is removed BEFORE the redirect: with a user still in the
- * store the library appends its id_token as `id_token_hint`, leaking a token
- * into the logout URL and browser history. The price is that Keycloak may
- * show a logout confirmation screen; acceptable.
+ * True once a sign-out has started. PrivateRoute and the axios 401 handler
+ * consult it so neither starts a competing signinRedirect. The redirect
+ * navigator only resolves on pageshow, so in the success case this stays
+ * true for the remaining life of the page.
  */
-export const signoutRedirect = async (): Promise<void> => {
-  await userManager.removeUser();
-  return userManager.signoutRedirect(
-    buildSignoutArgs(AUTH_ISSUER, AUTH_CLIENT_ID, PAGE_ORIGIN)
-  );
+export const isSignoutInProgress = (): boolean => signoutInProgress;
+
+/**
+ * Only for a redirect that never left the page (metadata fetch failure and
+ * the like): clears the latch so the app can recover.
+ */
+export const endSignout = (): void => {
+  signoutInProgress = false;
+};
+
+/**
+ * Marks sign-out as started synchronously, before anything else runs, and
+ * returns the args for `useAuth().signoutRedirect()`.
+ *
+ * Cognito's `/logout` ignores `id_token_hint`, so the stored user is removed
+ * first to keep the token out of the redirect URL and history. Other
+ * providers are left alone: oidc-client-ts reads `id_token_hint` from the
+ * stored user before removing it, and Keycloak needs the hint to skip its
+ * logout confirmation page.
+ */
+export const beginSignout = async (): Promise<
+  SignoutRedirectArgs | undefined
+> => {
+  signoutInProgress = true;
+  if (isCognitoIssuer(AUTH_ISSUER)) {
+    await userManager.removeUser();
+  }
+  return buildSignoutArgs(AUTH_ISSUER, AUTH_CLIENT_ID, PAGE_ORIGIN);
 };
 
 // Proactive renewal, replacing automaticSilentRenew: the library raises

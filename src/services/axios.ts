@@ -1,5 +1,10 @@
 import axios, { type InternalAxiosRequestConfig } from "axios";
-import { CALLBACK_PATH, renewToken, userManager } from "./oidc";
+import {
+  CALLBACK_PATH,
+  isSignoutInProgress,
+  renewToken,
+  userManager,
+} from "./oidc";
 import { isTrustedRequestUrl, resolveApiOrigin } from "@/utilities/sameOrigin";
 
 const baseURL = import.meta.env.VITE_API_URL;
@@ -44,50 +49,56 @@ type RetriableRequestConfig = InternalAxiosRequestConfig & {
   _retry?: boolean;
 };
 
-api.interceptors.response.use(
-  (response) => {
-    return response;
-  },
-  async (error) => {
-    const originalRequest = error.config as RetriableRequestConfig | undefined;
+export const handleResponseError = async (error: unknown) => {
+  const originalRequest = (error as { config?: RetriableRequestConfig })
+    .config;
+  const status = (error as { response?: { status?: number } }).response
+    ?.status;
 
-    if (
-      error.response?.status === 401 &&
-      originalRequest &&
-      !originalRequest._retry &&
-      isTrustedRequestUrl(
-        originalRequest.url,
-        originalRequest.baseURL,
-        PAGE_ORIGIN,
-        API_ORIGIN
-      )
-    ) {
-      originalRequest._retry = true;
+  if (
+    status === 401 &&
+    originalRequest &&
+    !originalRequest._retry &&
+    isTrustedRequestUrl(
+      originalRequest.url,
+      originalRequest.baseURL,
+      PAGE_ORIGIN,
+      API_ORIGIN
+    )
+  ) {
+    originalRequest._retry = true;
 
-      try {
-        const user = await renewToken();
-        if (user) {
-          originalRequest.headers.Authorization = `Bearer ${user.access_token}`;
-          return api(originalRequest);
-        }
-      } catch (renewError) {
-        console.error("Silent token renew failed:", renewError);
+    try {
+      const user = await renewToken();
+      if (user) {
+        originalRequest.headers.Authorization = `Bearer ${user.access_token}`;
+        return api(originalRequest);
       }
-
-      // Renew failed: only an interactive sign-in can recover. Never start
-      // one from the callback route, where the exchange in progress would
-      // loop forever.
-      if (window.location.pathname !== CALLBACK_PATH) {
-        void userManager.signinRedirect({
-          state: {
-            returnTo: window.location.pathname + window.location.search,
-          },
-        });
-      }
+    } catch (renewError) {
+      console.error("Silent token renew failed:", renewError);
     }
 
-    return Promise.reject(error);
+    // Renew failed: only an interactive sign-in can recover. Never start
+    // one from the callback route, where the exchange in progress would
+    // loop forever, and never while a sign-out is underway, where it would
+    // race the sign-out redirect.
+    if (
+      window.location.pathname !== CALLBACK_PATH &&
+      !isSignoutInProgress()
+    ) {
+      void userManager.signinRedirect({
+        state: {
+          returnTo: window.location.pathname + window.location.search,
+        },
+      });
+    }
   }
-);
+
+  return Promise.reject(error);
+};
+
+api.interceptors.response.use((response) => {
+  return response;
+}, handleResponseError);
 
 export default api;
