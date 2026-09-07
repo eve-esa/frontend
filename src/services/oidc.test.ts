@@ -155,16 +155,15 @@ describe("renewToken", () => {
   });
 });
 
-describe("signoutRedirect", () => {
-  it("sends Cognito its non-standard logout parameters", async () => {
-    const { signoutRedirect, manager } = await loadOidc({
+describe("beginSignout", () => {
+  it("returns Cognito's non-standard logout parameters for a Cognito issuer", async () => {
+    const { beginSignout } = await loadOidc({
       AUTH_ISSUER:
         "https://cognito-idp.eu-west-1.amazonaws.com/eu-west-1_AbCdEf123",
       AUTH_CLIENT_ID: "cognito-client",
     });
 
-    await signoutRedirect();
-    expect(manager.signoutRedirect).toHaveBeenCalledWith({
+    await expect(beginSignout()).resolves.toEqual({
       extraQueryParams: {
         client_id: "cognito-client",
         logout_uri: ORIGIN,
@@ -172,27 +171,59 @@ describe("signoutRedirect", () => {
     });
   });
 
-  it("uses the plain RP-initiated logout for any other issuer", async () => {
-    const { signoutRedirect, manager } = await loadOidc({
+  it("returns undefined for a generic issuer", async () => {
+    const { beginSignout } = await loadOidc({
       AUTH_ISSUER: "https://idp.example.com/realms/eve",
       AUTH_CLIENT_ID: "eve-frontend",
     });
 
-    await signoutRedirect();
-    expect(manager.signoutRedirect).toHaveBeenCalledWith(undefined);
+    await expect(beginSignout()).resolves.toBeUndefined();
   });
 
-  it("removes the stored user before redirecting, keeping the id_token out of the URL", async () => {
-    const { signoutRedirect, manager } = await loadOidc({
+  it("removes the stored user for a Cognito issuer, keeping the id_token out of the URL", async () => {
+    const { beginSignout, manager } = await loadOidc({
+      AUTH_ISSUER:
+        "https://cognito-idp.eu-west-1.amazonaws.com/eu-west-1_AbCdEf123",
+      AUTH_CLIENT_ID: "cognito-client",
+    });
+
+    await beginSignout();
+    expect(manager.removeUser).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not remove the stored user for a generic issuer", async () => {
+    const { beginSignout, manager } = await loadOidc({
       AUTH_ISSUER: "https://idp.example.com/realms/eve",
       AUTH_CLIENT_ID: "eve-frontend",
     });
 
-    await signoutRedirect();
-    expect(manager.removeUser).toHaveBeenCalledTimes(1);
-    expect(manager.removeUser.mock.invocationCallOrder[0]).toBeLessThan(
-      manager.signoutRedirect.mock.invocationCallOrder[0]
-    );
+    await beginSignout();
+    expect(manager.removeUser).not.toHaveBeenCalled();
+  });
+
+  it("marks signout as in progress synchronously, before any await settles", async () => {
+    const { beginSignout, isSignoutInProgress } = await loadOidc({
+      AUTH_ISSUER: "https://idp.example.com/realms/eve",
+      AUTH_CLIENT_ID: "eve-frontend",
+    });
+
+    expect(isSignoutInProgress()).toBe(false);
+    const pending = beginSignout();
+    expect(isSignoutInProgress()).toBe(true);
+    await pending;
+    expect(isSignoutInProgress()).toBe(true);
+  });
+
+  it("endSignout resets the latch", async () => {
+    const { beginSignout, endSignout, isSignoutInProgress } = await loadOidc({
+      AUTH_ISSUER: "https://idp.example.com/realms/eve",
+      AUTH_CLIENT_ID: "eve-frontend",
+    });
+
+    await beginSignout();
+    expect(isSignoutInProgress()).toBe(true);
+    endSignout();
+    expect(isSignoutInProgress()).toBe(false);
   });
 
   it("treats an unparseable issuer as a generic provider", async () => {
