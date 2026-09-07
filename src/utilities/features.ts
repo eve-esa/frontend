@@ -93,3 +93,16 @@ export const BETA_BADGE_ENABLED = isEnabled("FEATURE_BETA_BADGE", false);
  * opening, and it is the first thing a new user sees before they have typed anything.
  */
 export const WELCOME_DIALOG_ENABLED = isEnabled("FEATURE_WELCOME_DIALOG", false);
+
+/**
+ * Pre-answer `status` notices streamed while an answer is loading: "Retrieving relevant
+ * documents" on the classic path, "Thinking" on the agentic path (`useSendRequest.ts`). The
+ * `requery` notice ("Searched for: ...") is never gated by this flag; it always shows.
+ *
+ * Eighth opening-scope flag, same default-off shape as the six above and the seventh
+ * (`WELCOME_DIALOG_ENABLED`): on in development, off in staging and production.
+ */
+export const STREAM_STATUS_NOTICES_ENABLED = isEnabled(
+  "FEATURE_STREAM_STATUS_NOTICES",
+  false
+);

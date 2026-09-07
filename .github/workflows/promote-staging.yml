@@ -162,6 +162,7 @@ jobs:
               "FEATURE_ANSWERED_BY": "${{ vars.FEATURE_ANSWERED_BY }}",
               "FEATURE_BETA_BADGE": "${{ vars.FEATURE_BETA_BADGE }}",
               "FEATURE_WELCOME_DIALOG": "${{ vars.FEATURE_WELCOME_DIALOG }}",
+              "FEATURE_STREAM_STATUS_NOTICES": "${{ vars.FEATURE_STREAM_STATUS_NOTICES }}",
               "CONTACT_URL": "${{ vars.VITE_CONTACT_URL }}",
               "PRIVACY_POLICY_URL": "${{ vars.VITE_PRIVACY_POLICY_URL }}",
               "ABOUT_US_URL": "${{ vars.VITE_ABOUT_US_URL }}",

@@ -50,6 +50,7 @@ export type ConfigKey =
   | "FEATURE_ANSWERED_BY"
   | "FEATURE_BETA_BADGE"
   | "FEATURE_WELCOME_DIALOG"
+  | "FEATURE_STREAM_STATUS_NOTICES"
   // Not switches. They are here because they are per-environment values that a
   // promoted artifact cannot carry, which is the same problem the flags have.
   // They were build-time only, set on deploy-dev and on nothing else, so
@@ -95,6 +96,8 @@ const BUILD_TIME: Record<ConfigKey, string | undefined> = {
   FEATURE_ANSWERED_BY: import.meta.env.VITE_FEATURE_ANSWERED_BY,
   FEATURE_BETA_BADGE: import.meta.env.VITE_FEATURE_BETA_BADGE,
   FEATURE_WELCOME_DIALOG: import.meta.env.VITE_FEATURE_WELCOME_DIALOG,
+  FEATURE_STREAM_STATUS_NOTICES: import.meta.env
+    .VITE_FEATURE_STREAM_STATUS_NOTICES,
   CONTACT_URL: import.meta.env.VITE_CONTACT_URL,
   PRIVACY_POLICY_URL: import.meta.env.VITE_PRIVACY_POLICY_URL,
   ABOUT_US_URL: import.meta.env.VITE_ABOUT_US_URL,
