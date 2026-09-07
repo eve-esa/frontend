@@ -16,6 +16,13 @@ Release and promotes staging. Production is promoted from there by an explicit d
 The `[1.0.0]` entry below is historical and predates this repository's current version series. The
 released tags run `v0.0.1` through `v0.0.6`; no `v1.0.0` was ever tagged here.
 
+## [0.0.16](https://github.com/eve-esa/frontend/compare/v0.0.15...v0.0.16) (2026-09-07)
+
+
+### Added
+
+* **auth:** show an awaiting approval page for accounts past the signup limit ([#86](https://github.com/eve-esa/frontend/issues/86)) ([f9f8875](https://github.com/eve-esa/frontend/commit/f9f88755b62fb9b00a56972d702ae7af6a457daa))
+
 ## [0.0.15](https://github.com/eve-esa/frontend/compare/v0.0.14...v0.0.15) (2026-09-07)
 
 
