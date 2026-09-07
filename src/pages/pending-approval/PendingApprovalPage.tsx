@@ -6,7 +6,8 @@ import { LogoutDialog } from "@/components/auth/LogoutDialog";
 
 /**
  * Shown instead of the chat tree once the backend answers every authenticated
- * call, including /users/me, with a 403 pending_approval. The user is real
+ * call, including /users/me, with a 403 pending_approval. Wording agreed with
+ * the product owner: high demand, on hold, we will email you. The user is real
  * and signed in at the identity provider, just not approved yet, so this is
  * not a sign-in failure: it only offers to log out and wait.
  */
@@ -20,13 +21,12 @@ export const PendingApprovalPage = () => {
       <img src={logo} alt="logo" className="h-[48px]" />
       <div className="flex max-w-[480px] flex-col items-center gap-2 text-center">
         <h1 className="text-xl font-bold">
-          Your account is awaiting approval
+          Access to EVE is on hold for now
         </h1>
         <p className="text-sm text-natural-300">
-          {email ? `${email} has` : "Your account has"} been registered. We
-          are opening EVE to new users gradually, so access is enabled in
-          batches. You will receive an email as soon as your account is
-          enabled, and from that moment you can sign in and start using EVE.
+          Apologies, due to high demand we cannot give you access to EVE at
+          this time. {email ? `Your account ${email} is` : "Your account is"}{" "}
+          registered and on hold. We will email you as soon as you can start.
         </p>
       </div>
       <Button variant="outline" size="md" onClick={() => setIsLogoutOpen(true)}>
