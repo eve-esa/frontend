@@ -16,6 +16,13 @@ Release and promotes staging. Production is promoted from there by an explicit d
 The `[1.0.0]` entry below is historical and predates this repository's current version series. The
 released tags run `v0.0.1` through `v0.0.6`; no `v1.0.0` was ever tagged here.
 
+## [0.0.17](https://github.com/eve-esa/frontend/compare/v0.0.16...v0.0.17) (2026-09-07)
+
+
+### Added
+
+* **flags:** gate the pre-answer status lines behind FEATURE_STREAM_STATUS_NOTICES ([#88](https://github.com/eve-esa/frontend/issues/88)) ([b19af93](https://github.com/eve-esa/frontend/commit/b19af9324ec7ecda46854c808c8dbe1c91e05c60))
+
 ## [0.0.16](https://github.com/eve-esa/frontend/compare/v0.0.15...v0.0.16) (2026-09-07)
 
 
