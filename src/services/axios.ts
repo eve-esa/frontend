@@ -55,6 +55,9 @@ export const handleResponseError = async (error: unknown) => {
   const status = (error as { response?: { status?: number } }).response
     ?.status;
 
+  // A 403 deliberately never lands here: it means the token is valid but the
+  // account is not allowed to do this yet (e.g. pending_approval), which no
+  // renew or interactive sign-in can fix. Callers handle 403 themselves.
   if (
     status === 401 &&
     originalRequest &&

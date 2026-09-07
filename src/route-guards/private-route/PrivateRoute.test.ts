@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { shouldAttemptSignin } from "./PrivateRoute";
+import { resolvePrivateRouteState, shouldAttemptSignin } from "./PrivateRoute";
 
 // The base case: everything is in the "should redirect" state. Each test
 // below flips exactly one field to false and checks the result flips too,
@@ -48,5 +48,62 @@ describe("shouldAttemptSignin", () => {
     expect(shouldAttemptSignin({ ...base, signoutInProgress: true })).toBe(
       false
     );
+  });
+});
+
+// The base case: authenticated, profile loaded, nothing pending, no
+// onboarding needed. Each test below flips exactly one field and checks the
+// view flips too.
+const viewBase = {
+  authLoading: false,
+  isAuthenticated: true,
+  isProfileLoading: false,
+  isPending: false,
+  needsOnboarding: false,
+};
+
+describe("resolvePrivateRouteState", () => {
+  it("renders the outlet when everything is settled", () => {
+    expect(resolvePrivateRouteState(viewBase)).toBe("outlet");
+  });
+
+  it("shows the spinner while auth is still loading", () => {
+    expect(
+      resolvePrivateRouteState({ ...viewBase, authLoading: true })
+    ).toBe("spinner");
+  });
+
+  it("shows the spinner when not authenticated", () => {
+    expect(
+      resolvePrivateRouteState({ ...viewBase, isAuthenticated: false })
+    ).toBe("spinner");
+  });
+
+  it("shows the spinner while the profile call is still loading", () => {
+    expect(
+      resolvePrivateRouteState({ ...viewBase, isProfileLoading: true })
+    ).toBe("spinner");
+  });
+
+  it("shows the pending-approval page when the profile call is pending approval", () => {
+    expect(resolvePrivateRouteState({ ...viewBase, isPending: true })).toBe(
+      "pending-approval"
+    );
+  });
+
+  it("redirects to onboarding when needed", () => {
+    expect(
+      resolvePrivateRouteState({ ...viewBase, needsOnboarding: true })
+    ).toBe("onboarding");
+  });
+
+  it("regression: a pending account never reaches onboarding, even though both conditions are true", () => {
+    expect(
+      resolvePrivateRouteState({
+        ...viewBase,
+        isPending: true,
+        needsOnboarding: true,
+      })
+    ).toBe("pending-approval");
   });
 });
