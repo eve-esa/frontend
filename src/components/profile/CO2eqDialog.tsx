@@ -36,7 +36,7 @@ export const CO2eqDialog = ({ isOpen, onOpenChange }: CO2eqDialogProps) => {
           <DialogTitle>Calculate my CO2eq cost</DialogTitle>
         </DialogHeader>
         <DialogDescription>
-          This is a pilot estimation based on your interaction stats.
+          This is an estimate based on your interaction stats.
         </DialogDescription>
 
         <div className="flex flex-col gap-4 mt-2">
