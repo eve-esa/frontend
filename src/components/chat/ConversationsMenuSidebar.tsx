@@ -244,8 +244,8 @@ export const ConversationsMenuSidebar = () => {
                           or cloud platforms you use at work.
                         </li>
                         <li>
-                          No visual understanding (for now). The pilot model is
-                          text-only: it cannot read satellite images or plots
+                          No visual understanding (for now). The current model
+                          is text-only: it cannot read satellite images or plots
                           yet.
                         </li>
                       </ul>
