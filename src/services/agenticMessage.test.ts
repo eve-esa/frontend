@@ -36,7 +36,8 @@ let buildGenerationPayload: typeof import("./agenticMessage").buildGenerationPay
 let getSelectedMcpServerNames: typeof import("@/utilities/mcpServers").getSelectedMcpServerNames;
 
 // Mirrors useSendRequest: settings come from the caller (read from storage),
-// the MCP selection picks the endpoint, collections are read by the builder.
+// the endpoint is always agentic, MCP selection only fills public_mcp_servers,
+// and collections are read by the builder.
 const buildRequest = (conversationId: string) => {
   const settings = JSON.parse(
     localStorage.getItem(LOCAL_STORAGE_SETTINGS) as string,
@@ -76,10 +77,10 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-describe("classic request (no MCP servers)", () => {
-  it("hits stream_messages with exactly the enabled collections", () => {
+describe("agentic request (no MCP servers)", () => {
+  it("hits stream-generate-agentic with exactly the enabled collections", () => {
     expect(buildRequest("conv-1")).toEqual({
-      url: "/conversations/conv-1/stream_messages",
+      url: "/conversations/conv-1/stream-generate-agentic",
       payload: {
         query: "hello",
         score_threshold: 0.42,
@@ -103,7 +104,7 @@ describe("classic request (no MCP servers)", () => {
 
     const { url, payload } = buildRequest("conv-1");
 
-    expect(url).toBe("/conversations/conv-1/stream_messages");
+    expect(url).toBe("/conversations/conv-1/stream-generate-agentic");
     expect(payload).not.toHaveProperty("public_mcp_servers");
   });
 });
@@ -180,7 +181,8 @@ describe("classification filters with the flag off", () => {
 
   // The whole path a perspective would have to travel to reach the backend:
   // Chat reads storage and adapts, useSendRequest builds the payload from what
-  // it is handed. Both endpoints run through it, only the MCP selection differs.
+  // it is handed. Both with and without MCP servers run through it; only
+  // public_mcp_servers differs.
   const sentRequest = (conversationId: string) => {
     const settings = { ...adaptSettingsForRequest(readStoredSettings()) };
     const { url, extraPayload } = resolveMessageEndpoint(
@@ -227,10 +229,10 @@ describe("classification filters with the flag off", () => {
     });
   });
 
-  it("keeps the three perspectives out of the classic request", () => {
+  it("keeps the three perspectives out of the agentic request with no MCP servers", () => {
     const { url, payload } = sentRequest("conv-1");
 
-    expect(url).toBe("/conversations/conv-1/stream_messages");
+    expect(url).toBe("/conversations/conv-1/stream-generate-agentic");
     expect(mustKeys(payload)).toEqual(["journal"]);
   });
 

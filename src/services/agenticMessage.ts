@@ -48,10 +48,9 @@ export const buildGenerationPayload = ({
   );
   const modelFields = modelSelectionToPayload(selection, models);
 
-  // Note: the MCP server selection (which endpoint this hits and its
-  // `public_mcp_servers` field) is resolved by the caller via
-  // utilities/messageEndpoint.ts + utilities/mcpServers.ts, and spread on top
-  // of this payload — see useSendRequest.ts.
+  // Note: the caller always hits the agentic endpoint. MCP selection only
+  // fills `public_mcp_servers` (omitted when empty) via
+  // utilities/messageEndpoint.ts + utilities/mcpServers.ts — see useSendRequest.ts.
   return {
     query,
     ...settings,
