@@ -16,6 +16,13 @@ Release and promotes staging. Production is promoted from there by an explicit d
 The `[1.0.0]` entry below is historical and predates this repository's current version series. The
 released tags run `v0.0.1` through `v0.0.6`; no `v1.0.0` was ever tagged here.
 
+## [0.0.19](https://github.com/eve-esa/frontend/compare/v0.0.18...v0.0.19) (2026-09-09)
+
+
+### Added
+
+* **messages:** always send chat messages to the agentic endpoints ([#93](https://github.com/eve-esa/frontend/issues/93)) ([c1780d5](https://github.com/eve-esa/frontend/commit/c1780d5f7bb1b9ff775d6e908e3321cf3842a761))
+
 ## [0.0.18](https://github.com/eve-esa/frontend/compare/v0.0.17...v0.0.18) (2026-09-07)
 
 
