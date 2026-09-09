@@ -57,9 +57,7 @@ export const sendRequest = async ({
   models,
   attachments,
 }: SendRequestProps) => {
-  // Which endpoint this hits (classic RAG vs agentic) is driven entirely by
-  // the MCP server selection: empty selection keeps the classic path
-  // byte-identical, one or more servers switches to the agentic pipeline.
+  // Endpoint is always agentic; MCP selection only fills public_mcp_servers.
   const mcpServers = getSelectedMcpServerNames();
   const { url, extraPayload } = resolveMessageEndpoint(
     conversationId,
@@ -124,6 +122,7 @@ export const useSendRequest = (conversationId?: string) => {
         models ??
         queryClient.getQueryData<ModelListResponse>([QUERY_KEYS.models]);
 
+      // Endpoint is always agentic; MCP selection only fills public_mcp_servers.
       const mcpServers = getSelectedMcpServerNames();
       const { url: streamUrl, extraPayload: mcpPayload } =
         resolveMessageEndpoint(conversationId, mcpServers, "stream");

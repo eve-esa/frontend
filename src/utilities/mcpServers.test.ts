@@ -41,7 +41,7 @@ describe("getSelectedMcpServerNames with toolkits on", () => {
 });
 
 describe("getSelectedMcpServerNames with toolkits off", () => {
-  it("returns [], which is what keeps a message on the classic endpoint", async () => {
+  it("returns [], which means do not attach MCP servers (endpoint is still agentic)", async () => {
     const { getSelectedMcpServerNames } = await loadMcpServers("false");
     seed(["weather"]);
 
