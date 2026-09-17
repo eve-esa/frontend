@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getRenderableDocuments, getSourceText } from "./messageDocuments";
 import type { Document } from "@/types";
+import { wileyEnvelopeDoc } from "./wileyEnvelope.fixture";
 
 const doc = (id: string): Document => ({
   id,
@@ -106,5 +107,56 @@ describe("getSourceText", () => {
     d.payload.text = 42 as unknown as string;
     d.text = [{ chunk: 1 }] as unknown as string;
     expect(getSourceText(d)).toBe("No text");
+  });
+
+  it("unwraps a Wiley Scholar Gateway envelope on text", () => {
+    const d = wileyEnvelopeDoc();
+    expect(getSourceText(d)).toContain(
+      "Gully erosion varies seasonally at catchment scale.",
+    );
+    expect(getSourceText(d)).toContain(
+      "Sentinel-2 provides optical imagery for land monitoring.",
+    );
+  });
+
+  it("unwraps a JSON-string Wiley envelope", () => {
+    const d = wileyEnvelopeDoc();
+    d.text = JSON.stringify(d.text);
+    expect(getSourceText(d)).toContain("Gully erosion varies seasonally");
+  });
+});
+
+describe("Wiley eve_retrieval documents", () => {
+  it("explodes a Wiley envelope into one source per chunk", () => {
+    const sources = getRenderableDocuments([wileyEnvelopeDoc()]);
+    expect(sources).toHaveLength(2);
+    expect(sources[0]?.payload.title).toBe(
+      "Modelling seasonal variation of gully erosion at the catchment scale",
+    );
+    expect(sources[0]?.payload.url).toBe("https://doi.org/10.1002/esp.5041");
+    expect(sources[0]?.collection_name).toBe("Wiley AI Gateway");
+    expect(getSourceText(sources[0])).toContain(
+      "Gully erosion varies seasonally at catchment scale.",
+    );
+    expect(getSourceText(sources[1])).toContain(
+      "Sentinel-2 provides optical imagery for land monitoring.",
+    );
+  });
+
+  it("falls back to citationLine when a Wiley chunk has no title", () => {
+    const wrapped = wileyEnvelopeDoc();
+    const envelope = wrapped.text as unknown as {
+      results: Array<{ metadata: { additionalMetadata: { title?: string; citationLine: string } } }>;
+    };
+    delete envelope.results[0]?.metadata.additionalMetadata.title;
+    const sources = getRenderableDocuments([wrapped]);
+    expect(sources[0]?.payload.title).toContain("Agostini, M.");
+  });
+
+  it("does not explode unrelated objects that happen to have results", () => {
+    const d = doc("a");
+    d.text = { results: [{ unrelated: true }] } as unknown as string;
+    expect(getRenderableDocuments([d])).toEqual([d]);
+    expect(getSourceText(d)).toBe("body");
   });
 });
