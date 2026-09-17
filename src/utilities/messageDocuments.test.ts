@@ -245,4 +245,27 @@ describe("Wiley eve_retrieval documents", () => {
       ),
     ).toBe(false);
   });
+
+  it("drops duplicate Wiley documents that are not wrapped in an envelope", () => {
+    const chunk = {
+      id: null,
+      collection_name: "Wiley AI Gateway",
+      payload: {
+        title: "Sentinel-2 mission overview",
+        url: "https://doi.org/10.1016/j.rse.2011.11.026",
+        text: "Sentinel-2 provides optical imagery for land monitoring.",
+      },
+      text: "Sentinel-2 provides optical imagery for land monitoring.",
+      metadata: {
+        additionalMetadata: {
+          title: "Sentinel-2 mission overview",
+          link: "https://doi.org/10.1016/j.rse.2011.11.026",
+          journalTitle: "",
+          citationLine: "",
+        },
+      },
+    } as unknown as Document;
+    const copy = { ...chunk, payload: { ...chunk.payload } };
+    expect(getRenderableDocuments([chunk, copy])).toHaveLength(1);
+  });
 });
