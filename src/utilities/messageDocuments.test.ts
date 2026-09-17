@@ -159,4 +159,40 @@ describe("Wiley eve_retrieval documents", () => {
     expect(getRenderableDocuments([d])).toEqual([d]);
     expect(getSourceText(d)).toBe("body");
   });
+
+  it("keeps one passage per article when a Wiley envelope repeats a paper", () => {
+    const wrapped = wileyEnvelopeDoc();
+    const envelope = wrapped.text as unknown as {
+      results: Array<Record<string, unknown>>;
+    };
+    envelope.results.push({
+      chunk_index: 17,
+      text: "A second chunk from the same gully-erosion article.",
+      metadata: {
+        additionalMetadata: {
+          title:
+            "Modelling seasonal variation of gully erosion at the catchment scale",
+          link: "https://doi.org/10.1002/esp.5041",
+          citationLine:
+            "Agostini, M., Mondini, A. C., Torri, D., & Rossi, M. (2021). Modelling seasonal variation of gully erosion at the catchment scale.",
+        },
+      },
+    });
+    const sources = getRenderableDocuments([wrapped]);
+    expect(sources).toHaveLength(2);
+    expect(getSourceText(sources[0])).toContain(
+      "Gully erosion varies seasonally at catchment scale.",
+    );
+    expect(getSourceText(sources[0])).not.toContain(
+      "A second chunk from the same gully-erosion article.",
+    );
+  });
+
+  it("does not duplicate chunks when the same Wiley envelope appears twice", () => {
+    const sources = getRenderableDocuments([
+      wileyEnvelopeDoc(),
+      wileyEnvelopeDoc(),
+    ]);
+    expect(sources).toHaveLength(2);
+  });
 });
