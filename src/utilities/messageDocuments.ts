@@ -120,35 +120,44 @@ const normalizeArticleUrl = (url: string): string => {
   return trimmed.replace(/\/+$/, "").toLowerCase();
 };
 
-const envelopeFingerprint = (envelope: WileyEnvelope): string => {
-  const query = typeof envelope.query === "string" ? envelope.query : "";
-  const first = chunkText(envelope.results[0]) ?? "";
-  return `${query}|${envelope.results.length}|${first.slice(0, 80)}`;
-};
+const isMissingId = (id: unknown): boolean =>
+  id == null || String(id) === "" || String(id) === "null";
 
-const chunkKey = (
+const normalizePassage = (text: string): string =>
+  text.replace(/\s+/g, " ").trim().toLowerCase();
+
+const passageOf = (doc: Document): string =>
+  asPassage(doc.payload?.content) ??
+  asPassage(doc.payload?.text) ??
+  asPassage(doc.text) ??
+  "";
+
+const isWileyCollection = (doc: Document): boolean =>
+  (doc.collection_name ?? "").toLowerCase().includes("wiley");
+
+const identityKeys = (
   doc: Document,
   result: unknown,
   index: number,
-): string => {
+): string[] => {
+  const keys: string[] = [];
   const record = isRecord(result) ? result : {};
-  if (
-    record.id != null &&
-    String(record.id) !== "" &&
-    String(record.id) !== "null"
-  ) {
-    return `id:${String(record.id)}`;
-  }
+  if (!isMissingId(record.id)) keys.push(`id:${String(record.id)}`);
+
   const url =
     asText(doc.payload?.url) ?? asText(doc.metadata?.additionalMetadata?.link);
   const chunkIndex =
-    typeof record.chunk_index === "number" ? record.chunk_index : index;
-  if (url) return `chunk:${normalizeArticleUrl(url)}:${chunkIndex}`;
-  const text =
-    asPassage(doc.payload?.text) ?? asPassage(doc.text) ?? "";
-  return text
-    ? `text:${text.replace(/\s+/g, " ").trim().toLowerCase()}`
-    : `idx:${index}`;
+    typeof record.chunk_index === "number"
+      ? record.chunk_index
+      : index;
+  if (url) keys.push(`chunk:${normalizeArticleUrl(url)}:${chunkIndex}`);
+
+  const passage = normalizePassage(passageOf(doc));
+  if (passage && (isWileyCollection(doc) || isMissingId(doc.id))) {
+    keys.push(`text:${passage}`);
+  }
+
+  return keys.length > 0 ? keys : [`idx:${index}`];
 };
 
 const wileyResultToDocument = (
@@ -228,11 +237,17 @@ export const getSourceText = (source: Document | null | undefined): string =>
 
 export const getRenderableDocuments = (documents: unknown): Document[] => {
   if (!Array.isArray(documents)) return [];
-  const seenEnvelopes = new Set<string>();
-  const seenChunks = new Set<string>();
+  const seen = new Set<string>();
   const out: Document[] = [];
 
-  for (const entry of documents) {
+  const pushUnique = (piece: Document, result: unknown, index: number) => {
+    const keys = identityKeys(piece, result, index);
+    if (keys.some((key) => seen.has(key))) return;
+    for (const key of keys) seen.add(key);
+    out.push(piece);
+  };
+
+  for (const [index, entry] of documents.entries()) {
     if (!isRecord(entry)) continue;
     if (!isRecord(entry.payload) && typeof entry.collection_name !== "string") {
       continue;
@@ -240,22 +255,12 @@ export const getRenderableDocuments = (documents: unknown): Document[] => {
     const doc = entry as Document;
     const envelope = envelopeOfDocument(doc);
     if (!envelope) {
-      out.push(doc);
+      pushUnique(doc, doc, index);
       continue;
     }
 
-    const fingerprint = envelopeFingerprint(envelope);
-    if (seenEnvelopes.has(fingerprint)) continue;
-    seenEnvelopes.add(fingerprint);
-
-    // Unique chunks only. Same paper can contribute several passages;
-    // duplicate envelopes or the same chunk_index+DOI must not.
-    for (const [index, result] of envelope.results.entries()) {
-      const piece = wileyResultToDocument(result, doc, index);
-      const key = chunkKey(piece, result, index);
-      if (seenChunks.has(key)) continue;
-      seenChunks.add(key);
-      out.push(piece);
+    for (const [chunkIndex, result] of envelope.results.entries()) {
+      pushUnique(wileyResultToDocument(result, doc, chunkIndex), result, chunkIndex);
     }
   }
   return out;
