@@ -414,6 +414,8 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
   };
 
   const renderableDocuments = getRenderableDocuments(message?.documents);
+  const renderableHallucinationSources =
+    getRenderableDocuments(hallucinationSources);
   const hasSources = renderableDocuments.length > 0;
   const hasTrace = message?.trace?.length;
   const generatedWithTools =
@@ -632,7 +634,7 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
           </div>
           {!isHallucinationStreaming && (
             <div className="mt-3 flex items-center justify-between">
-              {hallucinationSources?.length > 0 ? (
+              {renderableHallucinationSources.length > 0 ? (
                 <Button
                   variant="primary"
                   onClick={() => {
@@ -645,7 +647,7 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
                       openDynamicSidebar({
                         type: "sources",
                         props: {
-                          sources: hallucinationSources,
+                          sources: renderableHallucinationSources,
                           messageId: message?.id,
                         },
                       });
@@ -655,7 +657,7 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
                   <FontAwesomeIcon icon={faBullseye} className="size-4" />
                   <span className="font-['NotesESA']">Sources</span>
                   <span className="font-['NotesESA']">
-                    ({hallucinationSources.length})
+                    ({renderableHallucinationSources.length})
                   </span>
                 </Button>
               ) : (
