@@ -9,6 +9,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
  * messages hold {tool, content} entries that must not render as sources.
  */
 export const NO_SOURCE_TEXT = "No text";
+const PLACEHOLDER_TITLE = "Title not available";
 
 const CHUNK_TEXT_KEYS = [
   "text",
@@ -85,18 +86,24 @@ const isWileyEnvelope = (value: unknown): value is WileyEnvelope => {
   });
 };
 
-const chunkText = (result: unknown): string | undefined => {
-  if (!isRecord(result)) return undefined;
-  for (const key of CHUNK_TEXT_KEYS) {
-    const text = asText(result[key]);
-    if (text) return text;
-  }
-  return undefined;
-};
-
 const envelopeFrom = (value: unknown): WileyEnvelope | undefined => {
   const parsed = coerceJson(value);
   return isWileyEnvelope(parsed) ? parsed : undefined;
+};
+
+/** Renderable passage, not a Scholar Gateway envelope object/JSON string. */
+const asPassage = (value: unknown): string | undefined => {
+  if (envelopeFrom(value)) return undefined;
+  return asText(value);
+};
+
+const chunkText = (result: unknown): string | undefined => {
+  if (!isRecord(result)) return undefined;
+  for (const key of CHUNK_TEXT_KEYS) {
+    const text = asPassage(result[key]);
+    if (text) return text;
+  }
+  return undefined;
 };
 
 const additionalMetadataOf = (
@@ -106,30 +113,42 @@ const additionalMetadataOf = (
   return isRecord(metadata.additionalMetadata) ? metadata.additionalMetadata : {};
 };
 
-const articleKey = (doc: Document): string => {
-  const url = asText(doc.payload?.url);
-  if (url) return `url:${url}`;
-  const title =
-    asText(doc.payload?.title) ??
-    asText(doc.metadata?.additionalMetadata?.title) ??
-    asText(doc.metadata?.additionalMetadata?.citationLine);
-  if (title) return `title:${title.toLowerCase()}`;
-  const text = (
-    asText(doc.payload?.content) ??
-    asText(doc.payload?.text) ??
-    asText(doc.text) ??
-    ""
-  )
-    .replace(/\s+/g, " ")
-    .trim()
-    .toLowerCase();
-  return text ? `text:${text}` : "";
+const normalizeArticleUrl = (url: string): string => {
+  const trimmed = url.trim();
+  const doi = trimmed.match(/(?:doi\.org\/|dx\.doi\.org\/)(.+)$/i);
+  if (doi?.[1]) return `doi:${doi[1].replace(/\/+$/, "").toLowerCase()}`;
+  return trimmed.replace(/\/+$/, "").toLowerCase();
 };
 
 const envelopeFingerprint = (envelope: WileyEnvelope): string => {
   const query = typeof envelope.query === "string" ? envelope.query : "";
   const first = chunkText(envelope.results[0]) ?? "";
   return `${query}|${envelope.results.length}|${first.slice(0, 80)}`;
+};
+
+const chunkKey = (
+  doc: Document,
+  result: unknown,
+  index: number,
+): string => {
+  const record = isRecord(result) ? result : {};
+  if (
+    record.id != null &&
+    String(record.id) !== "" &&
+    String(record.id) !== "null"
+  ) {
+    return `id:${String(record.id)}`;
+  }
+  const url =
+    asText(doc.payload?.url) ?? asText(doc.metadata?.additionalMetadata?.link);
+  const chunkIndex =
+    typeof record.chunk_index === "number" ? record.chunk_index : index;
+  if (url) return `chunk:${normalizeArticleUrl(url)}:${chunkIndex}`;
+  const text =
+    asPassage(doc.payload?.text) ?? asPassage(doc.text) ?? "";
+  return text
+    ? `text:${text.replace(/\s+/g, " ").trim().toLowerCase()}`
+    : `idx:${index}`;
 };
 
 const wileyResultToDocument = (
@@ -145,7 +164,7 @@ const wileyResultToDocument = (
     asText(additional.title) ??
     asText(additional.citationLine) ??
     asText(parent.payload?.title) ??
-    "Title not available";
+    PLACEHOLDER_TITLE;
   const url =
     asText(additional.link) ??
     asText(record.doi) ??
@@ -197,30 +216,20 @@ const envelopeOfDocument = (source: Document | null | undefined) =>
  * back to "No text".
  *
  * Wiley docs from eve_retrieval can nest the passage list inside a Scholar
- * Gateway envelope on `text`. Unwrap that the same way classic RAG does, and
- * join the chunk bodies when the envelope was not exploded first.
+ * Gateway envelope on `text`. Do not join every hit: that reprints the same
+ * papers in one block. Prefer a real passage field; otherwise the first chunk.
  */
-export const getSourceText = (source: Document | null | undefined): string => {
-  const envelope = envelopeOfDocument(source);
-  if (envelope) {
-    const parts = envelope.results
-      .map((result) => chunkText(result))
-      .filter((part): part is string => Boolean(part));
-    if (parts.length > 0) return parts.join("\n\n");
-  }
-
-  return (
-    asText(source?.payload?.content) ??
-    asText(source?.payload?.text) ??
-    asText(source?.text) ??
-    NO_SOURCE_TEXT
-  );
-};
+export const getSourceText = (source: Document | null | undefined): string =>
+  asPassage(source?.payload?.content) ??
+  asPassage(source?.payload?.text) ??
+  asPassage(source?.text) ??
+  chunkText(envelopeOfDocument(source)?.results[0]) ??
+  NO_SOURCE_TEXT;
 
 export const getRenderableDocuments = (documents: unknown): Document[] => {
   if (!Array.isArray(documents)) return [];
   const seenEnvelopes = new Set<string>();
-  const seenArticles = new Set<string>();
+  const seenChunks = new Set<string>();
   const out: Document[] = [];
 
   for (const entry of documents) {
@@ -239,13 +248,13 @@ export const getRenderableDocuments = (documents: unknown): Document[] => {
     if (seenEnvelopes.has(fingerprint)) continue;
     seenEnvelopes.add(fingerprint);
 
-    // The envelope is the raw Wiley dump (often 20 hits, several per paper).
-    // One passage per article avoids the same paper repeating under Sources.
+    // Unique chunks only. Same paper can contribute several passages;
+    // duplicate envelopes or the same chunk_index+DOI must not.
     for (const [index, result] of envelope.results.entries()) {
       const piece = wileyResultToDocument(result, doc, index);
-      const key = articleKey(piece);
-      if (key && seenArticles.has(key)) continue;
-      if (key) seenArticles.add(key);
+      const key = chunkKey(piece, result, index);
+      if (seenChunks.has(key)) continue;
+      seenChunks.add(key);
       out.push(piece);
     }
   }

@@ -114,7 +114,7 @@ describe("getSourceText", () => {
     expect(getSourceText(d)).toContain(
       "Gully erosion varies seasonally at catchment scale.",
     );
-    expect(getSourceText(d)).toContain(
+    expect(getSourceText(d)).not.toContain(
       "Sentinel-2 provides optical imagery for land monitoring.",
     );
   });
@@ -160,7 +160,7 @@ describe("Wiley eve_retrieval documents", () => {
     expect(getSourceText(d)).toBe("body");
   });
 
-  it("keeps one passage per article when a Wiley envelope repeats a paper", () => {
+  it("keeps distinct chunks from the same Wiley paper", () => {
     const wrapped = wileyEnvelopeDoc();
     const envelope = wrapped.text as unknown as {
       results: Array<Record<string, unknown>>;
@@ -179,13 +179,14 @@ describe("Wiley eve_retrieval documents", () => {
       },
     });
     const sources = getRenderableDocuments([wrapped]);
-    expect(sources).toHaveLength(2);
-    expect(getSourceText(sources[0])).toContain(
-      "Gully erosion varies seasonally at catchment scale.",
-    );
-    expect(getSourceText(sources[0])).not.toContain(
-      "A second chunk from the same gully-erosion article.",
-    );
+    expect(sources).toHaveLength(3);
+    expect(
+      sources.some((source) =>
+        getSourceText(source).includes(
+          "A second chunk from the same gully-erosion article.",
+        ),
+      ),
+    ).toBe(true);
   });
 
   it("does not duplicate chunks when the same Wiley envelope appears twice", () => {
@@ -194,5 +195,54 @@ describe("Wiley eve_retrieval documents", () => {
       wileyEnvelopeDoc(),
     ]);
     expect(sources).toHaveLength(2);
+  });
+
+  it("does not collapse distinct untitled Wiley papers", () => {
+    const wrapped = wileyEnvelopeDoc();
+    const envelope = wrapped.text as unknown as {
+      results: Array<Record<string, unknown>>;
+    };
+    envelope.results = [
+      {
+        chunk_index: 1,
+        text: "First untitled paper passage.",
+        metadata: { additionalMetadata: {} },
+      },
+      {
+        chunk_index: 2,
+        text: "Second untitled paper passage.",
+        metadata: { additionalMetadata: {} },
+      },
+    ];
+    const sources = getRenderableDocuments([wrapped]);
+    expect(sources).toHaveLength(2);
+    expect(getSourceText(sources[0])).toContain("First untitled paper");
+    expect(getSourceText(sources[1])).toContain("Second untitled paper");
+  });
+
+  it("drops a Wiley chunk that is the same DOI and chunk_index", () => {
+    const wrapped = wileyEnvelopeDoc();
+    const envelope = wrapped.text as unknown as {
+      results: Array<Record<string, unknown>>;
+    };
+    envelope.results.push({
+      chunk_index: 3,
+      text: "Duplicate Sentinel-2 chunk that should be dropped.",
+      metadata: {
+        additionalMetadata: {
+          title: "Sentinel-2 mission overview (copy)",
+          link: "http://dx.doi.org/10.1016/j.rse.2011.11.026",
+        },
+      },
+    });
+    const sources = getRenderableDocuments([wrapped]);
+    expect(sources).toHaveLength(2);
+    expect(
+      sources.some((source) =>
+        getSourceText(source).includes(
+          "Duplicate Sentinel-2 chunk that should be dropped.",
+        ),
+      ),
+    ).toBe(false);
   });
 });
