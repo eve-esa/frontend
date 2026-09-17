@@ -106,6 +106,32 @@ const additionalMetadataOf = (
   return isRecord(metadata.additionalMetadata) ? metadata.additionalMetadata : {};
 };
 
+const articleKey = (doc: Document): string => {
+  const url = asText(doc.payload?.url);
+  if (url) return `url:${url}`;
+  const title =
+    asText(doc.payload?.title) ??
+    asText(doc.metadata?.additionalMetadata?.title) ??
+    asText(doc.metadata?.additionalMetadata?.citationLine);
+  if (title) return `title:${title.toLowerCase()}`;
+  const text = (
+    asText(doc.payload?.content) ??
+    asText(doc.payload?.text) ??
+    asText(doc.text) ??
+    ""
+  )
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+  return text ? `text:${text}` : "";
+};
+
+const envelopeFingerprint = (envelope: WileyEnvelope): string => {
+  const query = typeof envelope.query === "string" ? envelope.query : "";
+  const first = chunkText(envelope.results[0]) ?? "";
+  return `${query}|${envelope.results.length}|${first.slice(0, 80)}`;
+};
+
 const wileyResultToDocument = (
   result: unknown,
   parent: Document,
@@ -126,10 +152,13 @@ const wileyResultToDocument = (
     asText(parent.payload?.url) ??
     "";
   const parentAdditional = parent.metadata?.additionalMetadata;
+  const chunkIndex =
+    typeof record.chunk_index === "number" ? record.chunk_index : index;
   const id =
     record.id ??
+    (url ? `${url}_${chunkIndex}` : undefined) ??
     parent.id ??
-    `${parent.collection_name ?? "wiley"}-${record.chunk_index ?? index}`;
+    `${parent.collection_name ?? "wiley"}-${chunkIndex}`;
 
   return {
     id: id as Document["id"],
@@ -139,7 +168,6 @@ const wileyResultToDocument = (
       title,
       url,
       text,
-      content: text,
     },
     metadata: {
       ...metadata,
@@ -191,16 +219,35 @@ export const getSourceText = (source: Document | null | undefined): string => {
 
 export const getRenderableDocuments = (documents: unknown): Document[] => {
   if (!Array.isArray(documents)) return [];
-  return documents.flatMap((entry) => {
-    if (!isRecord(entry)) return [];
+  const seenEnvelopes = new Set<string>();
+  const seenArticles = new Set<string>();
+  const out: Document[] = [];
+
+  for (const entry of documents) {
+    if (!isRecord(entry)) continue;
     if (!isRecord(entry.payload) && typeof entry.collection_name !== "string") {
-      return [];
+      continue;
     }
     const doc = entry as Document;
     const envelope = envelopeOfDocument(doc);
-    if (!envelope) return [doc];
-    return envelope.results.map((result, index) =>
-      wileyResultToDocument(result, doc, index),
-    );
-  });
+    if (!envelope) {
+      out.push(doc);
+      continue;
+    }
+
+    const fingerprint = envelopeFingerprint(envelope);
+    if (seenEnvelopes.has(fingerprint)) continue;
+    seenEnvelopes.add(fingerprint);
+
+    // The envelope is the raw Wiley dump (often 20 hits, several per paper).
+    // One passage per article avoids the same paper repeating under Sources.
+    for (const [index, result] of envelope.results.entries()) {
+      const piece = wileyResultToDocument(result, doc, index);
+      const key = articleKey(piece);
+      if (key && seenArticles.has(key)) continue;
+      if (key) seenArticles.add(key);
+      out.push(piece);
+    }
+  }
+  return out;
 };
