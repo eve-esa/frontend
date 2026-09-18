@@ -47,7 +47,7 @@ function SelectTrigger({
       )}
       {...props}
     >
-      <div className="w-full max-w-[90%] truncate text-start">{children}</div>
+      <div className="w-full max-w-[90%] truncate text-start text-md">{children}</div>
       <SelectPrimitive.Icon asChild>
         <FontAwesomeIcon
           icon={faChevronDown}
@@ -109,7 +109,7 @@ function SelectItem({
     <SelectPrimitive.Item
       data-slot="select-item"
       className={cn(
-        "focus:bg-primary-500 [&_svg:not([class*='text-'])]:text-muted-foreground relative flex w-full cursor-pointer items-center gap-2 rounded-md py-1.5 pr-8 pl-2 text-sm outline-hidden select-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
+        "focus:bg-primary-500 [&_svg:not([class*='text-'])]:text-muted-foreground relative flex w-full cursor-pointer items-center gap-2 rounded-md py-1.5 pr-8 pl-2 text-sm outline-hidden select-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2 *:[span]:last:text-md",
         className
       )}
       {...props}

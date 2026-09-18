@@ -55,13 +55,13 @@ export const ApiKeyRow = ({
           className="mt-0.5 truncate whitespace-nowrap text-[11px] leading-4 text-primary-300"
           title={[createdLabel(apiKey.created_at), provenance].filter(Boolean).join(", ")}
         >
-          <span data-testid="api-key-created" className="text-[11px]">
+          <span data-testid="api-key-created">
             {createdLabel(apiKey.created_at)}
           </span>
           {provenance && (
             <>
               {", "}
-              <span data-testid="api-key-provenance" className="text-[11px]">
+              <span data-testid="api-key-provenance">
                 {provenance}
               </span>
             </>
@@ -69,11 +69,11 @@ export const ApiKeyRow = ({
         </div>
         {/* Narrow screens drop the other columns: the same values, labelled, under the name. */}
         <div className="mt-1 flex flex-wrap gap-x-2 text-[12px] text-natural-200 sm:hidden">
-          <span className="font-mono text-[12px] text-natural-100">{mask}</span>
-          <span className={`text-[12px] ${expired ? "text-danger-100" : ""}`}>
+          <span className="font-mono text-natural-100">{mask}</span>
+          <span className={expired ? "text-danger-100" : undefined}>
             {expired ? "Expired" : expiryLabel(apiKey.expires_at, apiKey.status)}
           </span>
-          <span className="text-[12px]">
+          <span>
             {apiKey.last_used_at
               ? `Used ${lastUsedShort(apiKey.last_used_at, now)}`
               : "Never used"}

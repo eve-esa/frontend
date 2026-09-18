@@ -50,7 +50,7 @@ export const SidebarMenu = ({ isOpen }: SidebarMenuProps) => {
       <FontAwesomeIcon icon={faImages} className="w-4 h-4" />
       {isOpen && (
         <span className="text-lg truncate tracking-wider min-w-0 text-left">
-          <span className="whitespace-nowrap mt-[2px] overflow-hidden text-ellipsis">
+          <span className="whitespace-nowrap mt-[2px] overflow-hidden text-ellipsis text-md">
             Artifacts
           </span>
         </span>
@@ -71,7 +71,7 @@ export const SidebarMenu = ({ isOpen }: SidebarMenuProps) => {
       <FontAwesomeIcon icon={faKey} className="w-4 h-4" />
       {isOpen && (
         <span className="text-lg truncate tracking-wider min-w-0 text-left">
-          <span className="whitespace-nowrap mt-[2px] overflow-hidden text-ellipsis">
+          <span className="whitespace-nowrap mt-[2px] overflow-hidden text-ellipsis text-md">
             API keys
           </span>
         </span>

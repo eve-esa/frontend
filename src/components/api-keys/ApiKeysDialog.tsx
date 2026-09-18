@@ -202,7 +202,7 @@ export const ApiKeysDialog = ({
                   <div className="overflow-x-auto">
                     <table data-testid="api-keys-list" className="w-full table-fixed text-left">
                       <thead>
-                        <tr className="text-xs font-medium text-primary-300">
+                        <tr className="text-sm font-medium text-primary-300">
                           <th scope="col" className="pb-2 pr-3 font-medium">Name</th>
                           <th scope="col" className="hidden w-28 pb-2 pr-3 font-medium sm:table-cell">Key</th>
                           <th scope="col" className="hidden w-24 pb-2 pr-3 font-medium sm:table-cell">
