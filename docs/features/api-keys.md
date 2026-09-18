@@ -26,8 +26,9 @@ Opens `ApiKeysDialog`, which fetches the key list only once the dialog opens, no
 
 ## Reveal
 
-The raw secret is shown exactly once, right after create: a read-only input, a copy button,
-and a warning that this is the only time it is shown. Closing the dialog, pressing Escape,
+The create form says up front that the key will be shown only once. The raw secret is then
+shown exactly once, right after create: a read-only input, a copy button, and a highlighted
+warning that this is the only time it is shown. Closing the dialog, pressing Escape,
 or reopening it never brings the secret back.
 
 Secret hygiene in the implementation: the create mutation uses `gcTime: 0` and its data is
@@ -45,10 +46,12 @@ instead of erroring inline.
 
 ## Use your key
 
-The dialog includes a copy-pasteable snippet showing how to call the API with
-`$EVE_API_KEY`, never the actual secret, for both `/users/api-keys` style calls and the
-OpenAI-compatible gateway (`base_url` pointed at `/api/v1`). Backend contract: see the
-backend repo's `docs/api/api-keys.md` and `docs/api/openai-gateway.md`.
+Commands only, so the copy button copies something that runs as pasted: an
+`export EVE_API_KEY="<your API key>"` line, then `GET /v1/models` and
+`POST /v1/chat/completions` against `<origin>/api/v1`, one blank line between commands. The
+hint with the OpenAI `base_url` sits above the box and is not copied. The snippet never
+contains the real secret. Backend contract: the backend repo's `docs/api/api-keys.md` and
+`docs/api/openai-gateway.md`.
 
 ## Accessibility
 
