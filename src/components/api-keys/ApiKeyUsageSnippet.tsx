@@ -2,7 +2,12 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faCopy } from "@fortawesome/free-solid-svg-icons";
 import { Button } from "@/components/ui/Button";
 import { useClipboard } from "@/hooks/useClipboard";
-import { buildQuickstartSteps, resolveApiBaseUrl } from "@/utilities/apiKeys";
+import { useGatewayModels } from "@/services/useApiKeys";
+import {
+  buildQuickstartSteps,
+  pickQuickstartModel,
+  resolveApiBaseUrl,
+} from "@/utilities/apiKeys";
 
 const CopyButton = ({
   value,
@@ -43,7 +48,11 @@ export const ApiKeyUsageSnippet = () => {
     window.location.origin,
   );
   const baseUrl = `${apiBase}/v1`;
-  const steps = buildQuickstartSteps(apiBase);
+  const { data: modelIds } = useGatewayModels();
+  const steps = buildQuickstartSteps(
+    apiBase,
+    modelIds ? pickQuickstartModel(modelIds) : null,
+  );
 
   return (
     <div data-testid="api-keys-usage-snippet" className="flex flex-col gap-3">

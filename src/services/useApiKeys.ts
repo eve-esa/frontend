@@ -74,3 +74,21 @@ export const useDeleteApiKey = () => {
     },
   });
 };
+
+const fetchGatewayModels = async (): Promise<string[]> => {
+  const { data } = await api.get<{ data?: { id: string }[] }>("/v1/models");
+  return (data.data ?? []).map((model) => model.id);
+};
+
+/**
+ * Model ids the OpenAI-compatible gateway lists, for the Quickstart's
+ * EVE_MODEL. The session token authenticates like a key does. No retry: on
+ * failure the Quickstart keeps its placeholder rather than waiting.
+ */
+export const useGatewayModels = () =>
+  useQuery({
+    queryKey: [QUERY_KEYS.gatewayModels],
+    queryFn: fetchGatewayModels,
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
