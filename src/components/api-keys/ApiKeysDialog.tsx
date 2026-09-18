@@ -199,16 +199,33 @@ export const ApiKeysDialog = ({
                     No API keys yet. Create one to call EVE from your own code.
                   </p>
                 ) : (
-                  <ul data-testid="api-keys-list" className="flex flex-col gap-2">
-                    {keys.map((key) => (
-                      <ApiKeyRow key={key.id} apiKey={key} onDelete={handleDeleteRequest} />
-                    ))}
-                  </ul>
+                  <div className="overflow-x-auto">
+                    <table data-testid="api-keys-list" className="w-full table-fixed text-left">
+                      <thead>
+                        <tr className="text-xs font-medium text-primary-300">
+                          <th scope="col" className="pb-2 pr-3 font-medium">Name</th>
+                          <th scope="col" className="hidden w-28 pb-2 pr-3 font-medium sm:table-cell">Key</th>
+                          <th scope="col" className="hidden w-24 pb-2 pr-3 font-medium sm:table-cell">
+                            Last used
+                          </th>
+                          <th scope="col" className="hidden w-24 pb-2 pr-2 font-medium sm:table-cell">Expires</th>
+                          <th scope="col" className="w-10 pb-2">
+                            <span className="sr-only">Actions</span>
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {keys.map((key) => (
+                          <ApiKeyRow key={key.id} apiKey={key} onDelete={handleDeleteRequest} />
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 )}
 
                 <details className="rounded-lg border border-primary-400/40">
                   <summary className="cursor-pointer p-3 text-sm font-medium text-natural-100">
-                    Use your key
+                    Quickstart
                   </summary>
                   <div className="px-3 pb-3">
                     <ApiKeyUsageSnippet />

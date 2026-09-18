@@ -1,4 +1,4 @@
-import type { ApiError, ApiErrorDetail, ApiKey, ApiKeyParent, ApiKeyStatus, CreateApiKeyBody } from "@/types";
+import type { ApiError, ApiErrorDetail, ApiKey, ApiKeyStatus, CreateApiKeyBody } from "@/types";
 
 // Fallback when GET /users/api-keys omits X-API-Key-Limit (an older backend,
 // or a header CORS has not exposed yet). Matches the backend default
@@ -92,12 +92,30 @@ export const lastUsedLabel = (lastUsedAt: string | null): string => {
   return `Last used ${datePart}, ${timePart} UTC`;
 };
 
-/** Null when the key has no parent (line 3 of a row is only rendered then). */
-export const provenanceLabel = (createdBy: ApiKeyParent | null): string | null => {
-  if (!createdBy) return null;
-  return createdBy.token_suffix
-    ? `Created via API key ${formatKeyMask(createdBy.token_suffix)}`
-    : "Created via another API key";
+/** A key made with another key is only labelled as such: which key is not shown. */
+export const provenanceLabel = (createdByKeyId: string | null): string | null =>
+  createdByKeyId ? "via API key" : null;
+
+// Table cells. Elapsed time rather than a calendar day, so "Last used" reads the
+// same in every timezone; the exact UTC timestamp goes in the cell's title.
+export const lastUsedShort = (lastUsedAt: string | null, now: number): string => {
+  if (!lastUsedAt) return "Never";
+  const minutes = Math.floor((now - new Date(lastUsedAt).getTime()) / 60_000);
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days} ${days === 1 ? "day" : "days"} ago`;
+  return formatDate(lastUsedAt);
+};
+
+export const expiryShort = (
+  expiresAt: string | null,
+  status: ApiKeyStatus,
+): string => {
+  if (status === "expired") return "Expired";
+  return expiresAt ? formatDate(expiresAt) : "No expiry";
 };
 
 /**
@@ -158,7 +176,7 @@ export const parseLimitHeader = (value: unknown): number => {
 };
 
 /**
- * Resolves the API base URL for the "Use your key" snippet the same way
+ * Resolves the API base URL for the Quickstart the same way
  * axios resolves `baseURL`: a relative value (e.g. "/api") is joined onto
  * the page origin, an absolute one keeps its own origin, and a missing or
  * blank value falls back to the page origin. Always origin + pathname, no
@@ -177,26 +195,34 @@ export const resolveApiBaseUrl = (
   }
 };
 
-/**
- * The "Use your key" example, commands only so the copy button yields
- * something that runs as pasted. Takes a base URL, never a token: the secret
- * exists only in the reveal view's state, and this snippet is also rendered,
- * collapsed, from the list view where no secret is in scope. The export line
- * carries a placeholder the user replaces, never a value this app fills in.
- */
-export const buildUsageSnippet = (baseUrl: string): string =>
-  [
-    'export EVE_API_KEY="<your API key>"',
-    "",
-    `curl ${baseUrl}/v1/models \\`,
-    '  -H "Authorization: Bearer $EVE_API_KEY"',
-    "",
-    `curl ${baseUrl}/v1/chat/completions \\`,
-    '  -H "Authorization: Bearer $EVE_API_KEY" \\',
-    '  -H "Content-Type: application/json" \\',
-    `  -d '{"model": "<model id from /v1/models>", "messages": [{"role": "user", "content": "Hello, EVE"}]}'`,
-  ].join("\n");
+export type QuickstartStep = { title: string; code: string };
 
-/** The line shown above the snippet, kept out of what the copy button copies. */
-export const buildUsageHint = (baseUrl: string): string =>
-  `Replace <your API key> with your key. The API is OpenAI-compatible: use ${baseUrl}/v1 as base_url.`;
+/**
+ * The Quickstart: one command per step, each copied on its own, so what the
+ * user pastes runs as is. Takes a base URL, never a token: the secret exists
+ * only in the reveal view's state, and this is also rendered from the list
+ * view where no secret is in scope. The export line carries a placeholder the
+ * user replaces, never a value this app fills in.
+ */
+export const buildQuickstartSteps = (baseUrl: string): QuickstartStep[] => [
+  {
+    title: "Set your key",
+    code: 'export EVE_API_KEY="<your API key>"',
+  },
+  {
+    title: "List the models",
+    code: [
+      `curl ${baseUrl}/v1/models \\`,
+      '  -H "Authorization: Bearer $EVE_API_KEY"',
+    ].join("\n"),
+  },
+  {
+    title: "Send a chat request",
+    code: [
+      `curl ${baseUrl}/v1/chat/completions \\`,
+      '  -H "Authorization: Bearer $EVE_API_KEY" \\',
+      '  -H "Content-Type: application/json" \\',
+      `  -d '{"model": "<model id>", "messages": [{"role": "user", "content": "Hello, EVE"}]}'`,
+    ].join("\n"),
+  },
+];

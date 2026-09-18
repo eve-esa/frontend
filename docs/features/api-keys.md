@@ -9,9 +9,14 @@ Opens `ApiKeysDialog`, which fetches the key list only once the dialog opens, no
 
 ## List view
 
-- Name, masked token (`eve_…a1b2c3`), created date, "Last used …" or "Never used", expiry
-  (or "No expiration" / "Expired"), provenance ("Created via API key eve_…d4e5f6" when the
-  key was created by another key), Delete.
+- A table: Name, Key, Last used, Expires, and a trash icon to delete.
+  - Name cell: the name, then "Created <date>" and ", via API key" when another key created
+    it (which key is not shown). One line, truncated with the full text in the title.
+  - Key: the mask, `eve_…a1b2c3`.
+  - Last used: elapsed time ("5 min ago", "3 h ago", "4 days ago", the date after 30 days),
+    exact UTC timestamp in the title. Elapsed, so it reads the same in every timezone.
+  - Expires: the date, "No expiry", or "Expired" in amber.
+  - Below `sm` only the Name column stays, with key, expiry and last use listed under it.
 - "N of `<limit>` active keys" counter, sourced from the `X-API-Key-Limit` response header
   (falls back to 10). At the limit, Create is disabled and an inline notice explains why.
 
@@ -44,14 +49,13 @@ created with it will be deleted too", "Delete N keys"), because revoke cascades 
 A 404 (already deleted, by this or another session) shows a toast and returns to the list
 instead of erroring inline.
 
-## Use your key
+## Quickstart
 
-Commands only, so the copy button copies something that runs as pasted: an
-`export EVE_API_KEY="<your API key>"` line, then `GET /v1/models` and
-`POST /v1/chat/completions` against `<origin>/api/v1`, one blank line between commands. The
-hint with the OpenAI `base_url` sits above the box and is not copied. The snippet never
-contains the real secret. Backend contract: the backend repo's `docs/api/api-keys.md` and
-`docs/api/openai-gateway.md`.
+A collapsible "Quickstart" (expanded in the reveal view): one line saying the API is
+OpenAI-compatible, the base URL (`<origin>/api/v1`) with its own copy button, then three
+numbered steps, each a command with its own copy button: set `EVE_API_KEY` (placeholder
+value), list the models, send a chat request. The steps never contain the real secret.
+Backend contract: the backend repo's `docs/api/api-keys.md` and `docs/api/openai-gateway.md`.
 
 ## Accessibility
 
