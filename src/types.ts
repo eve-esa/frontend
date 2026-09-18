@@ -272,8 +272,8 @@ export type CreatedApiKey = ApiKey & { token: string };
 
 // Body of POST /users/api-keys. Every field optional: an omitted name gets
 // a generated one server side, and an omitted `expires_in_days` gets the
-// server default (90 days) rather than "never" — only an explicit `null`
-// means no expiration. `expires_at` is never sent by this client.
+// server default (90 days) rather than "never" (only an explicit `null`
+// means no expiration). `expires_at` is never sent by this client.
 export type CreateApiKeyBody = {
   name?: string;
   expires_in_days?: number | null;

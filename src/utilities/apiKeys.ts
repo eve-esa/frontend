@@ -103,8 +103,8 @@ export const provenanceLabel = (createdBy: ApiKeyParent | null): string | null =
 /**
  * Counts a key's active descendants (children, grandchildren, …) by walking
  * `created_by_key_id` edges. Used for the delete confirmation's cascade
- * warning, so a revoked descendant is not counted — it is already gone, not
- * something the delete is about to take down — but traversal continues
+ * warning, so a revoked descendant is not counted (it is already gone, not
+ * something the delete is about to take down), but traversal continues
  * through it, since ITS children may still be active. A visited set makes
  * a cycle (which should never occur server side, but the client should not
  * trust that) terminate instead of looping.
