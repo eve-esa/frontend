@@ -1,3 +1,4 @@
+import type { CSSProperties, Ref } from "react";
 import { cn } from "@/lib/utils";
 
 type SidebarProps = {
@@ -7,6 +8,14 @@ type SidebarProps = {
   side?: "left" | "right";
   variant?: "default" | "icon-only";
   className?: string;
+  ref?: Ref<HTMLDivElement>;
+  id?: string;
+  // A width set by the user (see useResizableSidebar); it overrides the
+  // width classes below. Desktop only.
+  style?: CSSProperties;
+  // True while the edge is being dragged: the width must follow the pointer
+  // without easing.
+  isResizing?: boolean;
 };
 
 export const Sidebar = ({
@@ -16,6 +25,10 @@ export const Sidebar = ({
   side = "left",
   variant = "default",
   className,
+  ref,
+  id,
+  style,
+  isResizing = false,
 }: SidebarProps) => {
   // Positioning based on side
   const getPositionClasses = () => {
@@ -67,8 +80,15 @@ export const Sidebar = ({
       getMobileTransformClasses(),
     ],
 
-    // Desktop
-    !isMobile && ["h-full", getDesktopWidthClasses()],
+    // Desktop. The right one is positioned so a resize handle can sit on its
+    // edge.
+    !isMobile && [
+      "h-full",
+      side === "right" && "relative",
+      getDesktopWidthClasses(),
+    ],
+
+    isResizing && "transition-none",
 
     className
   );
@@ -76,7 +96,14 @@ export const Sidebar = ({
   return (
     <>
       {/* Sidebar Container */}
-      <div className={sidebarClasses}>{children}</div>
+      <div
+        ref={ref}
+        id={id}
+        className={sidebarClasses}
+        style={isMobile ? undefined : style}
+      >
+        {children}
+      </div>
     </>
   );
 };

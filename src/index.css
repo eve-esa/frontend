@@ -54,6 +54,20 @@
   --color-success-200: #00ae9d;
   --animate-fade-in: fadeIn 0.2s ease-out;
   --animate-fade-out: fadeOut 0.2s ease-in;
+  --animate-collapsible-down: collapsibleDown 0.15s ease-out;
+  --animate-collapsible-up: collapsibleUp 0.15s ease-in;
+
+  /* Agent trace: one colour per step kind (timeline, card accent, badge) */
+  --color-trace-agent: #5ea9dd;
+  --color-trace-tool: #b392f0;
+  --color-trace-answer: #35c2a4;
+
+  /* JSON tree syntax colours, readable on the dark panel background */
+  --color-json-key: #9cdcfe;
+  --color-json-string: #e6b99a;
+  --color-json-number: #b5cea8;
+  --color-json-boolean: #c3a6ff;
+  --color-json-null: #8197a6;
 
   /* Custom breakpoints */
   --breakpoint-3xl: 187.5rem; /* 3000px */
@@ -222,6 +236,25 @@
   }
 }
 
+/* Radix Collapsible exposes the measured content height as a CSS variable. */
+@keyframes collapsibleDown {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-collapsible-content-height);
+  }
+}
+
+@keyframes collapsibleUp {
+  from {
+    height: var(--radix-collapsible-content-height);
+  }
+  to {
+    height: 0;
+  }
+}
+
 .animate-fade-in {
   animation: var(--animate-fade-in);
 }
@@ -306,4 +339,46 @@ body:has(.react-joyride__overlay) {
 .smarttext .katex-display > .katex > .katex-html > .tag {
   position: relative !important;
   margin-left: 15px;
+}
+
+/* JSON tree (react-json-view-lite). The library only takes class names, and
+   draws its expand arrows and the "..." of a collapsed node with ::after, so
+   those live here; colours come from the json tokens in @theme. */
+@layer components {
+  .json-tree-expander {
+    display: inline-block;
+    width: 1em;
+    margin-right: 2px;
+    text-align: center;
+    color: var(--color-primary-300);
+    cursor: pointer;
+    user-select: none;
+    border-radius: 2px;
+  }
+
+  .json-tree-expander:hover {
+    color: var(--color-natural-50);
+  }
+
+  .json-tree-expander:focus-visible {
+    outline: 1px solid var(--color-natural-200);
+    outline-offset: 1px;
+  }
+
+  .json-tree-expand::after {
+    content: "\25B8";
+  }
+
+  .json-tree-collapse::after {
+    content: "\25BE";
+  }
+
+  .json-tree-collapsed {
+    cursor: pointer;
+    color: var(--color-primary-300);
+  }
+
+  .json-tree-collapsed::after {
+    content: "...";
+  }
 }

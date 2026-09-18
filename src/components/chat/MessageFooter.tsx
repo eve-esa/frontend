@@ -486,6 +486,7 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
                 onClick={() =>
                   toggleMessageSidebar("trace", {
                     trace: message?.trace || [],
+                    question: message?.input,
                     messageId: message?.id,
                   })
                 }

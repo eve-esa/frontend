@@ -1,40 +1,10 @@
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck, faCopy } from "@fortawesome/free-solid-svg-icons";
-import { Button } from "@/components/ui/Button";
-import { useClipboard } from "@/hooks/useClipboard";
+import { CopyButton } from "@/components/ui/CopyButton";
 import { useGatewayModels } from "@/services/useApiKeys";
 import {
   buildQuickstartSteps,
   pickQuickstartModel,
   resolveApiBaseUrl,
 } from "@/utilities/apiKeys";
-
-const CopyButton = ({
-  value,
-  label,
-  testId,
-  className = "",
-}: {
-  value: string;
-  label: string;
-  testId: string;
-  className?: string;
-}) => {
-  const { copyToClipboard, isCopied } = useClipboard();
-  return (
-    <Button
-      type="button"
-      variant="icon"
-      data-testid={testId}
-      aria-label={label}
-      title={label}
-      onClick={() => void copyToClipboard(value)}
-      className={`shrink-0 text-primary-300 hover:text-natural-50 ${className}`}
-    >
-      <FontAwesomeIcon icon={isCopied ? faCheck : faCopy} className="size-3.5" />
-    </Button>
-  );
-};
 
 /**
  * Quickstart: the base URL, then one command per step, each with its own copy
