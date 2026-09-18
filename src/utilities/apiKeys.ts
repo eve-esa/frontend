@@ -1,4 +1,4 @@
-import type { ApiError, ApiErrorDetail, ApiKey, ApiKeyParent, ApiKeyStatus, CreateApiKeyBody } from "@/types";
+import type { ApiError, ApiErrorDetail, ApiKey, ApiKeyStatus, CreateApiKeyBody } from "@/types";
 
 // Fallback when GET /users/api-keys omits X-API-Key-Limit (an older backend,
 // or a header CORS has not exposed yet). Matches the backend default
@@ -92,12 +92,30 @@ export const lastUsedLabel = (lastUsedAt: string | null): string => {
   return `Last used ${datePart}, ${timePart} UTC`;
 };
 
-/** Null when the key has no parent (line 3 of a row is only rendered then). */
-export const provenanceLabel = (createdBy: ApiKeyParent | null): string | null => {
-  if (!createdBy) return null;
-  return createdBy.token_suffix
-    ? `Created via API key ${formatKeyMask(createdBy.token_suffix)}`
-    : "Created via another API key";
+/** A key made with another key is only labelled as such: which key is not shown. */
+export const provenanceLabel = (createdByKeyId: string | null): string | null =>
+  createdByKeyId ? "via API key" : null;
+
+// Table cells. Elapsed time rather than a calendar day, so "Last used" reads the
+// same in every timezone; the exact UTC timestamp goes in the cell's title.
+export const lastUsedShort = (lastUsedAt: string | null, now: number): string => {
+  if (!lastUsedAt) return "Never";
+  const minutes = Math.floor((now - new Date(lastUsedAt).getTime()) / 60_000);
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days} ${days === 1 ? "day" : "days"} ago`;
+  return formatDate(lastUsedAt);
+};
+
+export const expiryShort = (
+  expiresAt: string | null,
+  status: ApiKeyStatus,
+): string => {
+  if (status === "expired") return "Expired";
+  return expiresAt ? formatDate(expiresAt) : "No expiry";
 };
 
 /**

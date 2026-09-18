@@ -27,8 +27,17 @@ const baseKey: ApiKey = {
 
 const noop = () => undefined;
 
+const NOW = Date.parse("2026-09-18T15:00:00Z");
+
+// A <tr> only renders inside a table body.
 const render = (apiKey: ApiKey) =>
-  renderToStaticMarkup(<ApiKeyRow apiKey={apiKey} onDelete={noop} />);
+  renderToStaticMarkup(
+    <table>
+      <tbody>
+        <ApiKeyRow apiKey={apiKey} onDelete={noop} now={NOW} />
+      </tbody>
+    </table>,
+  );
 
 describe("ApiKeyRow", () => {
   it("shows the masked key", () => {
@@ -39,7 +48,7 @@ describe("ApiKeyRow", () => {
     expect(render(baseKey)).toContain('data-key-id="key-1"');
   });
 
-  it("shows the provenance line for a key with a parent", () => {
+  it("labels a key made with another key, without naming that key", () => {
     const child: ApiKey = {
       ...baseKey,
       id: "key-2",
@@ -51,11 +60,26 @@ describe("ApiKeyRow", () => {
         status: "active",
       },
     };
-    expect(render(child)).toContain("Created via API key eve_…d4e5f6");
+    const html = render(child);
+    expect(html).toContain("via API key");
+    expect(html).not.toContain("d4e5f6");
   });
 
-  it("shows no provenance line for a root key", () => {
+  it("shows no provenance for a key made from a session", () => {
     expect(render(baseKey)).not.toContain("api-key-provenance");
+  });
+
+  it("shows short values with the full wording in the title", () => {
+    const used: ApiKey = { ...baseKey, last_used_at: "2026-09-18T12:00:00Z" };
+    const html = render(used);
+    expect(html).toContain("3 h ago");
+    expect(html).toContain('title="Last used 18 Sep 2026, 12:00 UTC"');
+    expect(html).toContain("17 Dec 2026");
+    expect(html).toContain('title="Expires 17 Dec 2026"');
+  });
+
+  it("marks an expired key in the expiry cell", () => {
+    expect(render({ ...baseKey, status: "expired" })).toContain(">Expired<");
   });
 
   it("includes the name and mask in the delete button's aria-label", () => {

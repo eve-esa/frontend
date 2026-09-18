@@ -9,9 +9,14 @@ Opens `ApiKeysDialog`, which fetches the key list only once the dialog opens, no
 
 ## List view
 
-- Name, masked token (`eve_…a1b2c3`), created date, "Last used …" or "Never used", expiry
-  (or "No expiration" / "Expired"), provenance ("Created via API key eve_…d4e5f6" when the
-  key was created by another key), Delete.
+- A table: Name, Key, Last used, Expires, and a trash icon to delete.
+  - Name cell: the name, then "Created <date>" and ", via API key" when another key created
+    it (which key is not shown). One line, truncated with the full text in the title.
+  - Key: the mask, `eve_…a1b2c3`.
+  - Last used: elapsed time ("5 min ago", "3 h ago", "4 days ago", the date after 30 days),
+    exact UTC timestamp in the title. Elapsed, so it reads the same in every timezone.
+  - Expires: the date, "No expiry", or "Expired" in amber.
+  - Below `sm` only the Name column stays, with key, expiry and last use listed under it.
 - "N of `<limit>` active keys" counter, sourced from the `X-API-Key-Limit` response header
   (falls back to 10). At the limit, Create is disabled and an inline notice explains why.
 

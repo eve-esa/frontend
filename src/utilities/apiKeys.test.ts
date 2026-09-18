@@ -9,9 +9,11 @@ import {
   countDescendants,
   createdLabel,
   expiryLabel,
+  expiryShort,
   formatKeyMask,
   isApiKeyLimitError,
   lastUsedLabel,
+  lastUsedShort,
   parseLimitHeader,
   provenanceLabel,
   resolveApiBaseUrl,
@@ -109,20 +111,41 @@ describe("createdLabel", () => {
 });
 
 describe("provenanceLabel", () => {
-  it("is null without a parent", () => {
+  it("is null for a key made from a session", () => {
     expect(provenanceLabel(null)).toBeNull();
   });
 
-  it("names the parent's mask when it has a suffix", () => {
-    expect(
-      provenanceLabel({ id: "p", name: "Parent", token_suffix: "d4e5f6", status: "active" }),
-    ).toBe("Created via API key eve_…d4e5f6");
+  it("only says a key made it, never which one", () => {
+    expect(provenanceLabel("parent-id")).toBe("via API key");
+  });
+});
+
+describe("lastUsedShort", () => {
+  const now = Date.parse("2026-09-18T14:02:00Z");
+  const ago = (ms: number) => new Date(now - ms).toISOString();
+
+  it("says Never for an unused key", () => {
+    expect(lastUsedShort(null, now)).toBe("Never");
   });
 
-  it("falls back when the parent has no stored suffix", () => {
-    expect(
-      provenanceLabel({ id: "p", name: "Parent", token_suffix: null, status: "active" }),
-    ).toBe("Created via another API key");
+  it("counts elapsed minutes, hours and days", () => {
+    expect(lastUsedShort(ago(20_000), now)).toBe("Just now");
+    expect(lastUsedShort(ago(5 * 60_000), now)).toBe("5 min ago");
+    expect(lastUsedShort(ago(3 * 3_600_000), now)).toBe("3 h ago");
+    expect(lastUsedShort(ago(26 * 3_600_000), now)).toBe("1 day ago");
+    expect(lastUsedShort(ago(4 * 86_400_000), now)).toBe("4 days ago");
+  });
+
+  it("falls back to the date after 30 days", () => {
+    expect(lastUsedShort("2026-07-01T12:00:00Z", now)).toBe("1 Jul 2026");
+  });
+});
+
+describe("expiryShort", () => {
+  it("shows the date, No expiry or Expired", () => {
+    expect(expiryShort(NOON_UTC_DEC, "active")).toBe("17 Dec 2026");
+    expect(expiryShort(null, "active")).toBe("No expiry");
+    expect(expiryShort(NOON_UTC_SEP, "expired")).toBe("Expired");
   });
 });
 
