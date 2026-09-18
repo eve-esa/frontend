@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { useIsMutating } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
@@ -29,6 +29,8 @@ import type { ApiError, ApiKey, CreatedApiKey } from "@/types";
 type ApiKeysDialogProps = {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Opened from state, not a DialogTrigger, so Radix has no trigger to refocus on close. */
+  returnFocusRef?: RefObject<HTMLElement | null>;
 };
 
 type View =
@@ -37,7 +39,11 @@ type View =
   | { kind: "reveal"; key: CreatedApiKey }
   | { kind: "confirmDelete"; key: ApiKey; descendants: number };
 
-export const ApiKeysDialog = ({ isOpen, onOpenChange }: ApiKeysDialogProps) => {
+export const ApiKeysDialog = ({
+  isOpen,
+  onOpenChange,
+  returnFocusRef,
+}: ApiKeysDialogProps) => {
   const [view, setView] = useState<View>({ kind: "list" });
   const createOpenRef = useRef<HTMLButtonElement>(null);
   const deleteCancelRef = useRef<HTMLButtonElement>(null);
@@ -112,6 +118,12 @@ export const ApiKeysDialog = ({ isOpen, onOpenChange }: ApiKeysDialogProps) => {
       <DialogContent
         data-testid="api-keys-dialog"
         className="sm:max-w-2xl max-h-[85vh] overflow-y-auto"
+        onCloseAutoFocus={(event) => {
+          if (returnFocusRef?.current) {
+            event.preventDefault();
+            returnFocusRef.current.focus();
+          }
+        }}
         onEscapeKeyDown={(event) => {
           if (view.kind === "create" && isCreatePending) return;
           if (view.kind !== "list") {

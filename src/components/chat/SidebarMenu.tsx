@@ -1,5 +1,5 @@
 import { LogoutDialog } from "@/components/auth/LogoutDialog";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faImages, faKey } from "@fortawesome/free-solid-svg-icons";
@@ -27,6 +27,7 @@ export const SidebarMenu = ({ isOpen }: SidebarMenuProps) => {
   const [isOpenProfileDialog, setIsOpenProfileDialog] = useState(false);
   const [isOpenCO2eqDialog, setIsOpenCO2eqDialog] = useState(false);
   const [isOpenApiKeysDialog, setIsOpenApiKeysDialog] = useState(false);
+  const apiKeysButtonRef = useRef<HTMLButtonElement>(null);
 
   const { data: profile, isLoading: isLoadingProfile } = useGetProfile();
   const navigate = useNavigate();
@@ -59,6 +60,7 @@ export const SidebarMenu = ({ isOpen }: SidebarMenuProps) => {
 
   const apiKeysItem = (
     <button
+      ref={apiKeysButtonRef}
       type="button"
       data-testid="sidebar-api-keys"
       aria-label="API keys"
@@ -140,6 +142,7 @@ export const SidebarMenu = ({ isOpen }: SidebarMenuProps) => {
         <ApiKeysDialog
           isOpen={isOpenApiKeysDialog}
           onOpenChange={setIsOpenApiKeysDialog}
+          returnFocusRef={apiKeysButtonRef}
         />
       )}
     </div>
