@@ -1,6 +1,6 @@
 import React from "react";
 
-export const useClipboard = () => {
+export const useClipboard = (resetMs: number = 1000) => {
   const [isCopied, setIsCopied] = React.useState(false);
   const [isClipboardEnabled, setIsClipboardEnabled] =
     React.useState<boolean>(false);
@@ -40,7 +40,7 @@ export const useClipboard = () => {
       }
 
       setIsCopied(true);
-      timeoutRef.current = setTimeout(() => setIsCopied(false), 1000);
+      timeoutRef.current = setTimeout(() => setIsCopied(false), resetMs);
       return true;
     } catch (error) {
       console.error(error);

@@ -41,6 +41,7 @@ export type ConfigKey =
   | "FEATURE_CUSTOM_MODELS"
   | "FEATURE_STREAMING"
   | "FEATURE_CLASSIFICATION_FILTERS"
+  | "FEATURE_API_KEYS"
   // Opening-scope switches. Same shape as the four above, opposite default:
   // off unless an environment opts in (see features.ts for why).
   | "FEATURE_ARTIFACTS"
@@ -88,6 +89,7 @@ const BUILD_TIME: Record<ConfigKey, string | undefined> = {
   FEATURE_STREAMING: import.meta.env.VITE_FEATURE_STREAMING,
   FEATURE_CLASSIFICATION_FILTERS:
     import.meta.env.VITE_FEATURE_CLASSIFICATION_FILTERS,
+  FEATURE_API_KEYS: import.meta.env.VITE_FEATURE_API_KEYS,
   FEATURE_ARTIFACTS: import.meta.env.VITE_FEATURE_ARTIFACTS,
   FEATURE_TOOLKITS: import.meta.env.VITE_FEATURE_TOOLKITS,
   FEATURE_PRIVATE_COLLECTIONS: import.meta.env

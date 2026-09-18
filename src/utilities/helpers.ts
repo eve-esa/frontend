@@ -127,11 +127,27 @@ export const adaptSettingsForRequest = (
   };
 };
 
+const FALLBACK_API_ERROR_MESSAGE = "Something went wrong!";
+
 export const handleApiError = (error: ApiError) => {
+  const detail = error?.response?.data?.detail;
+
+  // An object detail ({code, message}) carries its own user-facing text, such
+  // as the API key create throttle or the active-key cap. It must be checked
+  // before the generic 429 case below, because the throttle is itself a 429
+  // and would otherwise be shadowed by the free-credits copy meant for the
+  // token budget.
+  if (detail && typeof detail === "object" && !Array.isArray(detail) && detail.message) {
+    return detail.message;
+  }
   if (error?.response?.status === 429) {
     return "You've run out of free credits. Please recharge and try again.";
   }
-  const detail = error?.response?.data?.detail;
-  const errorMessage = typeof detail === "string" ? detail : detail?.[0]?.msg;
-  return errorMessage ?? "Something went wrong!";
+  if (typeof detail === "string") {
+    return detail;
+  }
+  if (Array.isArray(detail)) {
+    return detail[0]?.msg ?? FALLBACK_API_ERROR_MESSAGE;
+  }
+  return FALLBACK_API_ERROR_MESSAGE;
 };

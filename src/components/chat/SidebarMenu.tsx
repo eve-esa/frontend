@@ -2,7 +2,7 @@ import { LogoutDialog } from "@/components/auth/LogoutDialog";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faImages } from "@fortawesome/free-solid-svg-icons";
+import { faImages, faKey } from "@fortawesome/free-solid-svg-icons";
 import { ProfileMenubar } from "./ProfileMenubar";
 import { ProfileDialog } from "@/components/profile/ProfileDialog";
 import { CO2eqDialog } from "@/components/profile/CO2eqDialog";
@@ -11,7 +11,12 @@ import { KnowledgeBaseMenuBar } from "./KnowledgeBaseMenuBar";
 import { ToolkitsMenuBar } from "./ToolkitsMenuBar";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { routes } from "@/utilities/routes";
-import { ARTIFACTS_ENABLED, TOOLKITS_ENABLED } from "@/utilities/features";
+import {
+  API_KEYS_ENABLED,
+  ARTIFACTS_ENABLED,
+  TOOLKITS_ENABLED,
+} from "@/utilities/features";
+import { ApiKeysDialog } from "@/components/api-keys/ApiKeysDialog";
 
 type SidebarMenuProps = {
   isOpen: boolean;
@@ -21,6 +26,7 @@ export const SidebarMenu = ({ isOpen }: SidebarMenuProps) => {
   const [isOpenLogoutDialog, setIsOpenLogoutDialog] = useState(false);
   const [isOpenProfileDialog, setIsOpenProfileDialog] = useState(false);
   const [isOpenCO2eqDialog, setIsOpenCO2eqDialog] = useState(false);
+  const [isOpenApiKeysDialog, setIsOpenApiKeysDialog] = useState(false);
 
   const { data: profile, isLoading: isLoadingProfile } = useGetProfile();
   const navigate = useNavigate();
@@ -45,6 +51,26 @@ export const SidebarMenu = ({ isOpen }: SidebarMenuProps) => {
         <span className="text-lg truncate tracking-wider min-w-0 text-left">
           <span className="whitespace-nowrap mt-[2px] overflow-hidden text-ellipsis">
             Artifacts
+          </span>
+        </span>
+      )}
+    </button>
+  );
+
+  const apiKeysItem = (
+    <button
+      type="button"
+      data-testid="sidebar-api-keys"
+      aria-label="API keys"
+      aria-haspopup="dialog"
+      onClick={() => setIsOpenApiKeysDialog(true)}
+      className={`${baseStyles} ${layoutStyles} text-natural-50 hover:text-white`}
+    >
+      <FontAwesomeIcon icon={faKey} className="w-4 h-4" />
+      {isOpen && (
+        <span className="text-lg truncate tracking-wider min-w-0 text-left">
+          <span className="whitespace-nowrap mt-[2px] overflow-hidden text-ellipsis">
+            API keys
           </span>
         </span>
       )}
@@ -76,6 +102,15 @@ export const SidebarMenu = ({ isOpen }: SidebarMenuProps) => {
           </Tooltip>
         ))}
 
+      {API_KEYS_ENABLED &&
+        (isOpen ? (
+          apiKeysItem
+        ) : (
+          <Tooltip side="right" disableClick={true} content={<>API keys</>}>
+            <div className="inline-block w-full">{apiKeysItem}</div>
+          </Tooltip>
+        ))}
+
       <ProfileMenubar
         isLoadingProfile={isLoadingProfile}
         email={email}
@@ -100,6 +135,13 @@ export const SidebarMenu = ({ isOpen }: SidebarMenuProps) => {
         isOpen={isOpenCO2eqDialog}
         onOpenChange={setIsOpenCO2eqDialog}
       />
+
+      {API_KEYS_ENABLED && (
+        <ApiKeysDialog
+          isOpen={isOpenApiKeysDialog}
+          onOpenChange={setIsOpenApiKeysDialog}
+        />
+      )}
     </div>
   );
 };
