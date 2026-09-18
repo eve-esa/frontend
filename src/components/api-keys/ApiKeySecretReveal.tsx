@@ -48,7 +48,7 @@ export const ApiKeySecretReveal = ({ apiKey, onDone }: ApiKeySecretRevealProps) 
       <DialogHeader>
         <DialogTitle>Save your API key</DialogTitle>
         <DialogDescription>
-          This is the only time the full key is shown.
+          Use it as a Bearer token in the Authorization header.
         </DialogDescription>
       </DialogHeader>
 
