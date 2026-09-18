@@ -70,13 +70,16 @@
 
 /* Typography System */
 @layer base {
-  *:not(.katex):not(.katex *) {
+  /* Set on the root and inherited. Applied to every element instead, a size
+     set on a container never reached its children: each one was reset to
+     text-md, so `<p class="text-sm"><span>..` rendered the span at 15px. */
+  html {
     @apply font-sans text-md;
   }
 
   /* Large screen font size adjustment */
   @media (min-width: 3000px) {
-    *:not(.katex):not(.katex *) {
+    html {
       @apply text-2xl;
     }
   }

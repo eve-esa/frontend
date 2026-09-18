@@ -56,7 +56,7 @@ export const ToolkitsMenuBar = ({
 
       {isOpen && (
         <span className="text-lg truncate line-height-[1.4rem] tracking-wider min-w-0 text-left">
-          <span className="whitespace-nowrap mt-[2px] overflow-hidden text-ellipsis">
+          <span className="whitespace-nowrap mt-[2px] overflow-hidden text-ellipsis text-md">
             Toolkits
           </span>
         </span>

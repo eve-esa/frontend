@@ -57,7 +57,7 @@ export const ProfileMenubar = ({
           {isLoadingProfile ? (
             <Skeleton className="h-[20px]  w-full" />
           ) : (
-            <span className="whitespace-nowrap mt-[2px] overflow-hidden text-ellipsis">
+            <span className="whitespace-nowrap mt-[2px] overflow-hidden text-ellipsis text-md">
               {email}
             </span>
           )}

@@ -163,7 +163,7 @@ export const ConversationsMenuSidebar = () => {
                       <h3 className="font-semibold text-base tracking-[0.16em] uppercase">
                         Tips for Best Results
                       </h3>
-                      <ul className="list-disc space-y-2 pl-5 text-sm">
+                      <ul className="list-disc space-y-2 pl-5 text-md">
                         <li>Ask clear, specific EO/ES questions.</li>
                         <li>
                           Request examples (e.g. “give me 3 use cases for
@@ -195,7 +195,7 @@ export const ConversationsMenuSidebar = () => {
                         EVE is your AI companion for exploring Earth Observation
                         and Earth Science.
                       </p>
-                      <ul className="list-disc space-y-2 pl-5 text-sm">
+                      <ul className="list-disc space-y-2 pl-5 text-md">
                         <li>
                           Ask domain-specific questions: from “What is
                           Sentinel-2 used for?” to “How do SAR backscatter
@@ -226,7 +226,7 @@ export const ConversationsMenuSidebar = () => {
                       <h3 className="font-semibold text-base tracking-[0.16em] uppercase">
                         What EVE Cannot Do (Yet)
                       </h3>
-                      <ul className="list-disc space-y-2 pl-5 text-sm">
+                      <ul className="list-disc space-y-2 pl-5 text-md">
                         <li>
                           No document-level control. You cannot instruct EVE to
                           “only use this specific PDF” or “focus on this
