@@ -40,4 +40,5 @@ export const QUERY_KEYS = {
   imageBlob: "imageBlob",
   myImages: "myImages",
   apiKeys: "apiKeys",
+  gatewayModels: "gatewayModels",
 };

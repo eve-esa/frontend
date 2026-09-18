@@ -3,6 +3,7 @@ import {
   DEFAULT_API_KEY_LIMIT,
   buildCreateApiKeyBody,
   buildQuickstartSteps,
+  pickQuickstartModel,
   cascadeWarning,
   countActive,
   countDescendants,
@@ -302,16 +303,27 @@ describe("resolveApiBaseUrl", () => {
 });
 
 describe("buildQuickstartSteps", () => {
-  const steps = buildQuickstartSteps("https://dev.eve-chat.chat/api");
+  const steps = buildQuickstartSteps("https://dev.eve-chat.chat/api", "eve/eve-esa/EVE-Instruct");
   const all = steps.map((step) => step.code).join("\n");
 
-  it("sets the key first, then lists models, then sends a request", () => {
+  it("sets the key and the model first, then lists models, then sends a request", () => {
     expect(steps.map((step) => step.title)).toEqual([
-      "Set your key",
+      "Set your key and model",
       "List the models",
       "Send a chat request",
     ]);
-    expect(steps[0].code).toBe('export EVE_API_KEY="<your API key>"');
+    expect(steps[0].code).toBe(
+      'export EVE_API_KEY="<your API key>"\nexport EVE_MODEL="eve/eve-esa/EVE-Instruct"',
+    );
+  });
+
+  it("sends the model from EVE_MODEL, so step 3 runs without edits", () => {
+    expect(steps[2].code).toContain('\\"model\\": \\"$EVE_MODEL\\"');
+    expect(steps[2].code).not.toContain("<model id>");
+  });
+
+  it("falls back to a visible placeholder when no model is known", () => {
+    expect(buildQuickstartSteps("https://x/api")[0].code).toContain('EVE_MODEL="<model id>"');
   });
 
   it("targets the OpenAI-compatible endpoints under the given base", () => {
@@ -326,5 +338,16 @@ describe("buildQuickstartSteps", () => {
 
   it("holds commands only, no prose to strip before pasting", () => {
     expect(all).not.toContain("OpenAI-compatible");
+  });
+});
+
+describe("pickQuickstartModel", () => {
+  it("prefers an EVE-hosted model", () => {
+    expect(pickQuickstartModel(["jsc/alias-eve", "eve/eve-esa/EVE-Instruct"])).toBe("eve/eve-esa/EVE-Instruct");
+  });
+
+  it("falls back to the first listed, then to null", () => {
+    expect(pickQuickstartModel(["jsc/alias-eve"])).toBe("jsc/alias-eve");
+    expect(pickQuickstartModel([])).toBeNull();
   });
 });

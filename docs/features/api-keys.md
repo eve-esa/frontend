@@ -53,8 +53,10 @@ instead of erroring inline.
 
 A collapsible "Quickstart" (expanded in the reveal view): one line saying the API is
 OpenAI-compatible, the base URL (`<origin>/api/v1`) with its own copy button, then three
-numbered steps, each a command with its own copy button: set `EVE_API_KEY` (placeholder
-value), list the models, send a chat request. The steps never contain the real secret.
+numbered steps, each a command with its own copy button: set `EVE_API_KEY` (placeholder value)
+and `EVE_MODEL` (the first `eve/` model `GET /v1/models` returns, a placeholder if the call fails),
+list the models, send a chat request that reads `$EVE_MODEL`, so it runs as pasted. Locally the
+model call is cross-origin and the gateway answers no CORS preflight, so the placeholder shows there. The steps never contain the real secret.
 Backend contract: the backend repo's `docs/api/api-keys.md` and `docs/api/openai-gateway.md`.
 
 ## Accessibility

@@ -197,17 +197,34 @@ export const resolveApiBaseUrl = (
 
 export type QuickstartStep = { title: string; code: string };
 
+/** Placeholder shown until the gateway's model list has loaded (or if it fails). */
+export const QUICKSTART_MODEL_PLACEHOLDER = "<model id>";
+
+/**
+ * The model the Quickstart sets in EVE_MODEL: the first EVE-hosted model the
+ * gateway lists (`eve/...`), else whatever it lists first, else null.
+ */
+export const pickQuickstartModel = (ids: string[]): string | null =>
+  ids.find((id) => id.startsWith("eve/")) ?? ids[0] ?? null;
+
 /**
  * The Quickstart: one command per step, each copied on its own, so what the
- * user pastes runs as is. Takes a base URL, never a token: the secret exists
- * only in the reveal view's state, and this is also rendered from the list
- * view where no secret is in scope. The export line carries a placeholder the
- * user replaces, never a value this app fills in.
+ * user pastes runs as is. Step 1 sets both environment variables, the key as a
+ * placeholder the user replaces and the model as a value that works, so step 3
+ * needs no edit. Takes a base URL, never a token: the secret exists only in the
+ * reveal view's state, and this is also rendered from the list view where no
+ * secret is in scope.
  */
-export const buildQuickstartSteps = (baseUrl: string): QuickstartStep[] => [
+export const buildQuickstartSteps = (
+  baseUrl: string,
+  model: string | null = null,
+): QuickstartStep[] => [
   {
-    title: "Set your key",
-    code: 'export EVE_API_KEY="<your API key>"',
+    title: "Set your key and model",
+    code: [
+      'export EVE_API_KEY="<your API key>"',
+      `export EVE_MODEL="${model ?? QUICKSTART_MODEL_PLACEHOLDER}"`,
+    ].join("\n"),
   },
   {
     title: "List the models",
@@ -222,7 +239,7 @@ export const buildQuickstartSteps = (baseUrl: string): QuickstartStep[] => [
       `curl ${baseUrl}/v1/chat/completions \\`,
       '  -H "Authorization: Bearer $EVE_API_KEY" \\',
       '  -H "Content-Type: application/json" \\',
-      `  -d '{"model": "<model id>", "messages": [{"role": "user", "content": "Hello, EVE"}]}'`,
+      '  -d "{\\"model\\": \\"$EVE_MODEL\\", \\"messages\\": [{\\"role\\": \\"user\\", \\"content\\": \\"Hello, EVE\\"}]}"',
     ].join("\n"),
   },
 ];
