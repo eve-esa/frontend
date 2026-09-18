@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_API_KEY_LIMIT,
   buildCreateApiKeyBody,
+  buildUsageHint,
   buildUsageSnippet,
   cascadeWarning,
   countActive,
@@ -288,5 +289,25 @@ describe("buildUsageSnippet", () => {
 
   it("targets the chat completions endpoint under the given base", () => {
     expect(snippet).toContain("https://dev.eve-chat.chat/api/v1/chat/completions");
+  });
+
+  it("holds only commands, starting with the export line", () => {
+    expect(snippet.split("\n")[0]).toBe('export EVE_API_KEY="<your API key>"');
+    expect(snippet).not.toContain("OpenAI-compatible");
+  });
+
+  it("separates the commands with a blank line", () => {
+    const blocks = snippet.split("\n\n");
+    expect(blocks).toHaveLength(3);
+    expect(blocks[1].startsWith("curl ")).toBe(true);
+    expect(blocks[2].startsWith("curl ")).toBe(true);
+  });
+});
+
+describe("buildUsageHint", () => {
+  it("names the OpenAI-compatible base URL and carries no secret", () => {
+    const hint = buildUsageHint("https://dev.eve-chat.chat/api");
+    expect(hint).toContain("https://dev.eve-chat.chat/api/v1");
+    expect(hint).not.toMatch(/eve_[0-9a-f]{6,}/);
   });
 });

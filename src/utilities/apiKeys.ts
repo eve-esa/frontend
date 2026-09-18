@@ -178,17 +178,25 @@ export const resolveApiBaseUrl = (
 };
 
 /**
- * The "Use your key" example. Takes a base URL, never a token: the secret
+ * The "Use your key" example, commands only so the copy button yields
+ * something that runs as pasted. Takes a base URL, never a token: the secret
  * exists only in the reveal view's state, and this snippet is also rendered,
- * collapsed, from the list view where no secret is in scope. `$EVE_API_KEY`
- * is a placeholder for the user's shell, not a value this app ever fills in.
+ * collapsed, from the list view where no secret is in scope. The export line
+ * carries a placeholder the user replaces, never a value this app fills in.
  */
 export const buildUsageSnippet = (baseUrl: string): string =>
   [
-    `Set EVE_API_KEY to your key. The API is OpenAI-compatible: use \`${baseUrl}/v1\` as base_url.`,
+    'export EVE_API_KEY="<your API key>"',
     "",
-    `curl ${baseUrl}/v1/models -H "Authorization: Bearer $EVE_API_KEY"`,
+    `curl ${baseUrl}/v1/models \\`,
+    '  -H "Authorization: Bearer $EVE_API_KEY"',
+    "",
     `curl ${baseUrl}/v1/chat/completions \\`,
-    `  -H "Authorization: Bearer $EVE_API_KEY" -H "Content-Type: application/json" \\`,
+    '  -H "Authorization: Bearer $EVE_API_KEY" \\',
+    '  -H "Content-Type: application/json" \\',
     `  -d '{"model": "<model id from /v1/models>", "messages": [{"role": "user", "content": "Hello, EVE"}]}'`,
   ].join("\n");
+
+/** The line shown above the snippet, kept out of what the copy button copies. */
+export const buildUsageHint = (baseUrl: string): string =>
+  `Replace <your API key> with your key. The API is OpenAI-compatible: use ${baseUrl}/v1 as base_url.`;
