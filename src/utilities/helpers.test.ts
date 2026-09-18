@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { stubRuntimeConfig } from "@/test-utils/runtimeConfigStub";
-import { adaptSettingsForRequest } from "./helpers";
+import { adaptSettingsForRequest, handleApiError } from "./helpers";
 import type { AdvancedSettingsValidation } from "./advancedSettingsSchema";
+import type { ApiError } from "@/types";
 
 const base: AdvancedSettingsValidation = {
   score_threshold: 0.42,
@@ -110,5 +111,65 @@ describe("adaptSettingsForRequest and the classification filters flag", () => {
 
   it("pushes none of them when the flag is off, and keeps the others", async () => {
     expect(await mustKeys("false")).toEqual(["journal"]);
+  });
+});
+
+const apiError = (status: number | undefined, detail: unknown): ApiError =>
+  ({
+    response: status === undefined ? undefined : { status, data: { detail } },
+  }) as ApiError;
+
+describe("handleApiError", () => {
+  it("returns a string detail as is", () => {
+    expect(handleApiError(apiError(400, "Name is too long"))).toBe(
+      "Name is too long",
+    );
+  });
+
+  it("returns the first message of an array detail", () => {
+    expect(
+      handleApiError(apiError(422, [{ msg: "field required" }])),
+    ).toBe("field required");
+  });
+
+  it("returns an object detail's message on a 409, e.g. the active-key cap", () => {
+    expect(
+      handleApiError(
+        apiError(409, {
+          code: "api_key_limit_reached",
+          message: "You have reached the limit of 10 active keys.",
+          limit: 10,
+        }),
+      ),
+    ).toBe("You have reached the limit of 10 active keys.");
+  });
+
+  it("prefers an object detail's message over the generic 429 text", () => {
+    expect(
+      handleApiError(
+        apiError(429, {
+          code: "api_key_create_rate_limited",
+          message: "Too many keys created recently. Try again later.",
+        }),
+      ),
+    ).toBe("Too many keys created recently. Try again later.");
+  });
+
+  it("falls back to the free-credits text on a plain 429", () => {
+    expect(handleApiError(apiError(429, "ignored"))).toBe(
+      "You've run out of free credits. Please recharge and try again.",
+    );
+  });
+
+  it("falls back to the generic message for an object detail without a message", () => {
+    expect(
+      handleApiError(apiError(500, { code: "internal_error" })),
+    ).toBe("Something went wrong!");
+  });
+
+  it("falls back to the generic message when there is no response at all", () => {
+    expect(handleApiError(apiError(undefined, undefined))).toBe(
+      "Something went wrong!",
+    );
   });
 });

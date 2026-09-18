@@ -46,6 +46,16 @@ export const CLASSIFICATION_FILTERS_ENABLED = isEnabled(
 );
 
 /**
+ * The "API keys" sidebar entry and its management dialog.
+ *
+ * Hides the UI only, not access control: any credential (browser session or `eve_` key) can
+ * already create, list and revoke keys server side, so turning this off removes the entry
+ * point rather than the capability. Off is a UI kill switch; the backend's own kill switch for
+ * creation is `API_KEY_MAX_ACTIVE_PER_USER=0`.
+ */
+export const API_KEYS_ENABLED = isEnabled("FEATURE_API_KEYS", true);
+
+/**
  * The Artifacts page and its sidebar entry. Off removes the `/artifacts` route, so a deep link
  * falls through to Not found; artifact links inside old messages go through the API rather than
  * the SPA route and keep working.

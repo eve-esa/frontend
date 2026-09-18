@@ -171,6 +171,25 @@ describe("FEATURE_WELCOME_DIALOG", () => {
   });
 });
 
+describe("FEATURE_API_KEYS", () => {
+  it("is on when nothing sets it", async () => {
+    const { API_KEYS_ENABLED } = await loadFeatures({});
+    expect(API_KEYS_ENABLED).toBe(true);
+  });
+
+  it("is on when the injected value is blank, which is what an unset GitHub variable sends", async () => {
+    const { API_KEYS_ENABLED } = await loadFeatures({ FEATURE_API_KEYS: "" });
+    expect(API_KEYS_ENABLED).toBe(true);
+  });
+
+  it("is off only when an environment says so", async () => {
+    const { API_KEYS_ENABLED } = await loadFeatures({
+      FEATURE_API_KEYS: "false",
+    });
+    expect(API_KEYS_ENABLED).toBe(false);
+  });
+});
+
 describe("FEATURE_STREAM_STATUS_NOTICES", () => {
   it("is off when nothing sets it", async () => {
     const { STREAM_STATUS_NOTICES_ENABLED } = await loadFeatures({});

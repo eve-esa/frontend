@@ -155,6 +155,7 @@ jobs:
               "FEATURE_CUSTOM_MODELS": "${{ vars.FEATURE_CUSTOM_MODELS }}",
               "FEATURE_STREAMING": "${{ vars.FEATURE_STREAMING }}",
               "FEATURE_CLASSIFICATION_FILTERS": "${{ vars.FEATURE_CLASSIFICATION_FILTERS }}",
+              "FEATURE_API_KEYS": "${{ vars.FEATURE_API_KEYS }}",
               "FEATURE_ARTIFACTS": "${{ vars.FEATURE_ARTIFACTS }}",
               "FEATURE_TOOLKITS": "${{ vars.FEATURE_TOOLKITS }}",
               "FEATURE_PRIVATE_COLLECTIONS": "${{ vars.FEATURE_PRIVATE_COLLECTIONS }}",

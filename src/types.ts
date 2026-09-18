@@ -142,7 +142,19 @@ export type DetailsErrorArr = {
   detail: DetailsError[];
 };
 
-export type ApiError = AxiosError<{ detail: string | DetailsError[] }>;
+// Structured error detail the backend sends for a refusal that has its own
+// user-facing message: the create throttle (429) and the active-key cap
+// (409). `code` lets a caller branch on the specific refusal (see
+// `isApiKeyLimitError`) without parsing `message`.
+export type ApiErrorDetail = {
+  code: string;
+  message?: string;
+  limit?: number;
+};
+
+export type ApiError = AxiosError<{
+  detail: string | DetailsError[] | ApiErrorDetail;
+}>;
 
 export type Meta = {
   current_page: number;
@@ -214,6 +226,57 @@ export type ModelListResponse = {
   platform: PlatformModel[];
   providers: ProviderCatalog[];
   custom: CustomModel[];
+};
+
+// ─── API keys ─────────────────────────────────────────────────────────────
+
+export type ApiKeyStatus = "active" | "expired" | "revoked";
+
+// How the key came to exist: through a browser sign-in, or created by
+// another `eve_` key (`created_by_key_id` then names the parent). Legacy
+// rows predating this feature carry `null` for both.
+export type ApiKeyCreatedVia = "oidc" | "api_key" | null;
+
+// The parent key's own record, embedded on a child/grandchild item so the
+// UI can show provenance ("Created via API key eve_...d4e5f6") without a
+// second request. `token_suffix` is null when the parent itself predates
+// the suffix column.
+export type ApiKeyParent = {
+  id: string;
+  name: string;
+  token_suffix: string | null;
+  status: ApiKeyStatus;
+};
+
+// One row of GET /users/api-keys. Datetimes are ISO strings with a
+// timezone; never the raw secret, which only the create response carries.
+export type ApiKey = {
+  id: string;
+  name: string;
+  token_suffix: string | null;
+  status: ApiKeyStatus;
+  created_at: string;
+  expires_at: string | null;
+  revoked_at: string | null;
+  last_used_at: string | null;
+  created_via: ApiKeyCreatedVia;
+  created_by_key_id: string | null;
+  created_by: ApiKeyParent | null;
+  is_current: boolean;
+};
+
+// Response of POST /users/api-keys: a list item plus the raw secret, shown
+// exactly once. Never persisted, never logged, never read from
+// `mutation.data` (see the create mutation's secret-hygiene comment).
+export type CreatedApiKey = ApiKey & { token: string };
+
+// Body of POST /users/api-keys. Every field optional: an omitted name gets
+// a generated one server side, and an omitted `expires_in_days` gets the
+// server default (90 days) rather than "never" (only an explicit `null`
+// means no expiration). `expires_at` is never sent by this client.
+export type CreateApiKeyBody = {
+  name?: string;
+  expires_in_days?: number | null;
 };
 
 export type ModelSelection =
