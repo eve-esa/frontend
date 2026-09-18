@@ -16,6 +16,24 @@ Release and promotes staging. Production is promoted from there by an explicit d
 The `[1.0.0]` entry below is historical and predates this repository's current version series. The
 released tags run `v0.0.1` through `v0.0.6`; no `v1.0.0` was ever tagged here.
 
+## [0.0.20](https://github.com/eve-esa/frontend/compare/v0.0.19...v0.0.20) (2026-09-18)
+
+
+### Added
+
+* **api-keys:** keys table and Quickstart ([#103](https://github.com/eve-esa/frontend/issues/103)) ([163b3a0](https://github.com/eve-esa/frontend/commit/163b3a0d5f4126405c0185238dd0a075a97addfd))
+* **api-keys:** manage API keys from the sidebar ([#102](https://github.com/eve-esa/frontend/issues/102)) ([becc071](https://github.com/eve-esa/frontend/commit/becc0715ed0199a65729f8a7bda2785831df7f57))
+* **api-keys:** set the model in the Quickstart so step 3 runs as pasted ([#105](https://github.com/eve-esa/frontend/issues/105)) ([4296fee](https://github.com/eve-esa/frontend/commit/4296fee3f992fd9eb64e106fbd7cc1ee71f32d36))
+
+
+### Fixed
+
+* **chat:** drop duplicate Wiley documents sent without an envelope ([#101](https://github.com/eve-esa/frontend/issues/101)) ([b598c26](https://github.com/eve-esa/frontend/commit/b598c265d05405d7fce48bee42df8b3a9ef9129c))
+* **chat:** keep unique Wiley chunks in Sources ([#100](https://github.com/eve-esa/frontend/issues/100)) ([3171a92](https://github.com/eve-esa/frontend/commit/3171a92d60294cc2b12c0466069be69b7b693daa))
+* **chat:** show Wiley eve_retrieval passages in Sources ([#98](https://github.com/eve-esa/frontend/issues/98)) ([3c11757](https://github.com/eve-esa/frontend/commit/3c11757db8612b63044d8f2e11401a1ebf658315))
+* **chat:** stopping a generation no longer reloads the page ([#106](https://github.com/eve-esa/frontend/issues/106)) ([193d746](https://github.com/eve-esa/frontend/commit/193d74646ffa0664906708694d462b5375a4ae72))
+* **ui:** let the base font size inherit ([#104](https://github.com/eve-esa/frontend/issues/104)) ([9f6a2f4](https://github.com/eve-esa/frontend/commit/9f6a2f40e60ecefe63b5e4b88abcc98065797f85))
+
 ## [0.0.19](https://github.com/eve-esa/frontend/compare/v0.0.18...v0.0.19) (2026-09-09)
 
 
