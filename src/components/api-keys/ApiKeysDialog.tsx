@@ -113,6 +113,7 @@ export const ApiKeysDialog = ({ isOpen, onOpenChange }: ApiKeysDialogProps) => {
         data-testid="api-keys-dialog"
         className="sm:max-w-2xl max-h-[85vh] overflow-y-auto"
         onEscapeKeyDown={(event) => {
+          if (view.kind === "create" && isCreatePending) return;
           if (view.kind !== "list") {
             event.preventDefault();
             goToList();
