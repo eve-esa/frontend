@@ -36,12 +36,17 @@ const deleteApiKey = async (id: string): Promise<void> => {
  * `enabled` gates the request on the dialog being open: the sidebar mounts
  * this hook whenever the flag is on, and without `enabled` every page load
  * would fire GET /users/api-keys before anyone clicked the entry.
+ *
+ * `staleTime: 0` so every opening refetches: keys are also created, used and
+ * revoked from a terminal, and the global 5 minute staleTime would show a
+ * list without them (and with a stale "last used") until a reload.
  */
 export const useListApiKeys = (enabled: boolean) =>
   useQuery({
     queryKey: [QUERY_KEYS.apiKeys],
     queryFn: fetchApiKeys,
     enabled,
+    staleTime: 0,
   });
 
 export const useCreateApiKey = () => {
