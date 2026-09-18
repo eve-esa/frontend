@@ -29,3 +29,5 @@ Work with EVE using a chat-first interface:
 - Authentication flows for login, logout, and password resets.
 - Profile management for names, email, and other account details.
 - Session-aware UI to keep conversations scoped to the right user.
+- Self-service [API keys](features/api-keys.md) for programmatic access, no session token
+  copy-pasting required.
