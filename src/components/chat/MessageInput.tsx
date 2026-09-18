@@ -480,7 +480,13 @@ export const MessageInput = ({
       )}
 
       <div className="flex flex-col gap-2 h-full">
-        <form className={`flex gap-4  ${className || ""} h-full`}>
+        {/* Sending runs from the button handlers and the Enter key, never from a
+            native submit: without this, any click that lands on the Send button
+            submits the form with a GET and reloads the whole page. */}
+        <form
+          className={`flex gap-4  ${className || ""} h-full`}
+          onSubmit={(e) => e.preventDefault()}
+        >
           <div
             {...getRootProps()}
             className={cn(
@@ -666,8 +672,14 @@ export const MessageInput = ({
               </div>
               <div className="pointer-events-auto flex items-center gap-1">
                 {tokenRing}
+                {/* Distinct keys so React mounts a new button instead of turning
+                    Stop into Send in place: Stop fires on mousedown, and the
+                    click that follows must not land on the Send button. The
+                    onClick handlers only serve keyboard activation (detail 0);
+                    mouse presses are handled on mousedown. */}
                 {isLoading ? (
                   <Button
+                    key="composer-stop"
                     type="button"
                     variant="icon"
                     size="sm"
@@ -679,11 +691,15 @@ export const MessageInput = ({
                       e.stopPropagation();
                       handleStop();
                     }}
+                    onClick={(e) => {
+                      if (e.detail === 0) handleStop();
+                    }}
                   >
                     <FontAwesomeIcon icon={faStop} className="size-4" />
                   </Button>
                 ) : (
                   <Button
+                    key="composer-send"
                     type="submit"
                     disabled={
                       !inputValue.trim().length ||
@@ -700,6 +716,9 @@ export const MessageInput = ({
                       e.preventDefault();
                       e.stopPropagation();
                       handleSubmit(onSubmit)();
+                    }}
+                    onClick={(e) => {
+                      if (e.detail === 0) handleSubmit(onSubmit)();
                     }}
                   >
                     <FontAwesomeIcon icon={faPaperPlane} className="size-4 " />
