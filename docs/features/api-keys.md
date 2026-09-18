@@ -49,14 +49,13 @@ created with it will be deleted too", "Delete N keys"), because revoke cascades 
 A 404 (already deleted, by this or another session) shows a toast and returns to the list
 instead of erroring inline.
 
-## Use your key
+## Quickstart
 
-Commands only, so the copy button copies something that runs as pasted: an
-`export EVE_API_KEY="<your API key>"` line, then `GET /v1/models` and
-`POST /v1/chat/completions` against `<origin>/api/v1`, one blank line between commands. The
-hint with the OpenAI `base_url` sits above the box and is not copied. The snippet never
-contains the real secret. Backend contract: the backend repo's `docs/api/api-keys.md` and
-`docs/api/openai-gateway.md`.
+A collapsible "Quickstart" (expanded in the reveal view): one line saying the API is
+OpenAI-compatible, the base URL (`<origin>/api/v1`) with its own copy button, then three
+numbered steps, each a command with its own copy button: set `EVE_API_KEY` (placeholder
+value), list the models, send a chat request. The steps never contain the real secret.
+Backend contract: the backend repo's `docs/api/api-keys.md` and `docs/api/openai-gateway.md`.
 
 ## Accessibility
 

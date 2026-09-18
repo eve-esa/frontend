@@ -176,7 +176,7 @@ export const parseLimitHeader = (value: unknown): number => {
 };
 
 /**
- * Resolves the API base URL for the "Use your key" snippet the same way
+ * Resolves the API base URL for the Quickstart the same way
  * axios resolves `baseURL`: a relative value (e.g. "/api") is joined onto
  * the page origin, an absolute one keeps its own origin, and a missing or
  * blank value falls back to the page origin. Always origin + pathname, no
@@ -195,26 +195,34 @@ export const resolveApiBaseUrl = (
   }
 };
 
-/**
- * The "Use your key" example, commands only so the copy button yields
- * something that runs as pasted. Takes a base URL, never a token: the secret
- * exists only in the reveal view's state, and this snippet is also rendered,
- * collapsed, from the list view where no secret is in scope. The export line
- * carries a placeholder the user replaces, never a value this app fills in.
- */
-export const buildUsageSnippet = (baseUrl: string): string =>
-  [
-    'export EVE_API_KEY="<your API key>"',
-    "",
-    `curl ${baseUrl}/v1/models \\`,
-    '  -H "Authorization: Bearer $EVE_API_KEY"',
-    "",
-    `curl ${baseUrl}/v1/chat/completions \\`,
-    '  -H "Authorization: Bearer $EVE_API_KEY" \\',
-    '  -H "Content-Type: application/json" \\',
-    `  -d '{"model": "<model id from /v1/models>", "messages": [{"role": "user", "content": "Hello, EVE"}]}'`,
-  ].join("\n");
+export type QuickstartStep = { title: string; code: string };
 
-/** The line shown above the snippet, kept out of what the copy button copies. */
-export const buildUsageHint = (baseUrl: string): string =>
-  `Replace <your API key> with your key. The API is OpenAI-compatible: use ${baseUrl}/v1 as base_url.`;
+/**
+ * The Quickstart: one command per step, each copied on its own, so what the
+ * user pastes runs as is. Takes a base URL, never a token: the secret exists
+ * only in the reveal view's state, and this is also rendered from the list
+ * view where no secret is in scope. The export line carries a placeholder the
+ * user replaces, never a value this app fills in.
+ */
+export const buildQuickstartSteps = (baseUrl: string): QuickstartStep[] => [
+  {
+    title: "Set your key",
+    code: 'export EVE_API_KEY="<your API key>"',
+  },
+  {
+    title: "List the models",
+    code: [
+      `curl ${baseUrl}/v1/models \\`,
+      '  -H "Authorization: Bearer $EVE_API_KEY"',
+    ].join("\n"),
+  },
+  {
+    title: "Send a chat request",
+    code: [
+      `curl ${baseUrl}/v1/chat/completions \\`,
+      '  -H "Authorization: Bearer $EVE_API_KEY" \\',
+      '  -H "Content-Type: application/json" \\',
+      `  -d '{"model": "<model id>", "messages": [{"role": "user", "content": "Hello, EVE"}]}'`,
+    ].join("\n"),
+  },
+];

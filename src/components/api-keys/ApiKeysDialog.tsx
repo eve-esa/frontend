@@ -225,7 +225,7 @@ export const ApiKeysDialog = ({
 
                 <details className="rounded-lg border border-primary-400/40">
                   <summary className="cursor-pointer p-3 text-sm font-medium text-natural-100">
-                    Use your key
+                    Quickstart
                   </summary>
                   <div className="px-3 pb-3">
                     <ApiKeyUsageSnippet />

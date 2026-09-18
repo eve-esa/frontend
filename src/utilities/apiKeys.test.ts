@@ -2,8 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_API_KEY_LIMIT,
   buildCreateApiKeyBody,
-  buildUsageHint,
-  buildUsageSnippet,
+  buildQuickstartSteps,
   cascadeWarning,
   countActive,
   countDescendants,
@@ -302,35 +301,30 @@ describe("resolveApiBaseUrl", () => {
   });
 });
 
-describe("buildUsageSnippet", () => {
-  const snippet = buildUsageSnippet("https://dev.eve-chat.chat/api");
+describe("buildQuickstartSteps", () => {
+  const steps = buildQuickstartSteps("https://dev.eve-chat.chat/api");
+  const all = steps.map((step) => step.code).join("\n");
+
+  it("sets the key first, then lists models, then sends a request", () => {
+    expect(steps.map((step) => step.title)).toEqual([
+      "Set your key",
+      "List the models",
+      "Send a chat request",
+    ]);
+    expect(steps[0].code).toBe('export EVE_API_KEY="<your API key>"');
+  });
+
+  it("targets the OpenAI-compatible endpoints under the given base", () => {
+    expect(steps[1].code).toContain("https://dev.eve-chat.chat/api/v1/models");
+    expect(steps[2].code).toContain("https://dev.eve-chat.chat/api/v1/chat/completions");
+  });
 
   it("uses the shell placeholder, never a real secret", () => {
-    expect(snippet).toContain("$EVE_API_KEY");
-    expect(snippet).not.toMatch(/eve_[0-9a-f]{6,}/);
+    expect(all).toContain("$EVE_API_KEY");
+    expect(all).not.toMatch(/eve_[0-9a-f]{6,}/);
   });
 
-  it("targets the chat completions endpoint under the given base", () => {
-    expect(snippet).toContain("https://dev.eve-chat.chat/api/v1/chat/completions");
-  });
-
-  it("holds only commands, starting with the export line", () => {
-    expect(snippet.split("\n")[0]).toBe('export EVE_API_KEY="<your API key>"');
-    expect(snippet).not.toContain("OpenAI-compatible");
-  });
-
-  it("separates the commands with a blank line", () => {
-    const blocks = snippet.split("\n\n");
-    expect(blocks).toHaveLength(3);
-    expect(blocks[1].startsWith("curl ")).toBe(true);
-    expect(blocks[2].startsWith("curl ")).toBe(true);
-  });
-});
-
-describe("buildUsageHint", () => {
-  it("names the OpenAI-compatible base URL and carries no secret", () => {
-    const hint = buildUsageHint("https://dev.eve-chat.chat/api");
-    expect(hint).toContain("https://dev.eve-chat.chat/api/v1");
-    expect(hint).not.toMatch(/eve_[0-9a-f]{6,}/);
+  it("holds commands only, no prose to strip before pasting", () => {
+    expect(all).not.toContain("OpenAI-compatible");
   });
 });
