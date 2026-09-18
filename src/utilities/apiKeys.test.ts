@@ -97,7 +97,7 @@ describe("lastUsedLabel", () => {
   });
 
   it("shows the UTC date and time", () => {
-    expect(lastUsedLabel(NOON_UTC_SEP)).toBe("Last used 18 Sep 2026, 14:02");
+    expect(lastUsedLabel(NOON_UTC_SEP)).toBe("Last used 18 Sep 2026, 14:02 UTC");
   });
 });
 

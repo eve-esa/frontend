@@ -89,7 +89,7 @@ export const lastUsedLabel = (lastUsedAt: string | null): string => {
   const date = new Date(lastUsedAt);
   const datePart = formatDate(lastUsedAt);
   const timePart = `${pad2(date.getUTCHours())}:${pad2(date.getUTCMinutes())}`;
-  return `Last used ${datePart}, ${timePart}`;
+  return `Last used ${datePart}, ${timePart} UTC`;
 };
 
 /** Null when the key has no parent (line 3 of a row is only rendered then). */
