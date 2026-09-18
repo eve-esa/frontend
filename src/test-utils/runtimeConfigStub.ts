@@ -3,7 +3,8 @@ import type { ConfigKey } from "@/utilities/runtimeConfig";
 
 /**
  * Values read from import.meta.env at module scope. A developer who copied
- * .env.example has all six opening-scope flags set to true there, and Vite
+ * .env.example has all eight opening-scope flags set to true there, and the
+ * compose frontend container sets the same eight on its environment, and Vite
  * hands those to import.meta.env in a test run as well, so a value a test means
  * to decide for itself would instead be decided by the machine it runs on.
  * Blanking them leaves the injected config as the only source.
@@ -13,12 +14,15 @@ const BUILD_TIME_ENV_KEYS = [
   "VITE_FEATURE_CUSTOM_MODELS",
   "VITE_FEATURE_STREAMING",
   "VITE_FEATURE_CLASSIFICATION_FILTERS",
+  "VITE_FEATURE_API_KEYS",
   "VITE_FEATURE_ARTIFACTS",
   "VITE_FEATURE_TOOLKITS",
   "VITE_FEATURE_PRIVATE_COLLECTIONS",
   "VITE_FEATURE_ATTACHMENTS",
   "VITE_FEATURE_ANSWERED_BY",
   "VITE_FEATURE_BETA_BADGE",
+  "VITE_FEATURE_WELCOME_DIALOG",
+  "VITE_FEATURE_STREAM_STATUS_NOTICES",
   // Not flags, same reasoning: AppVersion reads these at module scope and the
   // profile dialog renders it, so a developer's .env would otherwise decide
   // whether a version line appears in a test that never asked about one.
