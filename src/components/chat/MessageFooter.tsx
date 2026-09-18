@@ -452,8 +452,11 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
           !hasSources && "flex-col"
         } md:flex-row md:items-center justify-between gap-2 mb-4`}
       >
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2">
+        <div className="flex min-w-0 flex-col gap-2">
+          {/* Wraps instead of squeezing: in a narrow chat column (wide right
+              sidebar) the labels used to break one word per line and the
+              buttons overflowed into a horizontal scrollbar. */}
+          <div className="flex flex-wrap items-center gap-2">
             {hasSources ? (
               <Button
                 variant="primary"
