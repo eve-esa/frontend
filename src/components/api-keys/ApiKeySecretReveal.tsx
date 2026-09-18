@@ -48,7 +48,8 @@ export const ApiKeySecretReveal = ({ apiKey, onDone }: ApiKeySecretRevealProps) 
       <DialogHeader>
         <DialogTitle>Save your API key</DialogTitle>
         <DialogDescription>
-          Use it as a Bearer token in the Authorization header.
+          Copy your key now. For security reasons it is shown only once: you
+          won't be able to see it again.
         </DialogDescription>
       </DialogHeader>
 
@@ -98,10 +99,11 @@ export const ApiKeySecretReveal = ({ apiKey, onDone }: ApiKeySecretRevealProps) 
         <p
           id="api-key-secret-warning"
           data-testid="api-key-secret-warning"
-          className="text-sm text-primary-300"
+          className="rounded-md border border-danger-100/60 bg-danger-100/10 p-3 text-sm text-danger-100"
         >
-          This is the only time the full key is shown. Copy it now and store it
-          somewhere safe. If you lose it, delete it and create a new one.
+          This is the only time the full key is shown. Store it somewhere safe:
+          anyone with it can call EVE as you and use your token budget. If you
+          lose it, delete it and create a new one.
         </p>
       </div>
 

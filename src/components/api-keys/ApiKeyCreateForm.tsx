@@ -100,6 +100,14 @@ export const ApiKeyCreateForm = ({ onCancel, onCreated }: ApiKeyCreateFormProps)
           )}
         </fieldset>
 
+        <p
+          data-testid="api-key-create-once-note"
+          className="text-sm text-natural-200"
+        >
+          Your key will be shown only once, right after you create it. Copy it
+          then and store it somewhere safe.
+        </p>
+
         {error && (
           <p role="alert" data-testid="api-key-create-error" className="text-sm text-danger-400">
             {handleApiError(error)}
