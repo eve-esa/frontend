@@ -1,3 +1,4 @@
+import type { AgenticTraceStep } from "@/types";
 import api from "./axios";
 import { renewToken, userManager } from "./oidc";
 import type { AxiosProgressEvent } from "axios";
@@ -7,7 +8,7 @@ export type StreamEvent =
   | {
       type: "final";
       answer: string;
-      trace?: Record<string, unknown>[] | null;
+      trace?: AgenticTraceStep[] | null;
       artifact_ids?: string[];
     }
   | { type: "status"; content: string }

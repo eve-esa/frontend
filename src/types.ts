@@ -1,7 +1,54 @@
 import type { AxiosError } from "axios";
 import { z } from "zod";
 
-export type AgenticTraceStep = Record<string, unknown>;
+// One entry of `message.trace` (also on the SSE `final` event), as the backend
+// persists it. Every field is optional on purpose: legacy traces predate
+// `started_at_s` and carry near-zero `latency_s`, and nothing here is
+// validated on the way in. Read it through `normalizeTrace` in
+// utilities/agentTrace.ts, never field by field in a component.
+export type AgenticTraceRole =
+  | "assistant"
+  | "tool"
+  | "user"
+  | "system"
+  | "unknown";
+
+export type AgenticTraceToolCall = {
+  name?: string;
+  args?: Record<string, unknown>;
+  id?: string;
+};
+
+export type AgenticTraceStep = {
+  node?: string;
+  role?: AgenticTraceRole | (string & {});
+  // Duration of the step, in seconds. Wrong (near zero) on legacy traces.
+  latency_s?: number;
+  // Offset of the step from the start of the generation, in seconds. Its
+  // absence is what marks a legacy trace.
+  started_at_s?: number;
+  id?: string;
+  // Agent and final answer: markdown. Tool: the tool result as a plain
+  // string (JSON text when the tool returns JSON), or on legacy traces the
+  // Python repr of the MCP content blocks.
+  content?: unknown;
+  tool_calls?: AgenticTraceToolCall[];
+  response_metadata?: {
+    finish_reason?: string;
+    model_name?: string;
+    model_provider?: string;
+  };
+  usage_metadata?: {
+    input_tokens?: number;
+    output_tokens?: number;
+    total_tokens?: number;
+  };
+  // Tool steps only.
+  name?: string;
+  tool_call_id?: string;
+  status?: "success" | "error" | (string & {});
+  [key: string]: unknown;
+};
 
 // One MCP tool invocation within the streaming turn: appended as "running" on
 // a tool_call event and flipped to "done" by the matching tool_result. `tool`

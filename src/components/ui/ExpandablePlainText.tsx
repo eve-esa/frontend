@@ -1,15 +1,19 @@
 import { useEffect, useRef, useState } from "react";
+import { cn } from "@/lib/utils";
 
 const DEFAULT_MIN_LENGTH = 150;
 
 type ExpandablePlainTextProps = {
   text: string;
   minLength?: number;
+  // Extra classes for the text itself, e.g. a monospace font for tool output.
+  textClassName?: string;
 };
 
 export const ExpandablePlainText = ({
   text,
   minLength = DEFAULT_MIN_LENGTH,
+  textClassName,
 }: ExpandablePlainTextProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [contentHeight, setContentHeight] = useState(0);
@@ -32,7 +36,14 @@ export const ExpandablePlainText = ({
         }}
       >
         <div ref={contentRef}>
-          <p className="block !text-sm 3xl:!text-xl whitespace-pre-wrap">{text}</p>
+          <p
+            className={cn(
+              "block !text-sm 3xl:!text-xl whitespace-pre-wrap",
+              textClassName,
+            )}
+          >
+            {text}
+          </p>
         </div>
         {!isExpanded && canExpand && (
           <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-primary-200 to-transparent pointer-events-none transition-opacity duration-300" />

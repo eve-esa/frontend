@@ -31,6 +31,8 @@ export type SidebarContent = {
   props?: {
     sources?: AppDocument[];
     trace?: AgenticTraceStep[];
+    // The user message a trace answered, for the trace panel header.
+    question?: string;
     messageId?: string;
   };
 };
@@ -148,9 +150,13 @@ export const DynamicSidebarProvider = ({ children }: SidebarProviderProps) => {
         );
       case "trace":
         return (
+          // Keyed by message: the panel keeps per-step open state, which
+          // must not carry over to another message's trace.
           <AgenticTrace
+            key={content.props?.messageId}
             onToggle={closeDynamicSidebar}
             trace={content.props?.trace || []}
+            question={content.props?.question}
           />
         );
       case "shared-collections":

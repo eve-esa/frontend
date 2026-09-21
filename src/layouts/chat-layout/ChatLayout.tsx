@@ -117,8 +117,13 @@ export const ChatLayout = () => {
             {/* Left Sidebar: Conversations, Menu items, New chat button */}
             <ConversationsMenuSidebar />
 
-            {/* Main content: Chat */}
-            <div className="flex-1 h-full flex flex-col @container">
+            {/* Main content: Chat. data-chat-column lets the resizable right
+                sidebar measure the room it can take; the docked-layout minimum
+                keeps the chat usable whatever the sidebars do. */}
+            <div
+              data-chat-column
+              className="flex-1 h-full flex flex-col @container lg:min-w-[400px]"
+            >
               <Outlet />
             </div>
 
