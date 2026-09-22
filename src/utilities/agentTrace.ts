@@ -67,6 +67,14 @@ export type ToolStepView = TraceStepBase & {
    * falling back to order. Undefined when no call matches.
    */
   input: unknown;
+  /**
+   * False when the trace does not hold the arguments. Legacy traces lost
+   * them: the streaming runner traced the agent step from its first chunk,
+   * before the arguments arrived (stored as `{}`), and did not trace text
+   * tool calls at all (no agent step to pair with). On a legacy trace `{}`
+   * therefore counts as not recorded, even for a tool that takes none.
+   */
+  inputRecorded: boolean;
   output: ToolOutput;
 };
 
@@ -109,6 +117,9 @@ export const DISPLAY_TEXT_LIMIT = 4000;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
+
+const isEmptyRecord = (value: unknown): boolean =>
+  isRecord(value) && Object.keys(value).length === 0;
 
 const isContainer = (value: unknown): value is object =>
   typeof value === "object" && value !== null;
@@ -599,6 +610,7 @@ export const normalizeTrace = (
     if (raw.role === "tool") {
       const call = pairs.get(index);
       const name = readString(raw.name) ?? call?.name ?? "Tool";
+      const args = call?.args;
       return {
         ...base,
         kind: "tool",
@@ -607,7 +619,8 @@ export const normalizeTrace = (
         name,
         status: readStatus(raw.status),
         toolCallId: readString(raw.tool_call_id),
-        input: call?.args,
+        input: args,
+        inputRecorded: args != null && !(isLegacy && isEmptyRecord(args)),
         output: parseToolContent(raw.content),
       };
     }

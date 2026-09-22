@@ -14,7 +14,7 @@ EVE’s chat is a multi-turn assistant focused on Earth Observation topics. Mess
 
 ## Working with messages
 - **Sources**: when a reply uses retrieved documents, click **Sources (n)** in the message footer to inspect the cited snippets.
-- **Trace**: when a reply was generated with tools, click **Trace (n)** to see the agent's steps: what it planned, each tool call with its input and output (collapsible JSON, with copy), and the final answer. Newer answers also show how long each step took, on a timeline.
+- **Trace**: when a reply was generated with tools, click **Trace (n)** to see the agent's steps: what it planned, each tool call with its input and output (collapsible JSON, with copy), and the final answer. Newer answers also show how long each step took, on a timeline. Older answers may not have their tool inputs: the card says "Not recorded for this answer".
 - **Feedback**: thumbs up/down to rate answers; optionally leave a reason for negative feedback.
 - **Copy**: copy any reply text directly from the footer.
 

@@ -82,4 +82,25 @@ describe("TraceStepCard", () => {
     );
     expect(render(legacy.steps[1])).not.toContain("1.27 s");
   });
+
+  it("says the input was not recorded when a legacy trace lost it", () => {
+    const legacy = normalizeTrace([
+      { ...trace[0], tool_calls: [{ name: "search_docs", args: {}, id: "call-1" }] },
+      trace[1],
+    ].map((step) => ({ ...step, started_at_s: undefined })));
+    const html = render(legacy.steps[1]);
+    expect(html).toContain("Not recorded for this answer");
+    expect(html).not.toContain("No arguments");
+    expect(html).not.toContain('aria-label="Copy input"');
+  });
+
+  it("says a tool had no arguments on the new format", () => {
+    const view = normalizeTrace([
+      { ...trace[0], tool_calls: [{ name: "search_docs", args: {}, id: "call-1" }] },
+      trace[1],
+    ]);
+    const html = render(view.steps[1]);
+    expect(html).toContain("No arguments");
+    expect(html).not.toContain("Not recorded for this answer");
+  });
 });

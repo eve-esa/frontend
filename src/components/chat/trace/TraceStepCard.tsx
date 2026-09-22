@@ -152,34 +152,35 @@ const ToolOutputView = ({ step }: { step: ToolStepView }) => {
 };
 
 const ToolBody = ({ step }: { step: ToolStepView }) => {
-  const { input, output } = step;
-  const hasInput = input !== undefined;
+  const { input, inputRecorded, output } = step;
   const isEmptyInput =
     isContainer(input) && Object.keys(input).length === 0;
 
   return (
     <>
-      {hasInput && (
-        <TraceSection
-          title="Input"
-          copyText={isEmptyInput ? undefined : toCopyText(input)}
-          copyLabel="Copy input"
-        >
-          {isEmptyInput ? (
-            <Muted>No arguments</Muted>
-          ) : isContainer(input) ? (
-            <CodeBox>
-              <JsonTree data={input} expand="all" label="Tool input" />
-            </CodeBox>
-          ) : (
-            <CodeBox>
-              <pre className="whitespace-pre-wrap font-mono text-[12px] leading-5 text-natural-100 [overflow-wrap:anywhere]">
-                {String(input)}
-              </pre>
-            </CodeBox>
-          )}
-        </TraceSection>
-      )}
+      <TraceSection
+        title="Input"
+        copyText={
+          !inputRecorded || isEmptyInput ? undefined : toCopyText(input)
+        }
+        copyLabel="Copy input"
+      >
+        {!inputRecorded ? (
+          <Muted>Not recorded for this answer</Muted>
+        ) : isEmptyInput ? (
+          <Muted>No arguments</Muted>
+        ) : isContainer(input) ? (
+          <CodeBox>
+            <JsonTree data={input} expand="all" label="Tool input" />
+          </CodeBox>
+        ) : (
+          <CodeBox>
+            <pre className="whitespace-pre-wrap font-mono text-[12px] leading-5 text-natural-100 [overflow-wrap:anywhere]">
+              {String(input)}
+            </pre>
+          </CodeBox>
+        )}
+      </TraceSection>
       <TraceSection
         title="Output"
         copyText={output.kind === "empty" ? undefined : output.copyText}

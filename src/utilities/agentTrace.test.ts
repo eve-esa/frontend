@@ -278,6 +278,7 @@ describe("normalizeTrace", () => {
     const tool = view.steps[1] as ToolStepView;
     expect(tool.status).toBe("success");
     expect(tool.input).toEqual({ query: "sea ice", k: 2 });
+    expect(tool.inputRecorded).toBe(true);
     expect(tool.output).toMatchObject({ kind: "json" });
   });
 
@@ -288,10 +289,42 @@ describe("normalizeTrace", () => {
     expect(view.steps.every((step) => step.durationS === null)).toBe(true);
     const tool = view.steps[1] as ToolStepView;
     expect(tool.input).toEqual({ query: "sea ice", k: 2 });
+    expect(tool.inputRecorded).toBe(true);
     expect(tool.output).toMatchObject({
       kind: "json",
       value: { hits: [{ title: "Earth's albedo" }] },
     });
+  });
+
+  it("marks the input as not recorded when a legacy trace lost the arguments", () => {
+    // The old streaming runner traced the call before its arguments arrived.
+    const emptyArgs = normalizeTrace([
+      agentStep({ tool_calls: [{ name: "search_docs", args: {}, id: "call-1" }] }),
+      toolStep(),
+    ]).steps[1] as ToolStepView;
+    expect(emptyArgs.inputRecorded).toBe(false);
+
+    // Text tool calls left no agent step to pair with.
+    const noAgentStep = normalizeTrace([
+      toolStep({ tool_call_id: "call_0_search_docs" }),
+      answerStep(),
+    ]).steps[0] as ToolStepView;
+    expect(noAgentStep.input).toBeUndefined();
+    expect(noAgentStep.inputRecorded).toBe(false);
+  });
+
+  it("keeps empty arguments as recorded on the new format", () => {
+    const view = normalizeTrace([
+      agentStep({
+        tool_calls: [{ name: "list_themes", args: {}, id: "call-1" }],
+        latency_s: 1,
+        started_at_s: 0,
+      }),
+      toolStep({ name: "list_themes", latency_s: 1, started_at_s: 1 }),
+    ]);
+    const tool = view.steps[1] as ToolStepView;
+    expect(tool.input).toEqual({});
+    expect(tool.inputRecorded).toBe(true);
   });
 
   it("keeps unknown roles and odd entries as generic steps", () => {
