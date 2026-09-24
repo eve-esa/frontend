@@ -1,4 +1,5 @@
 import {
+  faBug,
   faBullseye,
   faCheck,
   faListUl,
@@ -38,7 +39,9 @@ import { getRenderableDocuments } from "@/utilities/messageDocuments";
 import { useListModels } from "@/services/useListModels";
 import { resolveCustomModelDisplayName } from "@/utilities/modelSelection";
 import { buildHallucinationCopyText } from "@/utilities/buildHallucinationCopyText";
-import { ANSWERED_BY_ENABLED } from "@/utilities/features";
+import { ANSWERED_BY_ENABLED, REPORT_BUG_ENABLED } from "@/utilities/features";
+import { isPersistedId } from "@/services/useReportBug";
+import { ReportBugDialog } from "./ReportBugDialog";
 
 type Hallucination = NonNullable<MessageType["hallucination"]>;
 
@@ -149,6 +152,7 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
 
   const [isSendFeedbackDialogOpen, setIsSendFeedbackDialogOpen] =
     useState(false);
+  const [isReportBugDialogOpen, setIsReportBugDialogOpen] = useState(false);
 
   const { mutate: sendFeedback } = useSendFeedback();
 
@@ -501,6 +505,20 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
                 </span>
               </Button>
             ) : null}
+            {/* The report names this answer, so whoever triages it lands on
+                the right generation. An optimistic id (still streaming, or
+                not saved yet) means nothing to the backend: disabled. */}
+            {REPORT_BUG_ENABLED && message?.id ? (
+              <Button
+                variant="primary"
+                aria-haspopup="dialog"
+                disabled={!isPersistedId(message.id)}
+                onClick={() => setIsReportBugDialogOpen(true)}
+              >
+                <FontAwesomeIcon icon={faBug} className="size-4" />
+                <span className="font-['NotesESA']">Report a bug</span>
+              </Button>
+            ) : null}
             <Button
               variant="outline"
               onClick={handleHallucinationDetect}
@@ -553,6 +571,17 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
             )}
           </Button>
         </div>
+        {REPORT_BUG_ENABLED && message?.id ? (
+          <ReportBugDialog
+            isOpen={isReportBugDialogOpen}
+            onOpenChange={setIsReportBugDialogOpen}
+            target={{
+              conversationId: conversationId || message.conversation_id,
+              messageId: message.id,
+              traceId: message.trace_id,
+            }}
+          />
+        ) : null}
         <SendFeedbackDialog
           isOpen={isSendFeedbackDialogOpen}
           onOpenChange={setIsSendFeedbackDialogOpen}

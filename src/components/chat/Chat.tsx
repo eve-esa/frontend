@@ -1,6 +1,6 @@
 import { MessageList } from "./MessageList";
 import { MessageInput } from "./MessageInput";
-import { ConversationHeader } from "./ConversationHeader";
+import { ChatHeader } from "./ChatHeader";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronDown } from "@fortawesome/free-solid-svg-icons";
@@ -168,10 +168,7 @@ export const Chat = () => {
   return (
     <div className="flex h-full w-full flex-col bg-natural-900 relative">
       <div className="flex-none">
-        <ConversationHeader
-          conversationId={conversationId}
-          messages={messages}
-        />
+        <ChatHeader />
       </div>
 
       {/* Scroll container - always present */}
