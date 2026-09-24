@@ -242,6 +242,19 @@ const toRedactedError = (
   return { name: "Error", message: redactString(String(error)) };
 };
 
+/**
+ * The redacted error as a real Error. The SDK only reads name, message and
+ * stack from an `instanceof Error`; a plain object becomes "Object captured as
+ * exception" and loses all three.
+ */
+export const toSdkError = (error: unknown): Error => {
+  const safe = toRedactedError(error);
+  const sdkError = new Error(safe.message);
+  sdkError.name = safe.name;
+  sdkError.stack = safe.stack ?? `${safe.name}: ${safe.message}`;
+  return sdkError;
+};
+
 // ---------------------------------------------------------------------------
 // Runtime state. Everything below is inert until initTelemetry() finds an
 // endpoint.
@@ -254,7 +267,7 @@ export const MAX_PENDING_EXCEPTIONS = 50;
 let state: State = "idle";
 let sdk: HyperDXSdk | undefined;
 let activeConfig: TelemetryConfig | null = null;
-let pendingExceptions: Array<[unknown, Attributes]> = [];
+let pendingExceptions: Array<[Error, Attributes]> = [];
 let pendingAttributes: Record<string, string> = {};
 let replayStarted = false;
 
@@ -321,7 +334,7 @@ export const recordException = (
 ): void => {
   if (state !== "loading" && state !== "ready") return;
   try {
-    const safeError = toRedactedError(error);
+    const safeError = toSdkError(error);
     const attributes = toAttributes(context);
     if (state === "ready" && sdk) {
       sdk.recordException(safeError, attributes);

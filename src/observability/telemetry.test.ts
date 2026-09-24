@@ -326,6 +326,44 @@ describe("initTelemetry with an endpoint", () => {
     expect(telemetry.getSessionId()).toBe("session-1");
   });
 
+  it("hands the SDK a real Error with name, message and stack on both paths", async () => {
+    const telemetry = await loadTelemetry({
+      OBSERVABILITY_ENDPOINT: "http://localhost:4318",
+    });
+    const queued = new TypeError("queued Bearer abc.def.ghi");
+    queued.stack = "TypeError: queued Bearer abc.def.ghi\n    at queued (app.js:1:1)";
+    const ready = telemetry.initTelemetry();
+    telemetry.recordException(queued);
+    await ready;
+    const direct = new Error("direct failure");
+    direct.name = "StreamError";
+    direct.stack = "StreamError: direct failure\n    at direct (app.js:2:2)";
+    telemetry.recordException(direct);
+    // A plain object, as some callers pass, still becomes a real Error.
+    telemetry.recordException({ name: "UploadError", message: "too big" });
+
+    expect(sdkState.recordException).toHaveBeenCalledTimes(3);
+    const [first, second, third] = sdkState.recordException.mock.calls.map(
+      ([error]) => error,
+    );
+    for (const error of [first, second, third]) {
+      expect(error).toBeInstanceOf(Error);
+    }
+    expect(first.name).toBe("TypeError");
+    expect(first.message).toBe("queued Bearer [REDACTED]");
+    expect(first.stack).toBe(
+      "TypeError: queued Bearer [REDACTED]\n    at queued (app.js:1:1)",
+    );
+    expect(second.name).toBe("StreamError");
+    expect(second.message).toBe("direct failure");
+    expect(second.stack).toBe(
+      "StreamError: direct failure\n    at direct (app.js:2:2)",
+    );
+    expect(third.name).toBe("UploadError");
+    expect(third.message).toBe("too big");
+    expect(third.stack).toBe("UploadError: too big");
+  });
+
   it("bounds the queue while the SDK is loading", async () => {
     const telemetry = await loadTelemetry({
       OBSERVABILITY_ENDPOINT: "http://localhost:4318",
