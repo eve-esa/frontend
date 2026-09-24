@@ -169,7 +169,13 @@ jobs:
               "ABOUT_US_URL": "${{ vars.VITE_ABOUT_US_URL }}",
               "AUTH_ISSUER": "${{ vars.AUTH_ISSUER }}",
               "AUTH_CLIENT_ID": "${{ vars.AUTH_CLIENT_ID }}",
-              "AUTH_SCOPE": "${{ vars.AUTH_SCOPE }}"
+              "AUTH_SCOPE": "${{ vars.AUTH_SCOPE }}",
+              "OBSERVABILITY_ENDPOINT": "${{ vars.OBSERVABILITY_ENDPOINT }}",
+              "OBSERVABILITY_INGEST_KEY": "${{ vars.OBSERVABILITY_INGEST_KEY }}",
+              "OBSERVABILITY_UI_URL": "${{ vars.OBSERVABILITY_UI_URL }}",
+              "OBSERVABILITY_ENVIRONMENT": "${{ vars.OBSERVABILITY_ENVIRONMENT }}",
+              "OBSERVABILITY_PRIVACY_MODE": "${{ vars.OBSERVABILITY_PRIVACY_MODE }}",
+              "OBSERVABILITY_CONSOLE_CAPTURE": "${{ vars.OBSERVABILITY_CONSOLE_CAPTURE }}"
             }
 
       - name: Configure AWS credentials

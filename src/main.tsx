@@ -8,6 +8,7 @@ import { router } from "./router";
 import { userManager } from "./services/oidc";
 import "./index.css";
 import { setupGlobalErrorHandlers } from "./utils/globalErrorHandler";
+import { initTelemetry } from "./observability/telemetry";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -28,6 +29,9 @@ const onSigninCallback = (user: User | undefined) => {
   void router.navigate(returnTo, { replace: true });
 };
 
+// Before the global handlers, so their first logError can already queue for
+// the SDK. A no-op without OBSERVABILITY_ENDPOINT; never rejects.
+void initTelemetry();
 setupGlobalErrorHandlers();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(

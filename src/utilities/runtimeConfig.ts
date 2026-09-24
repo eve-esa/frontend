@@ -68,7 +68,17 @@ export type ConfigKey =
   // appear in every authorization redirect.
   | "AUTH_ISSUER"
   | "AUTH_CLIENT_ID"
-  | "AUTH_SCOPE";
+  | "AUTH_SCOPE"
+  // Browser telemetry (src/observability/telemetry.ts). Per-environment for
+  // the same reason as the URLs above. Blank endpoint = telemetry off and the
+  // SDK never loaded. The ingest key is a browser key, public by nature: it
+  // ships in the page and only allows writing to the collector.
+  | "OBSERVABILITY_ENDPOINT"
+  | "OBSERVABILITY_INGEST_KEY"
+  | "OBSERVABILITY_UI_URL"
+  | "OBSERVABILITY_ENVIRONMENT"
+  | "OBSERVABILITY_PRIVACY_MODE"
+  | "OBSERVABILITY_CONSOLE_CAPTURE";
 
 declare global {
   interface Window {
@@ -106,6 +116,13 @@ const BUILD_TIME: Record<ConfigKey, string | undefined> = {
   AUTH_ISSUER: import.meta.env.VITE_AUTH_ISSUER,
   AUTH_CLIENT_ID: import.meta.env.VITE_AUTH_CLIENT_ID,
   AUTH_SCOPE: import.meta.env.VITE_AUTH_SCOPE,
+  OBSERVABILITY_ENDPOINT: import.meta.env.VITE_OBSERVABILITY_ENDPOINT,
+  OBSERVABILITY_INGEST_KEY: import.meta.env.VITE_OBSERVABILITY_INGEST_KEY,
+  OBSERVABILITY_UI_URL: import.meta.env.VITE_OBSERVABILITY_UI_URL,
+  OBSERVABILITY_ENVIRONMENT: import.meta.env.VITE_OBSERVABILITY_ENVIRONMENT,
+  OBSERVABILITY_PRIVACY_MODE: import.meta.env.VITE_OBSERVABILITY_PRIVACY_MODE,
+  OBSERVABILITY_CONSOLE_CAPTURE: import.meta.env
+    .VITE_OBSERVABILITY_CONSOLE_CAPTURE,
 };
 
 const injected = (): Partial<Record<ConfigKey, string>> =>
