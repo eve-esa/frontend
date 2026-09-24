@@ -141,9 +141,12 @@ export const ReportBugForm = ({
           What went wrong?
         </label>
         <div className="w-full border-primary-400 border-2 flex flex-col bg-primary-900">
+          {/* data-private: session replay never records the description,
+              same as the chat composer. */}
           <Textarea
             id="report-bug-description"
             ref={textareaRef}
+            data-private
             value={description}
             maxLength={BUG_REPORT_DESCRIPTION_MAX}
             aria-invalid={!!errors?.description}

@@ -114,6 +114,14 @@ describe("ReportBugForm", () => {
     expect(html).toMatch(/<button[^>]*disabled=""[^>]*type="submit"|<button[^>]*type="submit"[^>]*disabled=""/);
   });
 
+  it("keeps the description out of session replay", () => {
+    const html = render();
+    const textarea = html.match(/<textarea[^>]*>/)?.[0] ?? "";
+    expect(textarea).toContain('id="report-bug-description"');
+    // Any value matches the replay blockSelector "[data-private]".
+    expect(textarea).toMatch(/ data-private(="[^"]*")?[ >]/);
+  });
+
   it("offers a screenshot but does not need one", () => {
     const html = render();
     expect(html).toContain("Add screenshot");
