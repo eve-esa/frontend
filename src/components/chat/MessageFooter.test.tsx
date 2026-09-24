@@ -64,13 +64,24 @@ const render = async (
   );
 };
 
+/** Text nodes of a markup fragment: characters outside every tag. Icons are
+ * empty svg elements, so a button's text is its accessible name. This is a
+ * scanner, not a sanitizer: the markup comes from renderToStaticMarkup. */
+const textOutsideTags = (markup: string) => {
+  let text = "";
+  let depth = 0;
+  for (const ch of markup) {
+    if (ch === "<") depth += 1;
+    else if (ch === ">") depth -= 1;
+    else if (depth === 0) text += ch;
+  }
+  return text;
+};
+
 /** Accessible names of the footer buttons, in document order. */
 const buttonNames = (html: string) =>
   [...html.matchAll(/<button[^>]*>([\s\S]*?)<\/button>/g)].map((m) =>
-    m[1]
-      .replace(/<svg[\s\S]*?<\/svg>/g, "")
-      .replace(/<[^>]+>/g, "")
-      .trim(),
+    textOutsideTags(m[1]).trim(),
   );
 
 const reportButton = (html: string) =>
