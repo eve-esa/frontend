@@ -39,6 +39,7 @@ import { shouldToastStreamError } from "@/utilities/streamError";
 import { rememberStoppedPartial } from "@/utilities/stoppedPartials";
 import { STREAMING_ENABLED, STREAM_STATUS_NOTICES_ENABLED } from "@/utilities/features";
 import { shouldShowPreAnswerNotice } from "@/utilities/preAnswerNotices";
+import { rememberTraceFromFinalEvent } from "@/observability/lastTrace";
 
 type SendRequestProps = {
   query: string;
@@ -211,6 +212,9 @@ export const useSendRequest = (conversationId?: string) => {
               if (Array.isArray(artifactIds)) {
                 finalArtifactIds = artifactIds as string[];
               }
+              // Read only: a bug report filed after this answer points at
+              // its backend trace.
+              rememberTraceFromFinalEvent(conversationId, evt);
               updateTemp((msg) => ({ ...msg, output: answer }));
             } else if (
               typeof content === "string" &&

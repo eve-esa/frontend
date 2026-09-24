@@ -9,6 +9,7 @@ import { isSignoutInProgress } from "@/services/oidc";
 import { useGetProfile } from "@/services/useMe";
 import { isPendingApproval } from "@/services/approval";
 import { PendingApprovalPage } from "@/pages/pending-approval/PendingApprovalPage";
+import { setTelemetryUser } from "@/observability/telemetry";
 
 /**
  * Pure decision at the heart of the sign-in effect below, pulled out so the
@@ -79,9 +80,19 @@ export const PrivateRoute = () => {
   // it with no token and feed the axios 401 recovery flow, racing the
   // sign-in redirect above. Hooks must still run every render, so this is a
   // disabled query rather than a conditional hook call.
-  const { isLoading: isProfileLoading, error: profileError } = useGetProfile({
+  const {
+    data: profile,
+    isLoading: isProfileLoading,
+    error: profileError,
+  } = useGetProfile({
     enabled: auth.isAuthenticated,
   });
+
+  // Tags browser telemetry with the user id once the profile resolves. A no-op
+  // when telemetry is off.
+  useEffect(() => {
+    setTelemetryUser(profile?.id);
+  }, [profile?.id]);
 
   useEffect(() => {
     if (

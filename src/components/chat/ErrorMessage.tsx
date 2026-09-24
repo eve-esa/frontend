@@ -1,14 +1,23 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Button } from "@/components/ui/Button";
 import { faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
+import { useState } from "react";
 import { configValue } from "@/utilities/runtimeConfig";
+import { REPORT_BUG_ENABLED } from "@/utilities/features";
+import { ReportBugDialog } from "./ReportBugDialog";
+import { openBugReport } from "@/observability/reportReplay";
+import type { BugReportTarget } from "@/services/useReportBug";
 
 export const ErrorMessage = ({
   onRetry,
+  reportBugTarget,
 }: {
   onRetry?: () => void;
+  /** The failed turn, when the error sits under a conversation. */
+  reportBugTarget?: BugReportTarget;
 }) => {
   const contactUrl = configValue("CONTACT_URL");
+  const [isOpenReportBugDialog, setIsOpenReportBugDialog] = useState(false);
 
   const onContactClick = () => {
     if (contactUrl) {
@@ -41,12 +50,34 @@ export const ErrorMessage = ({
             </span>
           </div>
         )}
+        {REPORT_BUG_ENABLED && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="md"
+            data-testid="error-report-bug"
+            aria-haspopup="dialog"
+            onClick={() =>
+              void openBugReport(() => setIsOpenReportBugDialog(true))
+            }
+          >
+            Report a bug
+          </Button>
+        )}
         {onRetry && (
           <Button variant="outline" size="md" className="px-4" onClick={onRetry}>
             Retry
           </Button>
         )}
       </div>
+
+      {REPORT_BUG_ENABLED && (
+        <ReportBugDialog
+          isOpen={isOpenReportBugDialog}
+          onOpenChange={setIsOpenReportBugDialog}
+          target={reportBugTarget}
+        />
+      )}
     </div>
   );
 };

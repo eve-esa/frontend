@@ -511,6 +511,7 @@ export const MessageInput = ({
             )}
             <Textarea
               ref={textareaRef}
+              data-private
               value={inputValue}
               onChange={(e) => setValue("input", e.target.value)}
               onPaste={handlePaste}

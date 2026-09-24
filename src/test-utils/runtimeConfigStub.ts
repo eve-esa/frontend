@@ -23,11 +23,20 @@ const BUILD_TIME_ENV_KEYS = [
   "VITE_FEATURE_BETA_BADGE",
   "VITE_FEATURE_WELCOME_DIALOG",
   "VITE_FEATURE_STREAM_STATUS_NOTICES",
+  "VITE_FEATURE_REPORT_BUG",
   // Not flags, same reasoning: AppVersion reads these at module scope and the
   // profile dialog renders it, so a developer's .env would otherwise decide
   // whether a version line appears in a test that never asked about one.
   "VITE_APP_VERSION",
   "VITE_APP_COMMIT",
+  // Telemetry: a developer pointing the app at a local collector must not
+  // turn the SDK on inside a test that expects it off.
+  "VITE_OBSERVABILITY_ENDPOINT",
+  "VITE_OBSERVABILITY_INGEST_KEY",
+  "VITE_OBSERVABILITY_UI_URL",
+  "VITE_OBSERVABILITY_ENVIRONMENT",
+  "VITE_OBSERVABILITY_PRIVACY_MODE",
+  "VITE_OBSERVABILITY_CONSOLE_CAPTURE",
 ];
 
 /**

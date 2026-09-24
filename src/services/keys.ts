@@ -22,6 +22,7 @@ export const MUTATION_KEYS = {
   customModels: "customModels",
   uploadImage: "uploadImage",
   apiKeys: "apiKeys",
+  reportBug: "reportBug",
 };
 
 export const QUERY_KEYS = {

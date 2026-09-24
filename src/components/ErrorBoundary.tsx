@@ -1,6 +1,8 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { logError } from "@/services/errorLogging";
 import { ErrorMessage } from "@/components/chat/ErrorMessage";
+import { Toaster } from "@/components/ui/Sonner";
+import { REPORT_BUG_ENABLED } from "@/utilities/features";
 
 interface Props {
   children: ReactNode;
@@ -12,6 +14,47 @@ interface State {
   error: Error | null;
   errorInfo: ErrorInfo | null;
 }
+
+/**
+ * The crash page. Its ErrorMessage carries the "Report a bug" entry when
+ * FEATURE_REPORT_BUG is on, so a user can report the crash from here. The app
+ * toaster lives inside the boundary and is gone once it catches, so the page
+ * brings its own: the report confirms its success with a toast.
+ */
+export const ErrorBoundaryFallback = ({
+  error,
+  errorInfo,
+}: {
+  error: Error | null;
+  errorInfo: ErrorInfo | null;
+}) => (
+  <div className="min-h-[100dvh] bg-primary-600 text-natural-50 flex items-center justify-center p-4">
+    <div className="container max-w-2xl">
+      <div className="flex flex-col items-center justify-center gap-6">
+        <div className="text-center space-y-4 mb-4">
+          <h1 className="text-2xl font-bold">Something went wrong</h1>
+          <p className="text-natural-200">
+            We're sorry, but something unexpected happened. The error has been
+            logged and we'll look into it.
+          </p>
+          {import.meta.env.DEV && error && (
+            <details className="mt-4 text-left">
+              <summary className="cursor-pointer text-sm text-natural-300 hover:text-natural-100">
+                Error Details (Development Only)
+              </summary>
+              <pre className="mt-2 p-4 bg-natural-900 rounded text-xs overflow-auto max-h-64">
+                {error.toString()}
+                {errorInfo?.componentStack}
+              </pre>
+            </details>
+          )}
+        </div>
+        <ErrorMessage />
+      </div>
+    </div>
+    {REPORT_BUG_ENABLED && <Toaster />}
+  </div>
+);
 
 export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
@@ -60,31 +103,10 @@ export class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <div className="min-h-[100dvh] bg-primary-600 text-natural-50 flex items-center justify-center p-4">
-          <div className="container max-w-2xl">
-            <div className="flex flex-col items-center justify-center gap-6">
-              <div className="text-center space-y-4 mb-4">
-                <h1 className="text-2xl font-bold">Something went wrong</h1>
-                <p className="text-natural-200">
-                  We're sorry, but something unexpected happened. The error has
-                  been logged and we'll look into it.
-                </p>
-                {import.meta.env.DEV && this.state.error && (
-                  <details className="mt-4 text-left">
-                    <summary className="cursor-pointer text-sm text-natural-300 hover:text-natural-100">
-                      Error Details (Development Only)
-                    </summary>
-                    <pre className="mt-2 p-4 bg-natural-900 rounded text-xs overflow-auto max-h-64">
-                      {this.state.error.toString()}
-                      {this.state.errorInfo?.componentStack}
-                    </pre>
-                  </details>
-                )}
-              </div>
-              <ErrorMessage />
-            </div>
-          </div>
-        </div>
+        <ErrorBoundaryFallback
+          error={this.state.error}
+          errorInfo={this.state.errorInfo}
+        />
       );
     }
 

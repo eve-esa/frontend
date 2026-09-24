@@ -102,6 +102,9 @@ export type MessageType = {
   // message state know about its artifacts without waiting for the
   // onSettled refetch.
   artifact_ids?: string[];
+  // OpenTelemetry trace id of the generation, null with backend telemetry off.
+  // Read by the bug report as a fallback when no stream ran in this page.
+  trace_id?: string | null;
   answer?: string;
   was_copied?: boolean;
   query?: string;
