@@ -42,6 +42,7 @@ import { buildHallucinationCopyText } from "@/utilities/buildHallucinationCopyTe
 import { ANSWERED_BY_ENABLED, REPORT_BUG_ENABLED } from "@/utilities/features";
 import { isPersistedId } from "@/services/useReportBug";
 import { ReportBugDialog } from "./ReportBugDialog";
+import { openBugReport } from "@/observability/reportReplay";
 
 type Hallucination = NonNullable<MessageType["hallucination"]>;
 
@@ -513,7 +514,9 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
                 variant="primary"
                 aria-haspopup="dialog"
                 disabled={!isPersistedId(message.id)}
-                onClick={() => setIsReportBugDialogOpen(true)}
+                onClick={() =>
+                  void openBugReport(() => setIsReportBugDialogOpen(true))
+                }
               >
                 <FontAwesomeIcon icon={faBug} className="size-4" />
                 <span className="font-['NotesESA']">Report a bug</span>

@@ -5,6 +5,7 @@ import { useState } from "react";
 import { configValue } from "@/utilities/runtimeConfig";
 import { REPORT_BUG_ENABLED } from "@/utilities/features";
 import { ReportBugDialog } from "./ReportBugDialog";
+import { openBugReport } from "@/observability/reportReplay";
 import type { BugReportTarget } from "@/services/useReportBug";
 
 export const ErrorMessage = ({
@@ -56,7 +57,9 @@ export const ErrorMessage = ({
             size="md"
             data-testid="error-report-bug"
             aria-haspopup="dialog"
-            onClick={() => setIsOpenReportBugDialog(true)}
+            onClick={() =>
+              void openBugReport(() => setIsOpenReportBugDialog(true))
+            }
           >
             Report a bug
           </Button>

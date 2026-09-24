@@ -118,10 +118,10 @@ export const STREAM_STATUS_NOTICES_ENABLED = isEnabled(
 );
 
 /**
- * "Report a bug": the entry in the conversation header, the one in the chat error message and
- * the one on the crash page, and the dialog they open, which sends a description, an optional
- * screenshot and the telemetry context (session, replay link, trace, conversation and message
- * ids) to `POST /bug-reports`. The context is attached, never shown to the user. There is no
+ * "Report a bug": the entry under each answer, next to Trace, the one in the chat error message and
+ * the one on the crash page, and the dialog they open, which sends a description and the
+ * telemetry context (session, replay link, trace, conversation and message ids) to
+ * `POST /bug-reports`. The context is attached, never shown to the user. There is no
  * app level entry (sidebar, profile menu): a report there would not know its conversation.
  *
  * Default off, like the opening-scope flags: it needs the backend endpoint and is only useful

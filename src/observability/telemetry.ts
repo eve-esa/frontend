@@ -167,14 +167,21 @@ export const buildSdkOptions = (
   };
 };
 
+/** How far before `at` the session link opens: the minutes that led there. */
+export const SESSION_LINK_BEFORE_MS = 10 * 60 * 1000;
+/** How far after `at` the session link reaches. */
+export const SESSION_LINK_AFTER_MS = 60 * 1000;
+
 /**
- * Deep link to a session in the HyperDX UI. Built here because the SDK's own
- * getSessionUrl() always points at hyperdx.io.
+ * Deep link to a session in the HyperDX UI, positioned at `at` (epoch ms).
+ * HyperDX reads sid, sfrom, sto and ts from /sessions: the session, the time
+ * range to load and the moment the player seeks to. Built here because the
+ * SDK's own getSessionUrl() always points at hyperdx.io.
  */
 export const buildSessionUrl = (
   uiUrl: string | undefined,
   sessionId: string | undefined,
-  now: number = Date.now(),
+  at: number = Date.now(),
 ): string | undefined => {
   if (!uiUrl || !sessionId) return undefined;
   let base: URL;
@@ -184,11 +191,11 @@ export const buildSessionUrl = (
     return undefined;
   }
   if (base.protocol !== "http:" && base.protocol !== "https:") return undefined;
-  const window4h = 4 * 60 * 60 * 1000;
   const url = new URL(`${base.pathname.replace(/\/+$/, "")}/sessions`, base);
   url.searchParams.set("sid", sessionId);
-  url.searchParams.set("sfrom", String(now - window4h));
-  url.searchParams.set("sto", String(now + window4h));
+  url.searchParams.set("sfrom", String(at - SESSION_LINK_BEFORE_MS));
+  url.searchParams.set("sto", String(at + SESSION_LINK_AFTER_MS));
+  url.searchParams.set("ts", String(at));
   return url.toString();
 };
 

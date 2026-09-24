@@ -34,6 +34,7 @@ import {
   reportBugErrorMessage,
   resolveMessageAndTrace,
   resolveTargetMessageAndTrace,
+  withReplayAt,
   type BugReportContext,
 } from "./useReportBug";
 import { QUERY_KEYS } from "./keys";
@@ -361,70 +362,85 @@ describe("collectBugReportContext with a target", () => {
 });
 
 describe("buildBugReportFormData", () => {
-  it("carries description, context as JSON text and the screenshot file", () => {
-    const screenshot = new Blob([new Uint8Array(10)], { type: "image/jpeg" });
+  it("carries the description and the context as JSON text, nothing else", () => {
     const form = buildBugReportFormData({
       description: "The answer never arrived",
       context: sampleContext,
-      screenshot,
     });
 
-    expect([...form.keys()].sort()).toEqual([
-      "context",
-      "description",
-      "screenshot",
-    ]);
+    expect([...form.keys()].sort()).toEqual(["context", "description"]);
     expect(form.get("description")).toBe("The answer never arrived");
     const context = JSON.parse(form.get("context") as string);
     expect(context).toEqual(sampleContext);
     expect(Object.keys(context).sort()).toEqual(CONTEXT_KEYS);
-    const file = form.get("screenshot") as File;
-    expect(file.name).toBe("screenshot.jpg");
-    expect(file.type).toBe("image/jpeg");
-    expect(file.size).toBe(10);
+  });
+});
+
+describe("withReplayAt", () => {
+  const at = Date.parse("2026-09-24T10:30:00Z");
+
+  it("positions the replay link at the given moment", () => {
+    const { replay_url } = withReplayAt(sampleContext, at, "http://localhost:8081");
+    const url = new URL(replay_url!);
+    expect(url.origin + url.pathname).toBe("http://localhost:8081/sessions");
+    expect(url.searchParams.get("sid")).toBe("sess-1");
+    expect(url.searchParams.get("sfrom")).toBe(String(at - 10 * 60 * 1000));
+    expect(url.searchParams.get("sto")).toBe(String(at + 60 * 1000));
+    expect(url.searchParams.get("ts")).toBe(String(at));
   });
 
-  it("names a PNG screenshot .png", () => {
-    const form = buildBugReportFormData({
-      description: "x",
-      context: sampleContext,
-      screenshot: new Blob(["png"], { type: "image/png" }),
-    });
-    expect((form.get("screenshot") as File).name).toBe("screenshot.png");
-  });
-
-  it("has no screenshot field without a screenshot", () => {
-    const form = buildBugReportFormData({
-      description: "x",
-      context: sampleContext,
-      screenshot: null,
-    });
-    expect(form.has("screenshot")).toBe(false);
+  it("keeps no link when replay is off or the session is unknown", () => {
+    expect(
+      withReplayAt({ ...sampleContext, privacy_mode: "off" }, at, "http://localhost:8081")
+        .replay_url,
+    ).toBeNull();
+    expect(
+      withReplayAt({ ...sampleContext, session_id: null }, at, "http://localhost:8081")
+        .replay_url,
+    ).toBeNull();
+    expect(withReplayAt(sampleContext, at, undefined).replay_url).toBeNull();
   });
 });
 
 describe("httpReportBug", () => {
-  it("posts multipart to /bug-reports and returns the created report", async () => {
-    const created = { id: "r1", created_at: "2026-09-24T10:00:00Z", screenshot: false };
+  it("posts description and context as multipart to /bug-reports", async () => {
+    const created = { id: "r1", created_at: "2026-09-24T10:00:00Z" };
     mocks.post.mockResolvedValue({ data: created });
+    mocks.resolveTelemetryConfig.mockReturnValue(telemetry);
 
+    const before = Date.now();
     const result = await httpReportBug({
       description: "Broken",
       context: sampleContext,
     });
+    const after = Date.now();
 
     expect(result).toEqual(created);
     expect(mocks.post).toHaveBeenCalledTimes(1);
     const [url, body, config] = mocks.post.mock.calls[0];
     expect(url).toBe("/bug-reports");
     expect(body).toBeInstanceOf(FormData);
-    expect((body as FormData).get("description")).toBe("Broken");
-    expect(JSON.parse((body as FormData).get("context") as string)).toEqual(
-      sampleContext,
-    );
+    const form = body as FormData;
+    expect([...form.keys()].sort()).toEqual(["context", "description"]);
+    expect(form.get("description")).toBe("Broken");
+    const sent = JSON.parse(form.get("context") as string) as BugReportContext;
+    expect({ ...sent, replay_url: null }).toEqual({
+      ...sampleContext,
+      replay_url: null,
+    });
     expect(config).toEqual({
       headers: { "Content-Type": "multipart/form-data" },
     });
+
+    // The link lands on the moment the report was sent, not when it opened.
+    const replay = new URL(sent.replay_url!);
+    expect(replay.origin + replay.pathname).toBe("http://localhost:8081/sessions");
+    expect(replay.searchParams.get("sid")).toBe("sess-1");
+    const ts = Number(replay.searchParams.get("ts"));
+    expect(ts).toBeGreaterThanOrEqual(before);
+    expect(ts).toBeLessThanOrEqual(after);
+    expect(Number(replay.searchParams.get("sfrom"))).toBe(ts - 10 * 60 * 1000);
+    expect(Number(replay.searchParams.get("sto"))).toBe(ts + 60 * 1000);
   });
 });
 

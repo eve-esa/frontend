@@ -60,35 +60,17 @@ const stubContext: BugReportContext = {
 
 type HarnessProps = {
   context?: BugReportContext;
-  screenshot?: Blob | null;
-  screenshotUrl?: string | null;
-  screenshotError?: string | null;
-  canCapture?: boolean;
   submitError?: string | null;
 };
 
-const Harness = ({
-  context = stubContext,
-  screenshot = null,
-  screenshotUrl = null,
-  screenshotError = null,
-  canCapture = true,
-  submitError = null,
-}: HarnessProps) => {
+const Harness = ({ context = stubContext, submitError = null }: HarnessProps) => {
   const form = useReportBugForm();
   return (
     <ReportBugForm
       form={form}
       context={context}
-      screenshot={screenshot}
-      screenshotUrl={screenshotUrl}
-      screenshotError={screenshotError}
-      isCapturing={false}
       isSubmitting={false}
       submitError={submitError}
-      canCapture={canCapture}
-      onCaptureScreenshot={() => undefined}
-      onRemoveScreenshot={() => undefined}
       onSubmit={() => undefined}
       onCancel={() => undefined}
     />
@@ -174,36 +156,12 @@ describe("ReportBugForm", () => {
     expect(textarea).toMatch(/ data-private(="[^"]*")?[ >]/);
   });
 
-  it("offers a screenshot but does not need one", () => {
-    const html = render();
-    expect(html).toContain("Add screenshot");
-    expect(html).not.toContain("Screenshot attached");
-  });
-
-  it("shows a captured screenshot as a thumbnail the user can remove", () => {
-    const html = render({
-      screenshot: new Blob([new Uint8Array(2048)], { type: "image/jpeg" }),
-      screenshotUrl: "blob:http://localhost:5173/shot",
-    });
-    expect(html).toContain('data-testid="report-bug-screenshot"');
-    expect(html).toMatch(/<img[^>]*src="blob:http:\/\/localhost:5173\/shot"/);
-    expect(html).toContain('alt="Your screenshot"');
-    expect(html).toContain('aria-label="Remove screenshot"');
-    expect(html).toContain("Retake");
-    expect(html).not.toContain("Add screenshot");
-  });
-
-  it("shows why a screenshot could not be attached", () => {
-    const html = render({
-      screenshotError: "The screenshot is larger than 1 MB and cannot be attached.",
-    });
-    expect(html).toMatch(/role="alert"[^>]*>The screenshot is larger than 1 MB/);
-  });
-
-  it("explains when the browser cannot take a screenshot", () => {
-    const html = render({ canCapture: false });
-    expect(html).not.toContain("Add screenshot");
-    expect(html).toContain("Screenshots are not available in this browser.");
+  it("has no screenshot control of any kind", () => {
+    const html = render().toLowerCase();
+    expect(html).not.toContain("screenshot");
+    expect(html).not.toContain("<img");
+    expect(html).not.toContain("retake");
+    expect(html).not.toContain('data-icon="camera"');
   });
 
   it("sends nothing while it is only shown", () => {
@@ -228,15 +186,13 @@ const renderDialog = (context: BugReportContext = stubContext) =>
   );
 
 describe("ReportBugDialog", () => {
-  it("shows only the title, one helper, the field, the screenshot, the note and the buttons", () => {
+  it("shows only the title, one helper, the field, the note and the buttons", () => {
     const text = visibleText(renderDialog());
     expect(text).toBe(
       [
         "Report a bug",
         "Tell us what happened, in your own words.",
         "What went wrong?",
-        // The screenshot button needs getDisplayMedia, absent in node.
-        "Screenshots are not available in this browser.",
         "We attach the technical details of this conversation to help us fix it.",
         "Cancel",
         "Send",
@@ -257,6 +213,18 @@ describe("ReportBugDialog", () => {
       expect(html).not.toContain(value);
     }
     expect(html).not.toContain("1280");
+  });
+
+  it("never asks the browser to share the screen", () => {
+    const getDisplayMedia = vi.fn();
+    vi.stubGlobal("navigator", { mediaDevices: { getDisplayMedia } });
+    try {
+      const html = renderDialog();
+      expect(html.toLowerCase()).not.toContain("screenshot");
+      expect(getDisplayMedia).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it("renders nothing and sends nothing while closed", () => {

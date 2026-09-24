@@ -1,3 +1,4 @@
+import type { ComponentProps, ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
@@ -140,4 +141,103 @@ describe("MessageFooter report a bug entry", () => {
       trace_id: TRACE,
     });
   });
+});
+
+/**
+ * The click itself. There is no DOM here, so the footer is rendered on the
+ * server with the Button wrapped to keep its props, and the onClick of the
+ * "Report a bug" button is called by hand. The dialog state setter does
+ * nothing after a server render, so the "open" step is observed through
+ * openBugReport, wrapped to log when it opens the dialog.
+ */
+describe("MessageFooter report a bug click", () => {
+  const events: string[] = [];
+  const startReplayOnDemand = vi.fn(() => {
+    events.push("replay");
+    return Promise.resolve(true);
+  });
+
+  const clickReport = async (privacyMode: string) => {
+    events.length = 0;
+    startReplayOnDemand.mockClear();
+    const config = {
+      FEATURE_REPORT_BUG: "true",
+      OBSERVABILITY_ENDPOINT: "http://localhost:4318",
+      OBSERVABILITY_UI_URL: "http://localhost:8081",
+      OBSERVABILITY_PRIVACY_MODE: privacyMode,
+    };
+    stubRuntimeConfig(config);
+    vi.stubGlobal("window", {
+      __EVE_CONFIG__: config,
+      innerWidth: 1440,
+      location: { origin: "http://localhost:5173" },
+    });
+    const buttons: Array<ComponentProps<"button">> = [];
+    vi.doMock("@/components/ui/Button", async (importOriginal) => {
+      const real = await importOriginal<typeof import("@/components/ui/Button")>();
+      return {
+        Button: (props: ComponentProps<typeof real.Button>) => {
+          buttons.push(props);
+          return real.Button(props);
+        },
+      };
+    });
+    vi.doMock("@/observability/telemetry", async (importOriginal) => ({
+      ...(await importOriginal<typeof import("@/observability/telemetry")>()),
+      startReplayOnDemand,
+    }));
+    vi.doMock("@/observability/reportReplay", async (importOriginal) => {
+      const real =
+        await importOriginal<typeof import("@/observability/reportReplay")>();
+      return {
+        ...real,
+        openBugReport: (open: () => void, timeoutMs?: number) =>
+          real.openBugReport(() => {
+            events.push("open");
+            open();
+          }, timeoutMs),
+      };
+    });
+    const { MessageFooter } = await import("./MessageFooter");
+    renderToStaticMarkup(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter initialEntries={[`/chat/${CONVERSATION}`]}>
+          <Routes>
+            <Route
+              path="/chat/:conversationId"
+              element={<MessageFooter message={answer()} />}
+            />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    const report = buttons.find((b) =>
+      renderToStaticMarkup(<>{b.children as ReactNode}</>).includes("Report a bug"),
+    );
+    expect(report?.onClick).toBeTypeOf("function");
+    report!.onClick!({} as never);
+    // Let openBugReport settle: the replay start and then the open.
+    await vi.waitFor(() => expect(events).toContain("open"));
+  };
+
+  afterEach(() => {
+    vi.doUnmock("@/components/ui/Button");
+    vi.doUnmock("@/observability/telemetry");
+    vi.doUnmock("@/observability/reportReplay");
+  });
+
+  it("starts the replay before it opens the dialog in on_demand mode", async () => {
+    await clickReport("on_demand");
+    expect(startReplayOnDemand).toHaveBeenCalledTimes(1);
+    expect(events).toEqual(["replay", "open"]);
+  });
+
+  it.each(["mask", "clear", "off"])(
+    "opens the dialog without touching the replay in %s mode",
+    async (mode) => {
+      await clickReport(mode);
+      expect(startReplayOnDemand).not.toHaveBeenCalled();
+      expect(events).toEqual(["open"]);
+    },
+  );
 });

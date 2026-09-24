@@ -55,13 +55,11 @@ export type BugReportContext = {
 export type BugReportResponse = {
   id: string;
   created_at: string;
-  screenshot: boolean;
 };
 
 export type ReportBugParams = {
   description: string;
   context: BugReportContext;
-  screenshot?: Blob | null;
 };
 
 /** Everything the context is made of, read by collectBugReportContext. */
@@ -243,28 +241,45 @@ export const collectBugReportContext = (
   });
 };
 
-/** The multipart body of POST /bug-reports. */
+/**
+ * The context with its replay link positioned at `at`, the moment the report
+ * is sent: the dialog reads the context when it opens, but the moment worth
+ * replaying is the one the user reports from. Still no link when replay is
+ * off or the session is unknown.
+ */
+export const withReplayAt = (
+  context: BugReportContext,
+  at: number = Date.now(),
+  uiUrl: string | undefined = resolveTelemetryConfig()?.uiUrl,
+): BugReportContext => ({
+  ...context,
+  replay_url:
+    context.privacy_mode === "off"
+      ? null
+      : orNull(buildSessionUrl(uiUrl, context.session_id ?? undefined, at)),
+});
+
+/** The multipart body of POST /bug-reports: description and context only. */
 export const buildBugReportFormData = ({
   description,
   context,
-  screenshot,
 }: ReportBugParams): FormData => {
   const formData = new FormData();
   formData.append("description", description);
   formData.append("context", JSON.stringify(context));
-  if (screenshot) {
-    const extension = screenshot.type === "image/png" ? "png" : "jpg";
-    formData.append("screenshot", screenshot, `screenshot.${extension}`);
-  }
   return formData;
 };
 
+/** Sends the report, its replay link positioned at the time of sending. */
 export const httpReportBug = async (
   params: ReportBugParams,
 ): Promise<BugReportResponse> => {
   const { data } = await api.post<BugReportResponse>(
     "/bug-reports",
-    buildBugReportFormData(params),
+    buildBugReportFormData({
+      ...params,
+      context: withReplayAt(params.context),
+    }),
     { headers: { "Content-Type": "multipart/form-data" } },
   );
   return data;

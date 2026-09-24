@@ -244,17 +244,25 @@ describe("buildSdkOptions", () => {
 
 describe("buildSessionUrl", () => {
   const now = 1_700_000_000_000;
-  const fourHours = 4 * 60 * 60 * 1000;
 
-  it("links to the session page of the configured UI", async () => {
+  it("links to the session at a moment, ten minutes before to one after", async () => {
     const { buildSessionUrl } = await loadTelemetry({});
-    const url = new URL(
-      buildSessionUrl("https://o11y.example.org/", "abc", now)!,
+    const link = buildSessionUrl("https://o11y.example.org/", "abc", now)!;
+    expect(link).toBe(
+      `https://o11y.example.org/sessions?sid=abc&sfrom=${now - 10 * 60 * 1000}&sto=${now + 60 * 1000}&ts=${now}`,
     );
-    expect(url.origin + url.pathname).toBe("https://o11y.example.org/sessions");
-    expect(url.searchParams.get("sid")).toBe("abc");
-    expect(url.searchParams.get("sfrom")).toBe(String(now - fourHours));
-    expect(url.searchParams.get("sto")).toBe(String(now + fourHours));
+  });
+
+  it("defaults the moment to now", async () => {
+    const { buildSessionUrl } = await loadTelemetry({});
+    const before = Date.now();
+    const url = new URL(buildSessionUrl("https://o11y.example.org", "abc")!);
+    const after = Date.now();
+    const ts = Number(url.searchParams.get("ts"));
+    expect(ts).toBeGreaterThanOrEqual(before);
+    expect(ts).toBeLessThanOrEqual(after);
+    expect(Number(url.searchParams.get("sfrom"))).toBe(ts - 10 * 60 * 1000);
+    expect(Number(url.searchParams.get("sto"))).toBe(ts + 60 * 1000);
   });
 
   it("keeps a path prefix and encodes the session id", async () => {
