@@ -1,6 +1,8 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { logError } from "@/services/errorLogging";
 import { ErrorMessage } from "@/components/chat/ErrorMessage";
+import { Toaster } from "@/components/ui/Sonner";
+import { REPORT_BUG_ENABLED } from "@/utilities/features";
 
 interface Props {
   children: ReactNode;
@@ -15,7 +17,9 @@ interface State {
 
 /**
  * The crash page. Its ErrorMessage carries the "Report a bug" entry when
- * FEATURE_REPORT_BUG is on, so a user can report the crash from here.
+ * FEATURE_REPORT_BUG is on, so a user can report the crash from here. The app
+ * toaster lives inside the boundary and is gone once it catches, so the page
+ * brings its own: the report confirms its success with a toast.
  */
 export const ErrorBoundaryFallback = ({
   error,
@@ -48,6 +52,7 @@ export const ErrorBoundaryFallback = ({
         <ErrorMessage />
       </div>
     </div>
+    {REPORT_BUG_ENABLED && <Toaster />}
   </div>
 );
 

@@ -6,7 +6,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { stubRuntimeConfig } from "@/test-utils/runtimeConfigStub";
 
 /**
- * Only the report a bug entries are under test. Every sibling that fetches,
+ * The report a bug entry belongs to a conversation (each assistant message and
+ * the error under a failed turn), never to the app level sidebar or profile
+ * menu, where a report would carry no conversation or message. Under test is
+ * that neither shows one, whatever the flag says. Every sibling that fetches,
  * needs a provider or pulls in the whole page tree is replaced by a stub, and
  * the Menubar kit renders its content inline (Radix menu content never
  * renders on the server), so the profile menu item is visible too.
@@ -57,29 +60,20 @@ const render = async (flag?: string) => {
   );
 };
 
-const count = (html: string, text: string) => html.split(text).length - 1;
-
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
 });
 
-describe("SidebarMenu report a bug entries", () => {
-  it("renders none when FEATURE_REPORT_BUG is unset", async () => {
-    const html = await render();
-    expect(html).toContain("API keys");
-    expect(html).not.toContain("Report a bug");
-  });
-
-  it("renders none when FEATURE_REPORT_BUG is false", async () => {
-    expect(await render("false")).not.toContain("Report a bug");
-  });
-
-  it("renders the sidebar item and the profile menu item when true", async () => {
-    const html = await render("true");
-    expect(html).toContain('data-testid="sidebar-report-bug"');
-    // Sidebar item: aria-label plus its visible label; profile menu: one item.
-    expect(count(html, "Report a bug")).toBe(3);
-    expect(html).toMatch(/role="menuitem"><span>Report a bug<\/span>/);
-  });
+describe("SidebarMenu has no report a bug entry", () => {
+  it.each([undefined, "false", "true"])(
+    "with FEATURE_REPORT_BUG %s, in the sidebar and in the profile menu",
+    async (flag) => {
+      const html = await render(flag);
+      expect(html).toContain("API keys");
+      expect(html).toMatch(/role="menuitem"><span[^>]*>Logout<\/span>/);
+      expect(html).not.toContain("Report a bug");
+      expect(html).not.toContain("report-bug");
+    },
+  );
 });

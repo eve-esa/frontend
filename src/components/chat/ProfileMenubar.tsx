@@ -10,7 +10,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Tooltip } from "../ui/Tooltip";
 import { configValue, type ConfigKey } from "@/utilities/runtimeConfig";
-import { REPORT_BUG_ENABLED } from "@/utilities/features";
 
 type ProfileMenubarProps = {
   email?: string;
@@ -19,8 +18,6 @@ type ProfileMenubarProps = {
   onProfileClick: () => void;
   onCO2eqClick: () => void;
   onLogoutClick: () => void;
-  /** Shown only with FEATURE_REPORT_BUG on and a handler given. */
-  onReportBugClick?: () => void;
   isLoadingProfile: boolean;
 };
 
@@ -31,7 +28,6 @@ export const ProfileMenubar = ({
   onProfileClick,
   onCO2eqClick,
   onLogoutClick,
-  onReportBugClick,
   isLoadingProfile,
 }: ProfileMenubarProps) => {
   // openLink rather than window.open directly: an unconfigured URL used to open
@@ -101,11 +97,6 @@ export const ProfileMenubar = ({
           <MenubarItem onClick={onPrivacyPolicyClick}>
             <span>Privacy Policy</span>
           </MenubarItem>
-          {REPORT_BUG_ENABLED && onReportBugClick && (
-            <MenubarItem onClick={onReportBugClick}>
-              <span>Report a bug</span>
-            </MenubarItem>
-          )}
           <MenubarItem onClick={onLogoutClick}>
             <span className="text-danger-300">Logout</span>
           </MenubarItem>

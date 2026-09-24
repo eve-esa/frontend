@@ -14,12 +14,15 @@ import {
 } from "@/components/ui/Dialog";
 import { Textarea } from "../ui/TextArea";
 import { cn } from "@/lib/utils";
+import type { ApiError } from "@/types";
 import {
   BUG_REPORT_DESCRIPTION_MAX,
   ReportBugSchema,
   collectBugReportContext,
+  reportBugErrorMessage,
   useReportBug,
   type BugReportContext,
+  type BugReportTarget,
   type ReportBugValidation,
 } from "@/services/useReportBug";
 import {
@@ -35,60 +38,15 @@ export const useReportBugForm = () =>
     defaultValues: { description: "" },
   });
 
-const NOT_AVAILABLE = "Not available";
-
-const replayLabel = (context: BugReportContext): string => {
-  if (context.replay_url) return "Available, linked to this report";
-  if (!context.session_id) return "Not recorded (telemetry is off)";
-  if (context.privacy_mode === "off") return "Not recorded (replay is off)";
-  return NOT_AVAILABLE;
-};
-
-/** What the report will carry besides the description, shown before sending. */
-export const ReportBugContextSummary = ({
-  context,
-}: {
-  context: BugReportContext;
-}) => {
-  const version = [context.app_version, context.app_commit?.slice(0, 7)]
-    .filter(Boolean)
-    .join(" ");
-  const rows: Array<[string, string]> = [
-    ["Session", context.session_id ?? NOT_AVAILABLE],
-    ["Replay", replayLabel(context)],
-    ["Trace", context.trace_id ?? NOT_AVAILABLE],
-    ["Conversation", context.conversation_id ?? NOT_AVAILABLE],
-    ["Message", context.message_id ?? NOT_AVAILABLE],
-    ["Version", version || NOT_AVAILABLE],
-    ["Environment", context.environment ?? NOT_AVAILABLE],
-    ["Page", context.path],
-    [
-      "Browser",
-      `${context.viewport.width}x${context.viewport.height}, ${context.console_errors.length} recent console errors`,
-    ],
-  ];
-  return (
-    <div data-testid="report-bug-context" className="flex flex-col gap-1">
-      <p className="text-sm text-natural-200">
-        Attached to the report, nothing is sent until you press Send:
-      </p>
-      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-xs border-2 border-primary-400 bg-primary-900 p-3">
-        {rows.map(([label, value]) => (
-          <div key={label} className="contents">
-            <dt className="text-natural-300">{label}</dt>
-            <dd
-              className="font-mono text-natural-100 truncate"
-              data-field={label.toLowerCase()}
-              title={value}
-            >
-              {value}
-            </dd>
-          </div>
-        ))}
-      </dl>
-    </div>
-  );
-};
+/**
+ * The only thing the user is told about the context. The ids, the session,
+ * the trace and the page are for whoever triages the report, not for the
+ * person filing it, so none of them is rendered.
+ */
+export const contextNote = (context: BugReportContext): string =>
+  context.conversation_id
+    ? "Technical details about this conversation are attached automatically to help us investigate."
+    : "Technical details about this page are attached automatically to help us investigate.";
 
 type ReportBugFormProps = {
   form: UseFormReturn<ReportBugValidation>;
@@ -97,6 +55,8 @@ type ReportBugFormProps = {
   screenshotError: string | null;
   isCapturing: boolean;
   isSubmitting: boolean;
+  /** Why the last send failed, shown above the buttons. */
+  submitError?: string | null;
   canCapture: boolean;
   onCaptureScreenshot: () => void;
   onRemoveScreenshot: () => void;
@@ -111,6 +71,7 @@ export const ReportBugForm = ({
   screenshotError,
   isCapturing,
   isSubmitting,
+  submitError,
   canCapture,
   onCaptureScreenshot,
   onRemoveScreenshot,
@@ -169,7 +130,7 @@ export const ReportBugForm = ({
           ) : (
             <span />
           )}
-          <span className="text-natural-300 shrink-0">
+          <span className="text-natural-200 shrink-0">
             {description.length}/{BUG_REPORT_DESCRIPTION_MAX}
           </span>
         </div>
@@ -207,7 +168,7 @@ export const ReportBugForm = ({
             )}
           </div>
         ) : (
-          <p className="text-sm text-natural-300">
+          <p className="text-sm text-natural-200">
             Screenshots are not available in this browser.
           </p>
         )}
@@ -218,7 +179,15 @@ export const ReportBugForm = ({
         )}
       </div>
 
-      <ReportBugContextSummary context={context} />
+      <p data-testid="report-bug-context-note" className="text-xs text-natural-200">
+        {contextNote(context)}
+      </p>
+
+      {submitError && (
+        <p className="text-sm text-red-500" role="alert">
+          {submitError}
+        </p>
+      )}
 
       <div className="flex gap-2 justify-end">
         <Button type="button" variant="ghost" size="md" onClick={onCancel}>
@@ -241,18 +210,23 @@ export const ReportBugForm = ({
 type ReportBugDialogProps = {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
+  /** The conversation and message the report is about, when known. */
+  target?: BugReportTarget;
   /** Overrides the collected context. For tests and stories. */
   context?: BugReportContext;
 };
 
 /**
- * "Report a bug": a description, an optional screenshot and the telemetry
- * context, sent to POST /bug-reports. The context is read once when the
- * dialog opens, so what the user sees is what gets sent.
+ * "Report a bug": a description and an optional screenshot from the user, plus
+ * the telemetry context (session, replay link, trace, conversation and message
+ * ids, build, browser), sent to POST /bug-reports. The context is read once
+ * when the dialog opens and is never shown: the user only reads that technical
+ * details are attached.
  */
 export const ReportBugDialog = ({
   isOpen,
   onOpenChange,
+  target,
   context: contextOverride,
 }: ReportBugDialogProps) => {
   const queryClient = useQueryClient();
@@ -263,18 +237,24 @@ export const ReportBugDialog = ({
   const [isCapturing, setIsCapturing] = useState(false);
   const { reset } = form;
 
-  const { mutate, isPending } = useReportBug(() => onOpenChange(false));
+  const { mutate, isPending, error, reset: resetMutation } = useReportBug(() =>
+    onOpenChange(false),
+  );
 
   useEffect(() => {
     if (isOpen) {
-      setContext(contextOverride ?? collectBugReportContext(queryClient));
+      setContext(
+        contextOverride ?? collectBugReportContext(queryClient, target),
+      );
     } else {
       reset();
+      resetMutation();
       setContext(null);
       setScreenshot(null);
       setScreenshotError(null);
       setIsCapturing(false);
     }
+    // Read once per opening: the target of an open dialog does not change.
   }, [isOpen, contextOverride, queryClient, reset]);
 
   // Not async, and captureScreenshot() comes first: getDisplayMedia must run
@@ -286,10 +266,10 @@ export const ReportBugDialog = ({
     setIsCapturing(true);
     pending
       .then((blob) => setScreenshot(blob))
-      .catch((error: unknown) => {
+      .catch((reason: unknown) => {
         setScreenshotError(
-          error instanceof ScreenshotError
-            ? error.message
+          reason instanceof ScreenshotError
+            ? reason.message
             : "The screenshot could not be taken.",
         );
       })
@@ -308,7 +288,7 @@ export const ReportBugDialog = ({
           <DialogTitle>Report a bug</DialogTitle>
         </DialogHeader>
         <DialogDescription>
-          Tell us what happened. The details below help us find the problem.
+          Tell us what happened, in your own words.
         </DialogDescription>
         {context && (
           <ReportBugForm
@@ -318,6 +298,7 @@ export const ReportBugDialog = ({
             screenshotError={screenshotError}
             isCapturing={isCapturing}
             isSubmitting={isPending}
+            submitError={error ? reportBugErrorMessage(error as ApiError) : null}
             canCapture={isScreenshotSupported()}
             onCaptureScreenshot={onCaptureScreenshot}
             onRemoveScreenshot={() => setScreenshot(null)}

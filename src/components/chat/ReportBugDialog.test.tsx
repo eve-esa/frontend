@@ -1,7 +1,10 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { BugReportContext } from "@/services/useReportBug";
+import {
+  buildBugReportFormData,
+  type BugReportContext,
+} from "@/services/useReportBug";
 
 /**
  * Rendered with renderToStaticMarkup, like the other component tests here:
@@ -41,6 +44,7 @@ type HarnessProps = {
   screenshot?: Blob | null;
   screenshotError?: string | null;
   canCapture?: boolean;
+  submitError?: string | null;
 };
 
 const Harness = ({
@@ -48,6 +52,7 @@ const Harness = ({
   screenshot = null,
   screenshotError = null,
   canCapture = true,
+  submitError = null,
 }: HarnessProps) => {
   const form = useReportBugForm();
   return (
@@ -58,6 +63,7 @@ const Harness = ({
       screenshotError={screenshotError}
       isCapturing={false}
       isSubmitting={false}
+      submitError={submitError}
       canCapture={canCapture}
       onCaptureScreenshot={() => undefined}
       onRemoveScreenshot={() => undefined}
@@ -70,41 +76,64 @@ const Harness = ({
 const render = (props: HarnessProps = {}) =>
   renderToStaticMarkup(<Harness {...props} />);
 
-const field = (html: string, name: string) =>
-  html.match(new RegExp(`data-field="${name}"[^>]*>([^<]*)<`))?.[1];
-
 beforeEach(() => {
   mocks.post.mockReset();
 });
 
+/** Every context value a user must never read in the dialog. */
+const hiddenValues = [
+  stubContext.session_id,
+  stubContext.replay_url,
+  stubContext.trace_id,
+  stubContext.conversation_id,
+  stubContext.message_id,
+  stubContext.app_commit,
+  stubContext.path,
+  stubContext.user_agent,
+  stubContext.console_errors[0],
+] as string[];
+
 describe("ReportBugForm", () => {
-  it("shows the context it will send", () => {
+  it("renders none of the context it will send", () => {
     const html = render();
-    expect(field(html, "session")).toBe("sess-42");
-    expect(field(html, "replay")).toBe("Available, linked to this report");
-    expect(field(html, "trace")).toBe(TRACE);
-    expect(field(html, "conversation")).toBe("conv-7");
-    expect(field(html, "message")).toBe("msg-9");
-    expect(field(html, "version")).toBe("v0.1.2 abc1234");
-    expect(field(html, "environment")).toBe("local");
-    expect(field(html, "page")).toBe("/chat/conv-7");
-    expect(field(html, "browser")).toContain("1 recent console errors");
+    for (const value of hiddenValues) {
+      expect(html).not.toContain(value);
+    }
+    for (const label of ["Session", "Trace", "Conversation", "Message", "Replay"]) {
+      expect(html).not.toContain(`>${label}<`);
+    }
+    expect(html).not.toContain("Attached to the report");
+    expect(html).not.toContain("data-field=");
   });
 
-  it("says what is missing instead of leaving blanks", () => {
-    const html = render({
-      context: {
-        ...stubContext,
-        session_id: null,
-        replay_url: null,
-        trace_id: null,
-        message_id: null,
-        privacy_mode: "off",
-      },
+  it("says in one sentence that technical details are attached", () => {
+    const html = render();
+    expect(html).toContain(
+      "Technical details about this conversation are attached automatically to help us investigate.",
+    );
+    const outside = render({ context: { ...stubContext, conversation_id: null } });
+    expect(outside).toContain(
+      "Technical details about this page are attached automatically to help us investigate.",
+    );
+  });
+
+  it("still sends the whole context in the form data", () => {
+    const formData = buildBugReportFormData({
+      description: "The answer stopped halfway",
+      context: stubContext,
     });
-    expect(field(html, "session")).toBe("Not available");
-    expect(field(html, "replay")).toBe("Not recorded (telemetry is off)");
-    expect(field(html, "trace")).toBe("Not available");
+    const sent = String(formData.get("context"));
+    expect(JSON.parse(sent)).toEqual(stubContext);
+    for (const value of hiddenValues) {
+      expect(sent).toContain(JSON.stringify(value).slice(1, -1));
+    }
+  });
+
+  it("shows why the last send failed, inline", () => {
+    const html = render({
+      submitError: "You have sent 5 bug reports in the last hour. Please try again later.",
+    });
+    expect(html).toMatch(/role="alert"[^>]*>You have sent 5 bug reports/);
   });
 
   it("caps the description at 4000 characters and starts with Send disabled", () => {

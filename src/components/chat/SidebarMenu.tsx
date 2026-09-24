@@ -2,7 +2,7 @@ import { LogoutDialog } from "@/components/auth/LogoutDialog";
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBug, faImages, faKey } from "@fortawesome/free-solid-svg-icons";
+import { faImages, faKey } from "@fortawesome/free-solid-svg-icons";
 import { ProfileMenubar } from "./ProfileMenubar";
 import { ProfileDialog } from "@/components/profile/ProfileDialog";
 import { CO2eqDialog } from "@/components/profile/CO2eqDialog";
@@ -14,11 +14,9 @@ import { routes } from "@/utilities/routes";
 import {
   API_KEYS_ENABLED,
   ARTIFACTS_ENABLED,
-  REPORT_BUG_ENABLED,
   TOOLKITS_ENABLED,
 } from "@/utilities/features";
 import { ApiKeysDialog } from "@/components/api-keys/ApiKeysDialog";
-import { ReportBugDialog } from "./ReportBugDialog";
 
 type SidebarMenuProps = {
   isOpen: boolean;
@@ -29,7 +27,6 @@ export const SidebarMenu = ({ isOpen }: SidebarMenuProps) => {
   const [isOpenProfileDialog, setIsOpenProfileDialog] = useState(false);
   const [isOpenCO2eqDialog, setIsOpenCO2eqDialog] = useState(false);
   const [isOpenApiKeysDialog, setIsOpenApiKeysDialog] = useState(false);
-  const [isOpenReportBugDialog, setIsOpenReportBugDialog] = useState(false);
   const apiKeysButtonRef = useRef<HTMLButtonElement>(null);
 
   const { data: profile, isLoading: isLoadingProfile } = useGetProfile();
@@ -82,26 +79,6 @@ export const SidebarMenu = ({ isOpen }: SidebarMenuProps) => {
     </button>
   );
 
-  const reportBugItem = (
-    <button
-      type="button"
-      data-testid="sidebar-report-bug"
-      aria-label="Report a bug"
-      aria-haspopup="dialog"
-      onClick={() => setIsOpenReportBugDialog(true)}
-      className={`${baseStyles} ${layoutStyles} text-natural-50 hover:text-white`}
-    >
-      <FontAwesomeIcon icon={faBug} className="w-4 h-4" />
-      {isOpen && (
-        <span className="text-lg truncate tracking-wider min-w-0 text-left">
-          <span className="whitespace-nowrap mt-[2px] overflow-hidden text-ellipsis text-md">
-            Report a bug
-          </span>
-        </span>
-      )}
-    </button>
-  );
-
   return (
     <div className="flex flex-col gap-4">
       <KnowledgeBaseMenuBar
@@ -136,24 +113,12 @@ export const SidebarMenu = ({ isOpen }: SidebarMenuProps) => {
           </Tooltip>
         ))}
 
-      {REPORT_BUG_ENABLED &&
-        (isOpen ? (
-          reportBugItem
-        ) : (
-          <Tooltip side="right" disableClick={true} content={<>Report a bug</>}>
-            <div className="inline-block w-full">{reportBugItem}</div>
-          </Tooltip>
-        ))}
-
       <ProfileMenubar
         isLoadingProfile={isLoadingProfile}
         email={email}
         onProfileClick={() => setIsOpenProfileDialog(true)}
         onCO2eqClick={() => setIsOpenCO2eqDialog(true)}
         onLogoutClick={() => setIsOpenLogoutDialog(true)}
-        onReportBugClick={
-          REPORT_BUG_ENABLED ? () => setIsOpenReportBugDialog(true) : undefined
-        }
         className={`${baseStyles} ${layoutStyles} text-natural-50 hover:text-white`}
         isOpen={isOpen}
       />
@@ -178,13 +143,6 @@ export const SidebarMenu = ({ isOpen }: SidebarMenuProps) => {
           isOpen={isOpenApiKeysDialog}
           onOpenChange={setIsOpenApiKeysDialog}
           returnFocusRef={apiKeysButtonRef}
-        />
-      )}
-
-      {REPORT_BUG_ENABLED && (
-        <ReportBugDialog
-          isOpen={isOpenReportBugDialog}
-          onOpenChange={setIsOpenReportBugDialog}
         />
       )}
     </div>

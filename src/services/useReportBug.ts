@@ -128,7 +128,7 @@ export const buildBugReportContext = (
 export const conversationIdFromPath = (pathname: string): string | undefined =>
   matchPath(CHAT_PATH, pathname)?.params.conversationId ?? undefined;
 
-const isPersistedId = (id: string | undefined): id is string =>
+export const isPersistedId = (id: string | undefined): id is string =>
   !!id && !id.startsWith("temp-") && !id.startsWith("srv-");
 
 /**
@@ -158,29 +158,80 @@ export const resolveMessageAndTrace = (
 };
 
 /**
- * Reads the live sources: telemetry session, remembered trace, the cached
- * conversation of the current chat page, build values and the window.
+ * The conversation and message a report is about, when the entry that opened
+ * it knows them (the report button of an assistant message, the error under a
+ * failed turn). Without it the report falls back to the current chat page.
+ */
+export type BugReportTarget = {
+  conversationId?: string;
+  messageId?: string;
+  traceId?: string | null;
+};
+
+/**
+ * The message and trace for an explicit target. The trace the entry passed
+ * wins, then the one stored on the cached message, then the one remembered
+ * from the stream when the target is the latest persisted message. A message
+ * id that is not persisted yet ("temp-", "srv-") means nothing to the backend,
+ * so the report then carries the conversation and the trace only.
+ */
+export const resolveTargetMessageAndTrace = (
+  conversation: Pick<ChaMessageType, "messages"> | undefined,
+  target: BugReportTarget,
+  rememberedTraceId: string | undefined,
+): { messageId?: string; traceId?: string } => {
+  if (!target.messageId) {
+    return resolveMessageAndTrace(conversation, rememberedTraceId);
+  }
+  if (!isPersistedId(target.messageId)) {
+    // Never the previous turn in its place: that would point triage at an
+    // answer that worked. The trace of this turn may still be known.
+    return {
+      messageId: undefined,
+      traceId: [target.traceId, rememberedTraceId].find(isTraceId),
+    };
+  }
+  const messages = (conversation?.messages ?? []).filter((m) =>
+    isPersistedId(m?.id),
+  );
+  const cached = messages.find((m) => m.id === target.messageId);
+  const isLatest =
+    messages.length > 0 && messages[messages.length - 1].id === target.messageId;
+  const traceId = [
+    target.traceId,
+    cached?.trace_id,
+    isLatest ? rememberedTraceId : undefined,
+  ].find(isTraceId);
+  return { messageId: target.messageId, traceId };
+};
+
+/**
+ * Reads the live sources: telemetry session, the target (or the current chat
+ * page), the remembered trace, the cached conversation, build values and the
+ * window.
  */
 export const collectBugReportContext = (
   queryClient?: QueryClient,
+  target?: BugReportTarget,
 ): BugReportContext => {
   const path = window.location.pathname;
-  const conversationId = conversationIdFromPath(path);
+  const conversationId =
+    orNull(target?.conversationId) ?? conversationIdFromPath(path);
   const conversation = conversationId
     ? queryClient?.getQueryData<ChaMessageType>([
         QUERY_KEYS.conversation,
         conversationId,
       ])
     : undefined;
-  const { messageId, traceId } = resolveMessageAndTrace(
-    conversation,
-    getLastTraceId(conversationId),
-  );
+  const remembered = getLastTraceId(conversationId ?? undefined);
+  const { messageId, traceId } = target
+    ? resolveTargetMessageAndTrace(conversation, target, remembered)
+    : resolveMessageAndTrace(conversation, remembered);
   return buildBugReportContext({
     telemetry: resolveTelemetryConfig(),
     sessionId: getSessionId(),
     traceId,
-    conversationId,
+    conversationId: conversationId ?? undefined,
     messageId,
     appVersion: import.meta.env.VITE_APP_VERSION,
     appCommit: import.meta.env.VITE_APP_COMMIT,
@@ -240,13 +291,15 @@ export const reportBugErrorMessage = (error: ApiError): string => {
   return handleApiError(error);
 };
 
+/**
+ * Sends a report. Success is a toast; a failure is left on the mutation for
+ * the dialog to show inline, next to the form the user can send again, which
+ * also works on the crash page where the app toaster is gone.
+ */
 export const useReportBug = (onSuccess?: (data: BugReportResponse) => void) => {
   return useMutation({
     mutationKey: [MUTATION_KEYS.reportBug],
     mutationFn: (params: ReportBugParams) => httpReportBug(params),
-    onError: (error: ApiError) => {
-      toast.error(reportBugErrorMessage(error));
-    },
     onSuccess: (data) => {
       toast.success("Thank you, your report was sent.");
       onSuccess?.(data);

@@ -33,6 +33,7 @@ import {
   httpReportBug,
   reportBugErrorMessage,
   resolveMessageAndTrace,
+  resolveTargetMessageAndTrace,
   type BugReportContext,
 } from "./useReportBug";
 import { QUERY_KEYS } from "./keys";
@@ -233,6 +234,57 @@ describe("resolveMessageAndTrace", () => {
   });
 });
 
+describe("resolveTargetMessageAndTrace", () => {
+  const conversation = {
+    messages: [
+      message("msg-1", TRACE_STORED),
+      message("msg-2", null),
+      message("temp-3"),
+    ],
+  };
+
+  it("keeps the target message and the trace it was given", () => {
+    expect(
+      resolveTargetMessageAndTrace(
+        conversation,
+        { messageId: "msg-1", traceId: TRACE_STREAM },
+        undefined,
+      ),
+    ).toEqual({ messageId: "msg-1", traceId: TRACE_STREAM });
+  });
+
+  it("reads the trace stored on the cached message", () => {
+    expect(
+      resolveTargetMessageAndTrace(conversation, { messageId: "msg-1" }, TRACE_STREAM),
+    ).toEqual({ messageId: "msg-1", traceId: TRACE_STORED });
+  });
+
+  it("uses the remembered trace only for the latest persisted message", () => {
+    expect(
+      resolveTargetMessageAndTrace(conversation, { messageId: "msg-2" }, TRACE_STREAM),
+    ).toEqual({ messageId: "msg-2", traceId: TRACE_STREAM });
+    expect(
+      resolveTargetMessageAndTrace(
+        { messages: [message("msg-1"), message("msg-2")] },
+        { messageId: "msg-1" },
+        TRACE_STREAM,
+      ),
+    ).toEqual({ messageId: "msg-1", traceId: undefined });
+  });
+
+  it("never swaps an optimistic id for the previous turn", () => {
+    expect(
+      resolveTargetMessageAndTrace(conversation, { messageId: "temp-3" }, TRACE_STREAM),
+    ).toEqual({ messageId: undefined, traceId: TRACE_STREAM });
+  });
+
+  it("falls back to the conversation without a message id", () => {
+    expect(
+      resolveTargetMessageAndTrace(conversation, { conversationId: "conv-1" }, undefined),
+    ).toEqual({ messageId: "msg-2", traceId: undefined });
+  });
+});
+
 describe("collectBugReportContext", () => {
   it("reads telemetry, the remembered trace, the cached conversation and the window", () => {
     vi.stubEnv("VITE_APP_VERSION", "v0.1.2");
@@ -273,6 +325,38 @@ describe("collectBugReportContext", () => {
       privacy_mode: "clear",
     });
     expect(context.replay_url).toContain("sid=sess-1");
+  });
+});
+
+describe("collectBugReportContext with a target", () => {
+  it("carries the conversation and message of the entry, whatever the page", () => {
+    vi.stubGlobal("window", {
+      __EVE_CONFIG__: {},
+      location: { pathname: "/artifacts" },
+      innerWidth: 800,
+      innerHeight: 600,
+    });
+    vi.stubGlobal("navigator", { userAgent: "UA/1.0" });
+    mocks.resolveTelemetryConfig.mockReturnValue(telemetry);
+    mocks.getSessionId.mockReturnValue("sess-1");
+    const queryClient = new QueryClient();
+    queryClient.setQueryData<Partial<ChaMessageType>>(
+      [QUERY_KEYS.conversation, "conv-9"],
+      { messages: [message("msg-7", TRACE_STORED), message("msg-8", TRACE_STREAM)] },
+    );
+
+    const context = collectBugReportContext(queryClient, {
+      conversationId: "conv-9",
+      messageId: "msg-7",
+    });
+
+    expect(context).toMatchObject({
+      conversation_id: "conv-9",
+      message_id: "msg-7",
+      trace_id: TRACE_STORED,
+      session_id: "sess-1",
+      path: "/artifacts",
+    });
   });
 });
 

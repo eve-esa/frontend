@@ -41,4 +41,10 @@ describe("ErrorBoundary fallback report a bug entry", () => {
     expect(html).toContain("Something went wrong");
     expect(html).toContain('data-testid="error-report-bug"');
   });
+
+  it("brings its own toaster with the flag on, the app one is gone", async () => {
+    // Sonner renders its live region on the server too.
+    expect(await render("true")).toContain('aria-label="Notifications');
+    expect(await render()).not.toContain('aria-label="Notifications');
+  });
 });

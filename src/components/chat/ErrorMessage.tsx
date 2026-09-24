@@ -5,11 +5,15 @@ import { useState } from "react";
 import { configValue } from "@/utilities/runtimeConfig";
 import { REPORT_BUG_ENABLED } from "@/utilities/features";
 import { ReportBugDialog } from "./ReportBugDialog";
+import type { BugReportTarget } from "@/services/useReportBug";
 
 export const ErrorMessage = ({
   onRetry,
+  reportBugTarget,
 }: {
   onRetry?: () => void;
+  /** The failed turn, when the error sits under a conversation. */
+  reportBugTarget?: BugReportTarget;
 }) => {
   const contactUrl = configValue("CONTACT_URL");
   const [isOpenReportBugDialog, setIsOpenReportBugDialog] = useState(false);
@@ -68,6 +72,7 @@ export const ErrorMessage = ({
         <ReportBugDialog
           isOpen={isOpenReportBugDialog}
           onOpenChange={setIsOpenReportBugDialog}
+          target={reportBugTarget}
         />
       )}
     </div>
