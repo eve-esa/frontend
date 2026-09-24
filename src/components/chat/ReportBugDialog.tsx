@@ -45,13 +45,18 @@ export const useReportBugForm = () =>
  */
 export const contextNote = (context: BugReportContext): string =>
   context.conversation_id
-    ? "Technical details about this conversation are attached automatically to help us investigate."
-    : "Technical details about this page are attached automatically to help us investigate.";
+    ? "We attach the technical details of this conversation to help us fix it."
+    : "We attach the technical details of this page to help us fix it.";
+
+/** The character count shows up only when the limit is near. */
+const COUNTER_FROM = BUG_REPORT_DESCRIPTION_MAX - 500;
 
 type ReportBugFormProps = {
   form: UseFormReturn<ReportBugValidation>;
   context: BugReportContext;
   screenshot: Blob | null;
+  /** Object URL of the screenshot, for the thumbnail. */
+  screenshotUrl?: string | null;
   screenshotError: string | null;
   isCapturing: boolean;
   isSubmitting: boolean;
@@ -68,6 +73,7 @@ export const ReportBugForm = ({
   form,
   context,
   screenshot,
+  screenshotUrl,
   screenshotError,
   isCapturing,
   isSubmitting,
@@ -122,23 +128,65 @@ export const ReportBugForm = ({
             )}
           />
         </div>
-        <div className="flex justify-between gap-2 text-xs">
-          {errors?.description ? (
-            <p className="text-sm text-red-500" role="alert">
-              {errors.description.message}
-            </p>
-          ) : (
-            <span />
-          )}
-          <span className="text-natural-200 shrink-0">
-            {description.length}/{BUG_REPORT_DESCRIPTION_MAX}
-          </span>
-        </div>
+        {(errors?.description || description.length >= COUNTER_FROM) && (
+          <div className="flex justify-between gap-2 text-xs">
+            {errors?.description ? (
+              <p className="text-sm text-red-500" role="alert">
+                {errors.description.message}
+              </p>
+            ) : (
+              <span />
+            )}
+            {description.length >= COUNTER_FROM && (
+              <span className="text-natural-200 shrink-0">
+                {description.length}/{BUG_REPORT_DESCRIPTION_MAX}
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col gap-2">
         {canCapture ? (
-          <div className="flex flex-wrap items-center gap-2">
+          screenshot ? (
+            <div className="flex items-center gap-3">
+              <div
+                data-testid="report-bug-screenshot"
+                className="relative w-40 aspect-video border-2 border-primary-400 bg-primary-600 overflow-hidden"
+              >
+                {screenshotUrl && (
+                  <img
+                    src={screenshotUrl}
+                    alt="Your screenshot"
+                    className="size-full object-cover object-top"
+                  />
+                )}
+                <Button
+                  type="button"
+                  variant="icon"
+                  size="sm"
+                  aria-label="Remove screenshot"
+                  title="Remove screenshot"
+                  onClick={onRemoveScreenshot}
+                  disabled={isSubmitting}
+                  className="absolute top-1 right-1 !p-1.5 bg-natural-900/80 text-natural-50 enabled:hover:bg-natural-900"
+                >
+                  <FontAwesomeIcon icon={faXmark} className="size-3" />
+                </Button>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={onCaptureScreenshot}
+                disabled={isCapturing || isSubmitting}
+                className="text-natural-200"
+              >
+                <FontAwesomeIcon icon={faCamera} aria-hidden />
+                Retake
+              </Button>
+            </div>
+          ) : (
             <Button
               type="button"
               variant="outline"
@@ -146,27 +194,10 @@ export const ReportBugForm = ({
               onClick={onCaptureScreenshot}
               disabled={isCapturing || isSubmitting}
             >
-              <FontAwesomeIcon icon={faCamera} />
-              {screenshot ? "Retake screenshot" : "Add screenshot"}
+              <FontAwesomeIcon icon={faCamera} aria-hidden />
+              Add screenshot
             </Button>
-            {screenshot && (
-              <span
-                data-testid="report-bug-screenshot"
-                className="flex items-center gap-2 text-sm text-natural-200"
-              >
-                Screenshot attached ({Math.ceil(screenshot.size / 1024)} KB)
-                <Button
-                  type="button"
-                  variant="icon"
-                  size="sm"
-                  aria-label="Remove screenshot"
-                  onClick={onRemoveScreenshot}
-                >
-                  <FontAwesomeIcon icon={faXmark} />
-                </Button>
-              </span>
-            )}
-          </div>
+          )
         ) : (
           <p className="text-sm text-natural-200">
             Screenshots are not available in this browser.
@@ -179,7 +210,10 @@ export const ReportBugForm = ({
         )}
       </div>
 
-      <p data-testid="report-bug-context-note" className="text-xs text-natural-200">
+      <p
+        data-testid="report-bug-context-note"
+        className="text-sm text-natural-200"
+      >
         {contextNote(context)}
       </p>
 
@@ -231,8 +265,32 @@ export const ReportBugDialog = ({
 }: ReportBugDialogProps) => {
   const queryClient = useQueryClient();
   const form = useReportBugForm();
-  const [context, setContext] = useState<BugReportContext | null>(null);
-  const [screenshot, setScreenshot] = useState<Blob | null>(null);
+  const [context, setContext] = useState<BugReportContext | null>(() =>
+    isOpen
+      ? (contextOverride ?? collectBugReportContext(queryClient, target))
+      : null,
+  );
+  const [screenshot, setScreenshotBlob] = useState<Blob | null>(null);
+  const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
+  const screenshotUrlRef = useRef<string | null>(null);
+
+  // One object URL per screenshot, revoked when it is replaced, removed or
+  // the dialog goes away.
+  const setScreenshot = (blob: Blob | null) => {
+    if (screenshotUrlRef.current) URL.revokeObjectURL(screenshotUrlRef.current);
+    screenshotUrlRef.current = blob ? URL.createObjectURL(blob) : null;
+    setScreenshotBlob(blob);
+    setScreenshotUrl(screenshotUrlRef.current);
+  };
+  useEffect(
+    () => () => {
+      if (screenshotUrlRef.current) {
+        URL.revokeObjectURL(screenshotUrlRef.current);
+        screenshotUrlRef.current = null;
+      }
+    },
+    [],
+  );
   const [screenshotError, setScreenshotError] = useState<string | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
   const { reset } = form;
@@ -295,6 +353,7 @@ export const ReportBugDialog = ({
             form={form}
             context={context}
             screenshot={screenshot}
+            screenshotUrl={screenshotUrl}
             screenshotError={screenshotError}
             isCapturing={isCapturing}
             isSubmitting={isPending}

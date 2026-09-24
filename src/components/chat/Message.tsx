@@ -16,8 +16,6 @@ import {
   selectStreamingCandidate,
 } from "@/utilities/streamingOutput";
 import { ToolActivityBar } from "./ToolActivityBar";
-import { MessageReportBug } from "./MessageReportBug";
-import { isPersistedId } from "@/services/useReportBug";
 
 type MessageProps = {
   message: MessageType;
@@ -25,8 +23,6 @@ type MessageProps = {
   isLastMessage: boolean;
   scrollContainerRef?: React.RefObject<HTMLDivElement | null>;
   messageIndex?: number;
-  /** The error box under the list already offers a report for this turn. */
-  hideReportBug?: boolean;
 };
 
 export const Message = ({
@@ -35,7 +31,6 @@ export const Message = ({
   isLastMessage,
   scrollContainerRef,
   messageIndex,
-  hideReportBug = false,
 }: MessageProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isOverflowing, setIsOverflowing] = useState(false);
@@ -194,16 +189,6 @@ export const Message = ({
     setIsExpanded(!isExpanded);
   };
 
-  // Only a settled turn the backend knows by id: while it streams, or before
-  // the refetch swaps the optimistic id for the real one, a report could not
-  // point at this message.
-  const canReportBug =
-    !hideReportBug &&
-    !isStreamingTarget &&
-    !showLoading &&
-    isPersistedId(message.id) &&
-    Boolean(message.output || message.metadata?.error || message.stopped);
-
   const isRequery = message.metadata?.prompts?.rag_decision_result?.use_rag;
   const requery = `**Searched for: ${
     message.metadata?.prompts?.rag_decision_result?.requery || message.input
@@ -213,10 +198,7 @@ export const Message = ({
     <div className="flex flex-col gap-3" ref={messageRef}>
       {/* USER BUBBLE */}
       <div className="flex justify-end">
-        <div
-          data-private
-          className="max-w-[min(1200px,90%)] bg-primary-900 border-2 border-primary-400 text-natural-50 rounded-2xl rounded-br-sm px-4 py-3 shadow-sm"
-        >
+        <div className="max-w-[min(1200px,90%)] bg-primary-900 border-2 border-primary-400 text-natural-50 rounded-2xl rounded-br-sm px-4 py-3 shadow-sm">
           {imageAttachments.length > 0 && (
             <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
               {imageAttachments.map((attachment, index) => (
@@ -274,9 +256,7 @@ export const Message = ({
 
       {/* ASSISTANT BUBBLE */}
       <div className="bg-natural-900 rounded-tl-[20px] rounded-br-[20px] pb-4 pt-0 relative">
-        {/* data-private: session replay never records the answer. The footer
-            below stays outside it. */}
-        <div data-private className="md:pt-8 pt-4 px-[1px]">
+        <div className="md:pt-8 pt-4 px-[1px]">
           {effectiveOutput ? (
             <>
               {/* Above the answer so the chips stay visible while tokens
@@ -347,20 +327,6 @@ export const Message = ({
         {!showLoading && Boolean(message.output) && (
           <div className="pt-8">
             <MessageFooter message={message} />
-          </div>
-        )}
-        {canReportBug && (
-          <div
-            className={cn(
-              "flex justify-end",
-              message.output ? "-mt-3" : "mt-2",
-            )}
-          >
-            <MessageReportBug
-              conversationId={message.conversation_id}
-              messageId={message.id}
-              traceId={message.trace_id}
-            />
           </div>
         )}
       </div>

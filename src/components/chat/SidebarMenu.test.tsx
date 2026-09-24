@@ -6,8 +6,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { stubRuntimeConfig } from "@/test-utils/runtimeConfigStub";
 
 /**
- * The report a bug entry belongs to a conversation (each assistant message and
- * the error under a failed turn), never to the app level sidebar or profile
+ * The report a bug entry belongs to a conversation (its header and the error
+ * under a failed turn), never to the app level sidebar or profile
  * menu, where a report would carry no conversation or message. Under test is
  * that neither shows one, whatever the flag says. Every sibling that fetches,
  * needs a provider or pulls in the whole page tree is replaced by a stub, and

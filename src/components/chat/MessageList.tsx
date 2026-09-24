@@ -17,7 +17,9 @@ export const MessageList = ({
   onRetry,
   scrollContainerRef,
 }: MessageListProps) => {
-  const lastMessage = messages?.[messages.length - 1];
+  const lastMessage = messages?.length
+    ? messages[messages.length - 1]
+    : undefined;
   return (
     <div className="flex flex-col gap-4 mx-auto">
       {messages?.map((message, index) => {
@@ -38,7 +40,6 @@ export const MessageList = ({
             isLastMessage={isLastMessage}
             scrollContainerRef={scrollContainerRef}
             messageIndex={index}
-            hideReportBug={isError && isLastMessage}
           />
         );
       })}

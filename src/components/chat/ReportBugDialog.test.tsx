@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -14,6 +15,21 @@ import {
  */
 const mocks = vi.hoisted(() => ({ post: vi.fn() }));
 vi.mock("@/services/axios", () => ({ default: { post: mocks.post } }));
+// The Radix dialog renders into a portal, which the server renderer skips.
+// Inline stand-ins keep the real dialog tree (title, helper, form) visible.
+vi.mock("@/components/ui/Dialog", () => {
+  const Pass = ({ children }: { children?: ReactNode }) => <div>{children}</div>;
+  return {
+    Dialog: ({ open, children }: { open?: boolean; children?: ReactNode }) =>
+      open ? <div role="dialog">{children}</div> : null,
+    DialogContent: Pass,
+    DialogHeader: Pass,
+    DialogTitle: ({ children }: { children?: ReactNode }) => <h2>{children}</h2>,
+    DialogDescription: ({ children }: { children?: ReactNode }) => (
+      <p>{children}</p>
+    ),
+  };
+});
 
 import {
   ReportBugDialog,
@@ -22,19 +38,22 @@ import {
 } from "./ReportBugDialog";
 
 const TRACE = "0af7651916cd43dd8448eb211c80319c";
+const CONVERSATION = "6ab522e6b3d679705f5b340a";
+const MESSAGE = "6ab522e6b3d679705f5b340b";
 
 const stubContext: BugReportContext = {
-  session_id: "sess-42",
-  replay_url: "http://localhost:8081/sessions?sid=sess-42",
+  session_id: "b3c1f2e4a5d6b7c8d9e0f1a2b3c4d5e6",
+  replay_url:
+    "http://localhost:8081/sessions?sid=b3c1f2e4a5d6b7c8d9e0f1a2b3c4d5e6",
   trace_id: TRACE,
-  conversation_id: "conv-7",
-  message_id: "msg-9",
+  conversation_id: CONVERSATION,
+  message_id: MESSAGE,
   app_version: "v0.1.2",
   app_commit: "abc1234def5678",
   environment: "local",
   user_agent: "UA/1.0",
   viewport: { width: 1280, height: 800 },
-  path: "/chat/conv-7",
+  path: `/chat/${CONVERSATION}`,
   console_errors: ["2026-09-24T10:00:00.000Z error: boom"],
   privacy_mode: "clear",
 };
@@ -42,6 +61,7 @@ const stubContext: BugReportContext = {
 type HarnessProps = {
   context?: BugReportContext;
   screenshot?: Blob | null;
+  screenshotUrl?: string | null;
   screenshotError?: string | null;
   canCapture?: boolean;
   submitError?: string | null;
@@ -50,6 +70,7 @@ type HarnessProps = {
 const Harness = ({
   context = stubContext,
   screenshot = null,
+  screenshotUrl = null,
   screenshotError = null,
   canCapture = true,
   submitError = null,
@@ -60,6 +81,7 @@ const Harness = ({
       form={form}
       context={context}
       screenshot={screenshot}
+      screenshotUrl={screenshotUrl}
       screenshotError={screenshotError}
       isCapturing={false}
       isSubmitting={false}
@@ -106,14 +128,14 @@ describe("ReportBugForm", () => {
     expect(html).not.toContain("data-field=");
   });
 
-  it("says in one sentence that technical details are attached", () => {
+  it("says in one plain sentence that technical details are attached", () => {
     const html = render();
     expect(html).toContain(
-      "Technical details about this conversation are attached automatically to help us investigate.",
+      "We attach the technical details of this conversation to help us fix it.",
     );
     const outside = render({ context: { ...stubContext, conversation_id: null } });
     expect(outside).toContain(
-      "Technical details about this page are attached automatically to help us investigate.",
+      "We attach the technical details of this page to help us fix it.",
     );
   });
 
@@ -139,7 +161,8 @@ describe("ReportBugForm", () => {
   it("caps the description at 4000 characters and starts with Send disabled", () => {
     const html = render();
     expect(html).toContain('maxLength="4000"');
-    expect(html).toContain("0/4000");
+    // No counter while the limit is far away.
+    expect(html).not.toContain("/4000");
     expect(html).toMatch(/<button[^>]*disabled=""[^>]*type="submit"|<button[^>]*type="submit"[^>]*disabled=""/);
   });
 
@@ -157,14 +180,24 @@ describe("ReportBugForm", () => {
     expect(html).not.toContain("Screenshot attached");
   });
 
-  it("shows an attached screenshot and a size error", () => {
+  it("shows a captured screenshot as a thumbnail the user can remove", () => {
     const html = render({
       screenshot: new Blob([new Uint8Array(2048)], { type: "image/jpeg" }),
+      screenshotUrl: "blob:http://localhost:5173/shot",
+    });
+    expect(html).toContain('data-testid="report-bug-screenshot"');
+    expect(html).toMatch(/<img[^>]*src="blob:http:\/\/localhost:5173\/shot"/);
+    expect(html).toContain('alt="Your screenshot"');
+    expect(html).toContain('aria-label="Remove screenshot"');
+    expect(html).toContain("Retake");
+    expect(html).not.toContain("Add screenshot");
+  });
+
+  it("shows why a screenshot could not be attached", () => {
+    const html = render({
       screenshotError: "The screenshot is larger than 1 MB and cannot be attached.",
     });
-    expect(html).toContain("Screenshot attached (2 KB)");
-    expect(html).toContain("Retake screenshot");
-    expect(html).toContain("larger than 1 MB");
+    expect(html).toMatch(/role="alert"[^>]*>The screenshot is larger than 1 MB/);
   });
 
   it("explains when the browser cannot take a screenshot", () => {
@@ -179,7 +212,53 @@ describe("ReportBugForm", () => {
   });
 });
 
+/** The text a user reads, tags and attributes stripped. */
+const visibleText = (html: string) =>
+  html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+
+const renderDialog = (context: BugReportContext = stubContext) =>
+  renderToStaticMarkup(
+    <QueryClientProvider client={new QueryClient()}>
+      <ReportBugDialog
+        isOpen={true}
+        onOpenChange={() => undefined}
+        context={context}
+      />
+    </QueryClientProvider>,
+  );
+
 describe("ReportBugDialog", () => {
+  it("shows only the title, one helper, the field, the screenshot, the note and the buttons", () => {
+    const text = visibleText(renderDialog());
+    expect(text).toBe(
+      [
+        "Report a bug",
+        "Tell us what happened, in your own words.",
+        "What went wrong?",
+        // The screenshot button needs getDisplayMedia, absent in node.
+        "Screenshots are not available in this browser.",
+        "We attach the technical details of this conversation to help us fix it.",
+        "Cancel",
+        "Send",
+      ].join(" "),
+    );
+  });
+
+  it("renders no id and no technical word, even though the context has them", () => {
+    const html = renderDialog();
+    const text = visibleText(html);
+    expect(text).not.toMatch(/\b[0-9a-f]{24}\b/i);
+    expect(text).not.toMatch(/\b[0-9a-f]{32}\b/i);
+    for (const word of ["trace", "session", "environment"]) {
+      expect(text.toLowerCase()).not.toContain(word);
+    }
+    // Not in attributes either: the whole dialog DOM is free of the values.
+    for (const value of hiddenValues) {
+      expect(html).not.toContain(value);
+    }
+    expect(html).not.toContain("1280");
+  });
+
   it("renders nothing and sends nothing while closed", () => {
     const html = renderToStaticMarkup(
       <QueryClientProvider client={new QueryClient()}>
