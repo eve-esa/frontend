@@ -116,3 +116,13 @@ export const STREAM_STATUS_NOTICES_ENABLED = isEnabled(
   "FEATURE_STREAM_STATUS_NOTICES",
   false
 );
+
+/**
+ * "Report a bug": the entries in the sidebar, the profile menu, the chat error message and the
+ * crash page, and the dialog they open, which sends a description, an optional screenshot and
+ * the telemetry context (session, replay link, last trace id) to `POST /bug-reports`.
+ *
+ * Default off, like the opening-scope flags: it needs the backend endpoint and is only useful
+ * where browser telemetry is on, so an environment opts in once both are there.
+ */
+export const REPORT_BUG_ENABLED = isEnabled("FEATURE_REPORT_BUG", false);

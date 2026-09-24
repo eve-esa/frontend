@@ -1,7 +1,10 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Button } from "@/components/ui/Button";
 import { faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
+import { useState } from "react";
 import { configValue } from "@/utilities/runtimeConfig";
+import { REPORT_BUG_ENABLED } from "@/utilities/features";
+import { ReportBugDialog } from "./ReportBugDialog";
 
 export const ErrorMessage = ({
   onRetry,
@@ -9,6 +12,7 @@ export const ErrorMessage = ({
   onRetry?: () => void;
 }) => {
   const contactUrl = configValue("CONTACT_URL");
+  const [isOpenReportBugDialog, setIsOpenReportBugDialog] = useState(false);
 
   const onContactClick = () => {
     if (contactUrl) {
@@ -41,12 +45,31 @@ export const ErrorMessage = ({
             </span>
           </div>
         )}
+        {REPORT_BUG_ENABLED && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="md"
+            data-testid="error-report-bug"
+            aria-haspopup="dialog"
+            onClick={() => setIsOpenReportBugDialog(true)}
+          >
+            Report a bug
+          </Button>
+        )}
         {onRetry && (
           <Button variant="outline" size="md" className="px-4" onClick={onRetry}>
             Retry
           </Button>
         )}
       </div>
+
+      {REPORT_BUG_ENABLED && (
+        <ReportBugDialog
+          isOpen={isOpenReportBugDialog}
+          onOpenChange={setIsOpenReportBugDialog}
+        />
+      )}
     </div>
   );
 };

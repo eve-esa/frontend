@@ -171,6 +171,23 @@ describe("FEATURE_WELCOME_DIALOG", () => {
   });
 });
 
+describe("FEATURE_REPORT_BUG", () => {
+  it("is off when nothing sets it", async () => {
+    const { REPORT_BUG_ENABLED } = await loadFeatures({});
+    expect(REPORT_BUG_ENABLED).toBe(false);
+  });
+
+  it("is off when the injected value is blank, which is what an unset GitHub variable sends", async () => {
+    const { REPORT_BUG_ENABLED } = await loadFeatures({ FEATURE_REPORT_BUG: "" });
+    expect(REPORT_BUG_ENABLED).toBe(false);
+  });
+
+  it("is on only when an environment opts in", async () => {
+    const { REPORT_BUG_ENABLED } = await loadFeatures({ FEATURE_REPORT_BUG: "true" });
+    expect(REPORT_BUG_ENABLED).toBe(true);
+  });
+});
+
 describe("FEATURE_API_KEYS", () => {
   it("is on when nothing sets it", async () => {
     const { API_KEYS_ENABLED } = await loadFeatures({});
