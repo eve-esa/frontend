@@ -16,6 +16,28 @@ Release and promotes staging. Production is promoted from there by an explicit d
 The `[1.0.0]` entry below is historical and predates this repository's current version series. The
 released tags run `v0.0.1` through `v0.0.6`; no `v1.0.0` was ever tagged here.
 
+## [0.0.20](https://github.com/eve-esa/frontend/compare/v0.0.19...v0.0.20) (2026-09-24)
+
+
+### Added
+
+* **api-keys:** keys table and Quickstart ([#103](https://github.com/eve-esa/frontend/issues/103)) ([163b3a0](https://github.com/eve-esa/frontend/commit/163b3a0d5f4126405c0185238dd0a075a97addfd))
+* **api-keys:** manage API keys from the sidebar ([#102](https://github.com/eve-esa/frontend/issues/102)) ([becc071](https://github.com/eve-esa/frontend/commit/becc0715ed0199a65729f8a7bda2785831df7f57))
+* **api-keys:** set the model in the Quickstart so step 3 runs as pasted ([#105](https://github.com/eve-esa/frontend/issues/105)) ([4296fee](https://github.com/eve-esa/frontend/commit/4296fee3f992fd9eb64e106fbd7cc1ee71f32d36))
+* **chat:** readable agent trace panel and a resizable right sidebar ([#108](https://github.com/eve-esa/frontend/issues/108)) ([4852747](https://github.com/eve-esa/frontend/commit/4852747d47507d8f301b698b0c604fc998689279))
+* **observability:** browser telemetry with the HyperDX SDK and the Report a bug dialog ([#110](https://github.com/eve-esa/frontend/issues/110)) ([da60a58](https://github.com/eve-esa/frontend/commit/da60a5815d733f55b8a3fade571c90ea1ba0f5b6))
+
+
+### Fixed
+
+* **chat:** drop duplicate Wiley documents sent without an envelope ([#101](https://github.com/eve-esa/frontend/issues/101)) ([b598c26](https://github.com/eve-esa/frontend/commit/b598c265d05405d7fce48bee42df8b3a9ef9129c))
+* **chat:** keep unique Wiley chunks in Sources ([#100](https://github.com/eve-esa/frontend/issues/100)) ([3171a92](https://github.com/eve-esa/frontend/commit/3171a92d60294cc2b12c0466069be69b7b693daa))
+* **chat:** say when a trace tool input was not recorded ([#109](https://github.com/eve-esa/frontend/issues/109)) ([8001c98](https://github.com/eve-esa/frontend/commit/8001c98c53e69aa5affb5d1118694a3045757486))
+* **chat:** show Wiley eve_retrieval passages in Sources ([#98](https://github.com/eve-esa/frontend/issues/98)) ([3c11757](https://github.com/eve-esa/frontend/commit/3c11757db8612b63044d8f2e11401a1ebf658315))
+* **chat:** stopping a generation no longer reloads the page ([#106](https://github.com/eve-esa/frontend/issues/106)) ([193d746](https://github.com/eve-esa/frontend/commit/193d74646ffa0664906708694d462b5375a4ae72))
+* **copy:** remove the pilot wording from the welcome, Discover EVE and CO2eq dialogs ([#92](https://github.com/eve-esa/frontend/issues/92)) ([f571f59](https://github.com/eve-esa/frontend/commit/f571f5990bfa6c4218600402af1ad323fa14dfb4))
+* **ui:** let the base font size inherit ([#104](https://github.com/eve-esa/frontend/issues/104)) ([9f6a2f4](https://github.com/eve-esa/frontend/commit/9f6a2f40e60ecefe63b5e4b88abcc98065797f85))
+
 ## [0.0.19](https://github.com/eve-esa/frontend/compare/v0.0.18...v0.0.19) (2026-09-09)
 
 
