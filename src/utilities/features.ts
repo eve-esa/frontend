@@ -63,9 +63,9 @@ export const API_KEYS_ENABLED = isEnabled("FEATURE_API_KEYS", true);
 export const ARTIFACTS_ENABLED = isEnabled("FEATURE_ARTIFACTS", false);
 
 /**
- * MCP toolkits: the sidebar entry, its panel, and the selection that routes a message to the
- * agentic endpoint. Off, the stored selection is ignored rather than deleted, so flipping the
- * flag back restores the user's choice.
+ * MCP toolkits: the sidebar entry, its panel, and the user's choice of servers. Off, only the
+ * default (eve_retrieval) is sent and the stored selection is ignored rather than deleted, so
+ * flipping the flag back restores the user's choice.
  */
 export const TOOLKITS_ENABLED = isEnabled("FEATURE_TOOLKITS", false);
 
