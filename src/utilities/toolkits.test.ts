@@ -47,6 +47,18 @@ describe("enabledToolkits", () => {
     ]);
     expect(result.map((s) => s.name)).toEqual(["effis"]);
   });
+
+  it("puts retrieval first, from whichever page it came, and keeps the rest in order", () => {
+    const result = enabledToolkits([
+      page(server("effis", true), server("geocode", true)),
+      page(server("eve_retrieval", true)),
+    ]);
+    expect(result.map((s) => s.name)).toEqual([
+      "eve_retrieval",
+      "effis",
+      "geocode",
+    ]);
+  });
 });
 
 describe("shouldShowToolkitsEntry", () => {

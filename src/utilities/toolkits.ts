@@ -2,9 +2,14 @@ import type {
   McpServerPublic,
   McpServersResponse,
 } from "@/services/useGetMcpServers";
+import { DEFAULT_MCP_SERVER_NAMES } from "./mcpServers";
+
+const isDefault = (server: McpServerPublic) =>
+  DEFAULT_MCP_SERVER_NAMES.includes(server.name);
 
 /**
- * Enabled toolkits across every page loaded so far.
+ * Enabled toolkits across every page loaded so far, the default ones (on until
+ * switched off) first and the rest in API order.
  *
  * Both the sidebar entry and the panel behind it derive their idea of "empty"
  * from this one function on purpose: if they computed it separately they could
@@ -13,8 +18,12 @@ import type {
  */
 export const enabledToolkits = (
   pages: McpServersResponse[] | undefined
-): McpServerPublic[] =>
-  pages?.flatMap((page) => page.data).filter((server) => server.enabled) ?? [];
+): McpServerPublic[] => {
+  const enabled =
+    pages?.flatMap((page) => page.data).filter((server) => server.enabled) ??
+    [];
+  return [...enabled.filter(isDefault), ...enabled.filter((s) => !isDefault(s))];
+};
 
 type ToolkitsEntryState = {
   isPending: boolean;

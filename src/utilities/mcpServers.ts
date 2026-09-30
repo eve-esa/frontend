@@ -1,22 +1,27 @@
 import { TOOLKITS_ENABLED } from "./features";
 import { LOCAL_STORAGE_MCP_SERVERS } from "./localStorage";
 
+// The knowledge base search. On until the user switches it off: without it the
+// agent answers with no sources.
+export const DEFAULT_MCP_SERVER_NAMES = ["eve_retrieval"];
+
 export function getSelectedMcpServerNames(): string[] {
-  // One gate for both readers: an empty selection means do not attach MCP
-  // servers (the send still hits the agentic endpoint). The stored names are
-  // read past, not deleted, so flipping the flag back restores the user's choice.
-  if (!TOOLKITS_ENABLED) return [];
+  // With toolkits hidden the user cannot choose, so the default applies. The
+  // stored names are read past, not deleted, so flipping the flag back
+  // restores the user's choice.
+  if (!TOOLKITS_ENABLED) return [...DEFAULT_MCP_SERVER_NAMES];
 
   try {
     const stored = localStorage.getItem(LOCAL_STORAGE_MCP_SERVERS);
-    if (!stored) return [];
+    if (!stored) return [...DEFAULT_MCP_SERVER_NAMES];
 
+    // A stored [] is a choice (everything switched off) and stays empty.
     const parsed = JSON.parse(stored);
     return Array.isArray(parsed)
       ? parsed.filter((name): name is string => typeof name === "string")
-      : [];
+      : [...DEFAULT_MCP_SERVER_NAMES];
   } catch {
-    return [];
+    return [...DEFAULT_MCP_SERVER_NAMES];
   }
 }
 
