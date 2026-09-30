@@ -79,6 +79,8 @@ afterEach(() => {
 
 describe("agentic request (no MCP servers)", () => {
   it("hits stream-generate-agentic with exactly the enabled collections", () => {
+    seed(LOCAL_STORAGE_MCP_SERVERS, []);
+
     expect(buildRequest("conv-1")).toEqual({
       url: "/conversations/conv-1/stream-generate-agentic",
       payload: {
@@ -93,10 +95,10 @@ describe("agentic request (no MCP servers)", () => {
     });
   });
 
-  it("omits public_mcp_servers when the MCP key is absent", () => {
-    expect(buildRequest("conv-1").payload).not.toHaveProperty(
-      "public_mcp_servers",
-    );
+  it("attaches retrieval when the MCP key is absent (a clean browser)", () => {
+    expect(buildRequest("conv-1").payload).toMatchObject({
+      public_mcp_servers: ["eve_retrieval"],
+    });
   });
 
   it("omits public_mcp_servers when the MCP selection is empty", () => {
@@ -230,6 +232,7 @@ describe("classification filters with the flag off", () => {
   });
 
   it("keeps the three perspectives out of the agentic request with no MCP servers", () => {
+    seed(LOCAL_STORAGE_MCP_SERVERS, []);
     const { url, payload } = sentRequest("conv-1");
 
     expect(url).toBe("/conversations/conv-1/stream-generate-agentic");

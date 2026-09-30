@@ -29,23 +29,49 @@ describe("getSelectedMcpServerNames with toolkits on", () => {
     expect(getSelectedMcpServerNames()).toEqual(["weather", "search"]);
   });
 
-  it("returns [] on a missing key, a non-array and invalid JSON", async () => {
+  it("returns retrieval on a missing key, a non-array and invalid JSON", async () => {
     const { getSelectedMcpServerNames } = await loadMcpServers("true");
 
-    expect(getSelectedMcpServerNames()).toEqual([]);
+    expect(getSelectedMcpServerNames()).toEqual(["eve_retrieval"]);
     seed({ weather: true });
-    expect(getSelectedMcpServerNames()).toEqual([]);
+    expect(getSelectedMcpServerNames()).toEqual(["eve_retrieval"]);
     localStorage.setItem(LOCAL_STORAGE_MCP_SERVERS, "{not json");
+    expect(getSelectedMcpServerNames()).toEqual(["eve_retrieval"]);
+  });
+
+  it("keeps a stored [] empty: the user switched everything off", async () => {
+    const { getSelectedMcpServerNames } = await loadMcpServers("true");
+    seed([]);
+
+    expect(getSelectedMcpServerNames()).toEqual([]);
+  });
+
+  it("keeps a stored list without retrieval as it is", async () => {
+    const { getSelectedMcpServerNames } = await loadMcpServers("true");
+    seed(["weather"]);
+
+    expect(getSelectedMcpServerNames()).toEqual(["weather"]);
+  });
+
+  it("switching retrieval off from the default stores []", async () => {
+    const { getSelectedMcpServerNames, toggleMcpServerSelection } =
+      await loadMcpServers("true");
+
+    toggleMcpServerSelection(getSelectedMcpServerNames(), "eve_retrieval");
+
     expect(getSelectedMcpServerNames()).toEqual([]);
   });
 });
 
 describe("getSelectedMcpServerNames with toolkits off", () => {
-  it("returns [], which means do not attach MCP servers (endpoint is still agentic)", async () => {
+  it("returns only retrieval, whatever is stored", async () => {
     const { getSelectedMcpServerNames } = await loadMcpServers("false");
-    seed(["weather"]);
 
-    expect(getSelectedMcpServerNames()).toEqual([]);
+    expect(getSelectedMcpServerNames()).toEqual(["eve_retrieval"]);
+    seed(["weather"]);
+    expect(getSelectedMcpServerNames()).toEqual(["eve_retrieval"]);
+    seed([]);
+    expect(getSelectedMcpServerNames()).toEqual(["eve_retrieval"]);
   });
 
   it("leaves the stored selection alone, so flipping the flag back restores it", async () => {

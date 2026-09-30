@@ -30,8 +30,8 @@ export const SharedToolkitsList = ({
   });
   // The toggles here are the only place MCP servers get selected. They write
   // to the shared `mcp_servers` storage (utilities/mcpServers.ts), which is
-  // what useSendRequest reads to decide whether the next message goes to the
-  // agentic endpoint.
+  // what useSendRequest reads to fill `public_mcp_servers`. With nothing stored
+  // the default applies, so eve_retrieval starts switched on.
   const [selectedServers, setSelectedServers] = useState<string[]>(() =>
     getSelectedMcpServerNames(),
   );
