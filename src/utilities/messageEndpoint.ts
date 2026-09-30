@@ -10,9 +10,11 @@ export type MessageRequestTarget = {
  * payload fields it needs.
  *
  * Every new send uses the agentic pipeline, whether or not MCP servers are
- * selected. `mcpServers` only controls `public_mcp_servers`: when the list is
- * empty the field is omitted (Option A — the graph runs with zero tools and
- * does not retrieve). FEATURE_TOOLKITS gates the Toolkits sidebar, not this URL.
+ * selected. `mcpServers` only controls `public_mcp_servers`, and it carries
+ * eve_retrieval by default (utilities/mcpServers.ts). An empty list means the
+ * user switched everything off: the field is omitted, the graph runs with zero
+ * tools and does not retrieve. FEATURE_TOOLKITS gates the Toolkits sidebar, not
+ * this URL.
  */
 export function resolveMessageEndpoint(
   conversationId: string | undefined,
