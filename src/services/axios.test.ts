@@ -44,6 +44,9 @@ const make401 = () => ({
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  // Since Vitest 4 restoreAllMocks only restores vi.spyOn spies: the vi.fn()
+  // mocks of the ./oidc factory keep their calls unless cleared here.
+  vi.clearAllMocks();
   vi.restoreAllMocks();
 });
 
