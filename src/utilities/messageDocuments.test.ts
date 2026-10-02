@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { getRenderableDocuments, getSourceText } from "./messageDocuments";
+import {
+  getRenderableDocuments,
+  getSourceText,
+  getSourceTitle,
+} from "./messageDocuments";
 import type { Document } from "@/types";
 import { wileyEnvelopeDoc } from "./wileyEnvelope.fixture";
 
@@ -267,5 +271,43 @@ describe("Wiley eve_retrieval documents", () => {
     } as unknown as Document;
     const copy = { ...chunk, payload: { ...chunk.payload } };
     expect(getRenderableDocuments([chunk, copy])).toHaveLength(1);
+  });
+});
+
+describe("getSourceTitle", () => {
+  const titled = (payloadTitle: unknown, additionalTitle?: unknown): Document =>
+    ({
+      id: "t",
+      text: "body",
+      collection_name: "qwen-512-filtered",
+      payload: { title: payloadTitle },
+      metadata:
+        additionalTitle === undefined
+          ? {}
+          : { additionalMetadata: { title: additionalTitle } },
+    }) as unknown as Document;
+
+  it("prefers additionalMetadata.title, then payload.title", () => {
+    expect(getSourceTitle(titled("Payload", "Additional"))).toBe("Additional");
+    expect(getSourceTitle(titled("Payload"))).toBe("Payload");
+  });
+
+  it.each(["nan", "NaN", "None", "null", "", "  "])(
+    "treats %j as a missing title",
+    (marker) => {
+      expect(getSourceTitle(titled(marker))).toBe("Title not available");
+      expect(getSourceTitle(titled("Real title", marker))).toBe("Real title");
+    },
+  );
+
+  it("falls back when there is no title or no source", () => {
+    expect(getSourceTitle(titled(null))).toBe("Title not available");
+    expect(getSourceTitle(undefined)).toBe("Title not available");
+  });
+
+  it("keeps a title that only contains a marker word", () => {
+    expect(getSourceTitle(titled("Nan Shan glacier survey"))).toBe(
+      "Nan Shan glacier survey",
+    );
   });
 });

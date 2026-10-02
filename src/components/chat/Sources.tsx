@@ -4,6 +4,7 @@ import { type Document } from "@/types";
 import { SourceContent } from "./SourceContent";
 import { useParams } from "react-router-dom";
 import { useLogSourceClick } from "@/services/useLogSourceClick";
+import { getSourceTitle } from "@/utilities/messageDocuments";
 
 type SourcesProps = {
   onToggle: () => void;
@@ -17,10 +18,7 @@ export const Sources = ({ onToggle, sources, messageId }: SourcesProps) => {
   // Group sources by title only
   const groupedSources =
     sources?.reduce((acc, source) => {
-      const title =
-        source?.metadata?.additionalMetadata?.title ??
-        source?.payload?.title ??
-        "Title not available";
+      const title = getSourceTitle(source);
 
       if (!acc[title]) {
         acc[title] = [];
@@ -66,6 +64,7 @@ export const Sources = ({ onToggle, sources, messageId }: SourcesProps) => {
                 {/* Title header for the group */}
                 <div className="flex flex-col gap- hover:underline hover:opacity-80">
                   <h2
+                    data-testid="source-title"
                     className="text-lg 3xl:text-2xl leading-6 cursor-pointer"
                     onClick={() => {
                       if (sourcesLink) {

@@ -465,6 +465,7 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
             {hasSources ? (
               <Button
                 variant="primary"
+                data-testid="message-sources-button"
                 onClick={() =>
                   toggleMessageSidebar("sources", {
                     sources: renderableDocuments,
