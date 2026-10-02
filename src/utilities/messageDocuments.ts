@@ -46,6 +46,18 @@ const asText = (value: unknown): string | undefined => {
   return undefined;
 };
 
+/**
+ * Ingestion stored missing titles as text: pandas NaN became "nan", Python None
+ * became "None". Those render as a title unless treated as missing.
+ */
+const MISSING_TITLE_MARKERS = new Set(["nan", "none", "null", "undefined"]);
+
+const asTitle = (value: unknown): string | undefined => {
+  const text = asText(value);
+  if (text === undefined) return undefined;
+  return MISSING_TITLE_MARKERS.has(text.trim().toLowerCase()) ? undefined : text;
+};
+
 const coerceJson = (value: unknown): unknown => {
   if (typeof value !== "string") return value;
   const trimmed = value.trim();
@@ -170,9 +182,9 @@ const wileyResultToDocument = (
   const additional = additionalMetadataOf(record);
   const text = chunkText(result) ?? "";
   const title =
-    asText(additional.title) ??
-    asText(additional.citationLine) ??
-    asText(parent.payload?.title) ??
+    asTitle(additional.title) ??
+    asTitle(additional.citationLine) ??
+    asTitle(parent.payload?.title) ??
     PLACEHOLDER_TITLE;
   const url =
     asText(additional.link) ??
@@ -234,6 +246,12 @@ export const getSourceText = (source: Document | null | undefined): string =>
   asPassage(source?.text) ??
   chunkText(envelopeOfDocument(source)?.results[0]) ??
   NO_SOURCE_TEXT;
+
+/** The title a source is listed under, "Title not available" when it has none. */
+export const getSourceTitle = (source: Document | null | undefined): string =>
+  asTitle(source?.metadata?.additionalMetadata?.title) ??
+  asTitle(source?.payload?.title) ??
+  PLACEHOLDER_TITLE;
 
 export const getRenderableDocuments = (documents: unknown): Document[] => {
   if (!Array.isArray(documents)) return [];
