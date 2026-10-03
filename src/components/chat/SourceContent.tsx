@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { type Document } from "@/types";
-import SmartText from "@/components/ui/SmartText";
+import SmartText from "@/components/ui/LazySmartText";
 import { getSourceText } from "@/utilities/messageDocuments";
 
 export const SourceContent = ({ source }: { source: Document }) => {

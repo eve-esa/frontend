@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { STATUS, ACTIONS, type CallBackProps } from "react-joyride";
+// Type-only import: a value import here would pull the tour library into the
+// entry chunk, while ChatLayout loads it on demand.
+import type { CallBackProps } from "react-joyride";
 import { LOCAL_STORAGE_TOUR_COMPLETED } from "@/utilities/localStorage";
 import { routes } from "@/utilities/routes";
 import { useIsMobile } from "@/hooks/useIsMobile";
@@ -73,9 +75,9 @@ export const useJoyride = () => {
     const { action, index, status, type } = data;
 
     if (type === "step:after") {
-      const nextStepIndex = index + (action === ACTIONS.PREV ? -1 : 1);
+      const nextStepIndex = index + (action === "prev" ? -1 : 1);
       setStepIndex(nextStepIndex);
-    } else if (status === STATUS.FINISHED || status === STATUS.SKIPPED) {
+    } else if (status === "finished" || status === "skipped") {
       localStorage.setItem(LOCAL_STORAGE_TOUR_COMPLETED, "true");
       navigate(routes.EMPTY_CHAT.path);
       setRun(false);

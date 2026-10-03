@@ -1,5 +1,4 @@
-import Joyride from "react-joyride";
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { Outlet } from "react-router-dom";
 import { DynamicSidebarProvider } from "@/components/chat/DynamicSidebarProvider";
 import { ConversationsMenuSidebar } from "@/components/chat/ConversationsMenuSidebar";
@@ -20,6 +19,11 @@ import {
   reconcileCollectionStorage,
 } from "@/utilities/collections";
 import { PRIVATE_COLLECTIONS_ENABLED } from "@/utilities/features";
+import { preloadSmartText } from "@/components/ui/LazySmartText";
+
+// The tour library (joyride, floater, popper) is fetched only when a tour runs:
+// most visits never start one.
+const Joyride = lazy(() => import("react-joyride"));
 
 // Built once: the flags are module constants, and a stable array keeps Joyride
 // from restarting its step machine on every render.
@@ -70,6 +74,12 @@ export const ChatLayout = () => {
   }, [myCollections, myHasNextPage]);
 
   useEffect(() => {
+    // Every page under this layout renders markdown: fetch the renderer now,
+    // while the conversation loads, instead of on the first message.
+    preloadSmartText();
+  }, []);
+
+  useEffect(() => {
     // Seed and repair stored settings: fills missing keys with defaults and
     // clamps out-of-range values, so every reader sees a complete object.
     localStorage.setItem(
@@ -87,32 +97,36 @@ export const ChatLayout = () => {
       >
         <DynamicSidebarProvider>
           <div className="flex h-full w-full overflow-hidden relative">
-            <Joyride
-              callback={handleJoyrideCallback}
-              continuous={true}
-              run={run}
-              scrollToFirstStep={false}
-              showProgress
-              showSkipButton
-              stepIndex={stepIndex}
-              steps={steps}
-              disableScrolling={true}
-              hideCloseButton={true}
-              disableOverlayClose={true}
-              locale={{
-                last: "Start New Chat",
-                next: "Next",
-                back: "Previous",
-                skip: "Skip Tour",
-              }}
-              styles={{
-                options: {
-                  primaryColor: "var(--color-primary-500)",
-                  zIndex: 10000,
-                  arrowColor: "#335e6f",
-                },
-              }}
-            />
+            {run && (
+              <Suspense fallback={null}>
+                <Joyride
+                  callback={handleJoyrideCallback}
+                  continuous={true}
+                  run={run}
+                  scrollToFirstStep={false}
+                  showProgress
+                  showSkipButton
+                  stepIndex={stepIndex}
+                  steps={steps}
+                  disableScrolling={true}
+                  hideCloseButton={true}
+                  disableOverlayClose={true}
+                  locale={{
+                    last: "Start New Chat",
+                    next: "Next",
+                    back: "Previous",
+                    skip: "Skip Tour",
+                  }}
+                  styles={{
+                    options: {
+                      primaryColor: "var(--color-primary-500)",
+                      zIndex: 10000,
+                      arrowColor: "#335e6f",
+                    },
+                  }}
+                />
+              </Suspense>
+            )}
 
             {/* Left Sidebar: Conversations, Menu items, New chat button */}
             <ConversationsMenuSidebar />

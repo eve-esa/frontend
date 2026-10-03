@@ -13,7 +13,7 @@ import {
 } from "@fortawesome/free-regular-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Button } from "@/components/ui/Button";
-import SmartText from "@/components/ui/SmartText";
+import SmartText from "@/components/ui/LazySmartText";
 import {
   LLMType,
   LLMTypeLabel,
