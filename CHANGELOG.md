@@ -13,8 +13,8 @@ but is not yet released is visible in the open `chore(main): release ...` pull r
 what cuts the release: merging it commits the version, creates the `vX.Y.Z` tag, publishes the GitHub
 Release and promotes staging. Production is promoted from there by an explicit dispatch.
 
-The `[1.0.0]` entry below is historical and predates this repository's current version series. The
-released tags run `v0.0.1` through `v0.0.6`; no `v1.0.0` was ever tagged here.
+The "Pilot history" section at the bottom predates this repository's version series: no tag was ever
+cut for it. The released tags start at `v0.0.1`.
 
 ## [0.0.20](https://github.com/eve-esa/frontend/compare/v0.0.19...v0.0.20) (2026-09-24)
 
@@ -152,7 +152,7 @@ released tags run `v0.0.1` through `v0.0.6`; no `v1.0.0` was ever tagged here.
 
 * The delete control on artifacts. An uploaded file is permanent ([#41](https://github.com/eve-esa/frontend/pull/41))
 
-## [1.0.0] - 2025-09-18
+## Pilot history (2025-09-18, never tagged)
 
 ### Added - Initial EVE Frontend Release
 - 🌍 **EVE Chat Interface** - Interactive chat system for Earth Observation Virtual Expert
@@ -279,4 +279,3 @@ This project follows [Semantic Versioning](https://semver.org/):
 
 ### Links
 
-- [1.0.0]: https://github.com/eve-esa/frontend/releases/tag/v1.0.0
