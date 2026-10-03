@@ -21,7 +21,7 @@ import { handleApiError } from "@/utilities/helpers";
 import { logError } from "./errorLogging";
 import { invalidateTokenUsage } from "./useTokenUsage";
 import {
-  buildGenerationPayload,
+  buildMessageRequest,
   mapCreateMessageResponse,
   mapToConversationMessage,
   updateLastTempMessage,
@@ -34,12 +34,22 @@ import {
 } from "@/utilities/modelSelection";
 import { getSelectedMcpServerNames } from "@/utilities/mcpServers";
 import { applyToolCall, applyToolResult } from "@/utilities/toolActivity";
-import { resolveMessageEndpoint } from "@/utilities/messageEndpoint";
+import type { MessagePipeline } from "@/utilities/messageEndpoint";
 import { shouldToastStreamError } from "@/utilities/streamError";
 import { rememberStoppedPartial } from "@/utilities/stoppedPartials";
-import { STREAMING_ENABLED, STREAM_STATUS_NOTICES_ENABLED } from "@/utilities/features";
+import {
+  AGENTIC_CHAT_ENABLED,
+  STREAMING_ENABLED,
+  STREAM_STATUS_NOTICES_ENABLED,
+} from "@/utilities/features";
 import { shouldShowPreAnswerNotice } from "@/utilities/preAnswerNotices";
 import { rememberTraceFromFinalEvent } from "@/observability/lastTrace";
+
+// FEATURE_AGENTIC_CHAT. The classic pipeline ignores the MCP selection, so it
+// is read only for agentic turns.
+const PIPELINE: MessagePipeline = AGENTIC_CHAT_ENABLED ? "agentic" : "classic";
+const selectedMcpServers = () =>
+  PIPELINE === "agentic" ? getSelectedMcpServerNames() : [];
 
 type SendRequestProps = {
   query: string;
@@ -58,20 +68,18 @@ export const sendRequest = async ({
   models,
   attachments,
 }: SendRequestProps) => {
-  // Endpoint is always agentic; MCP selection only fills public_mcp_servers.
-  const mcpServers = getSelectedMcpServerNames();
-  const { url, extraPayload } = resolveMessageEndpoint(
+  const { url, payload } = buildMessageRequest({
     conversationId,
-    mcpServers,
-    "sync",
-  );
-  const response = await api.post<CreateMessageResponse>(url, {
-    ...buildGenerationPayload({ query, settings, modelSelection, models }),
-    ...(attachments?.length
-      ? { artifact_ids: attachments.map((a) => a.id) }
-      : {}),
-    ...extraPayload,
+    mode: "sync",
+    pipeline: PIPELINE,
+    mcpServers: selectedMcpServers(),
+    query,
+    settings,
+    modelSelection,
+    models,
+    attachments,
   });
+  const response = await api.post<CreateMessageResponse>(url, payload);
   return mapCreateMessageResponse(response.data);
 };
 
@@ -123,23 +131,20 @@ export const useSendRequest = (conversationId?: string) => {
         models ??
         queryClient.getQueryData<ModelListResponse>([QUERY_KEYS.models]);
 
-      // Endpoint is always agentic; MCP selection only fills public_mcp_servers.
-      const mcpServers = getSelectedMcpServerNames();
-      const { url: streamUrl, extraPayload: mcpPayload } =
-        resolveMessageEndpoint(conversationId, mcpServers, "stream");
-
-      const payload = {
-        ...buildGenerationPayload({
-          query,
-          settings,
-          modelSelection,
-          models: cachedModels,
-        }),
-        ...(attachments?.length
-          ? { artifact_ids: attachments.map((a) => a.id) }
-          : {}),
-        ...mcpPayload,
-      };
+      // Both pipelines stream the same SSE events (status, requery, token,
+      // final, error), so one parser below serves both; tool_call and
+      // tool_result only ever arrive on the agentic one.
+      const { url: streamUrl, payload } = buildMessageRequest({
+        conversationId,
+        mode: "stream",
+        pipeline: PIPELINE,
+        mcpServers: selectedMcpServers(),
+        query,
+        settings,
+        modelSelection,
+        models: cachedModels,
+        attachments,
+      });
 
       // Everything the stream has painted into the bubble so far. Declared
       // outside the try so the catch can stamp it onto the outgoing error:

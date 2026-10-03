@@ -3,6 +3,7 @@ import type { AdvancedSettingsValidation } from "@/utilities/advancedSettingsSch
 import type {
   AgenticTraceStep,
   ChaMessageType,
+  ImageAttachment,
   MessageType,
   ModelListResponse,
   ModelSelection,
@@ -14,6 +15,11 @@ import {
   modelSelectionToPayload,
   reconcileModelSelection,
 } from "@/utilities/modelSelection";
+import {
+  resolveMessageEndpoint,
+  type MessagePipeline,
+  type MessageRequestMode,
+} from "@/utilities/messageEndpoint";
 
 export type CreateMessageResponse = {
   id: string;
@@ -48,14 +54,53 @@ export const buildGenerationPayload = ({
   );
   const modelFields = modelSelectionToPayload(selection, models);
 
-  // Note: the caller always hits the agentic endpoint. MCP selection only
-  // fills `public_mcp_servers` (omitted when empty) via
-  // utilities/messageEndpoint.ts + utilities/mcpServers.ts — see useSendRequest.ts.
+  // Shared by both pipelines: the classic and agentic routes take the same
+  // GenerationRequest. What differs (URL, `public_mcp_servers`) is added by
+  // buildMessageRequest below.
   return {
     query,
     ...settings,
     ...modelFields,
     ...getMessageCollectionPayload(),
+  };
+};
+
+type MessageRequestInput = GenerationInput & {
+  conversationId: string | undefined;
+  mode: MessageRequestMode;
+  pipeline: MessagePipeline;
+  mcpServers: string[];
+  attachments?: ImageAttachment[];
+};
+
+/**
+ * The URL and body of a new chat turn, for either pipeline and either mode. The
+ * one place both send paths in useSendRequest.ts build their request, so the
+ * streaming and the blocking request cannot drift apart.
+ */
+export const buildMessageRequest = ({
+  conversationId,
+  mode,
+  pipeline,
+  mcpServers,
+  attachments,
+  ...generation
+}: MessageRequestInput) => {
+  const { url, extraPayload } = resolveMessageEndpoint(
+    conversationId,
+    mcpServers,
+    mode,
+    pipeline,
+  );
+  return {
+    url,
+    payload: {
+      ...buildGenerationPayload(generation),
+      ...(attachments?.length
+        ? { artifact_ids: attachments.map((a) => a.id) }
+        : {}),
+      ...extraPayload,
+    },
   };
 };
 

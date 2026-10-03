@@ -63,11 +63,26 @@ export const API_KEYS_ENABLED = isEnabled("FEATURE_API_KEYS", true);
 export const ARTIFACTS_ENABLED = isEnabled("FEATURE_ARTIFACTS", false);
 
 /**
+ * Agentic chat: new turns go to the agentic pipeline (`stream-generate-agentic`, or
+ * `generate-agentic` without streaming), where the model decides which MCP tools to call,
+ * retrieval included. Off sends them to the classic pipeline (`stream_messages`, or `messages`),
+ * which always searches the knowledge base and runs no tools, and hides the Toolkits entry with
+ * it (`TOOLKITS_ENABLED` below). For an environment with no MCP tools, where an agentic turn
+ * would answer without sources.
+ *
+ * Default on, like the original flags: an environment opts out. Messages already in a
+ * conversation keep rendering their sources and trace either way.
+ */
+export const AGENTIC_CHAT_ENABLED = isEnabled("FEATURE_AGENTIC_CHAT", true);
+
+/**
  * MCP toolkits: the sidebar entry, its panel, and the user's choice of servers. Off, only the
  * default (eve_retrieval) is sent and the stored selection is ignored rather than deleted, so
- * flipping the flag back restores the user's choice.
+ * flipping the flag back restores the user's choice. Always off with agentic chat off: the
+ * classic pipeline runs no tools, so a toolkit choice would do nothing.
  */
-export const TOOLKITS_ENABLED = isEnabled("FEATURE_TOOLKITS", false);
+export const TOOLKITS_ENABLED =
+  AGENTIC_CHAT_ENABLED && isEnabled("FEATURE_TOOLKITS", false);
 
 /**
  * Personal document collections: the "My collections" menu item and panel, the `/collections`
