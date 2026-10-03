@@ -27,11 +27,6 @@ import {
   updateLastTempMessage,
   type CreateMessageResponse,
 } from "./agenticMessage";
-import {
-  getStoredModelSelection,
-  modelSelectionToPayload,
-  reconcileModelSelection,
-} from "@/utilities/modelSelection";
 import { getSelectedMcpServerNames } from "@/utilities/mcpServers";
 import { applyToolCall, applyToolResult } from "@/utilities/toolActivity";
 import type { MessagePipeline } from "@/utilities/messageEndpoint";
@@ -260,13 +255,6 @@ export const useSendRequest = (conversationId?: string) => {
         }
 
         const now = new Date();
-        const payloadFields = modelSelectionToPayload(
-          reconcileModelSelection(
-            modelSelection ?? getStoredModelSelection(cachedModels),
-            cachedModels,
-          ),
-          cachedModels,
-        );
         return mapToConversationMessage({
           id: `srv-${now.getTime()}`,
           timestamp: now,
@@ -277,9 +265,11 @@ export const useSendRequest = (conversationId?: string) => {
           documents: [],
           answer: finalAnswer || "",
           query: payload.query,
+          // The model the request named, not the stored selection: on the
+          // classic pipeline a custom selection is replaced before sending.
           request_input: {
-            llm_type: payloadFields.llm_type ?? null,
-            custom_model_id: payloadFields.custom_model_id ?? null,
+            llm_type: payload.llm_type ?? null,
+            custom_model_id: payload.custom_model_id ?? null,
           },
           attachments,
           artifact_ids: finalArtifactIds,

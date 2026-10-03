@@ -14,6 +14,7 @@ import {
   getStoredModelSelection,
   modelSelectionToPayload,
   reconcileModelSelection,
+  withoutCustomModels,
 } from "@/utilities/modelSelection";
 import {
   resolveMessageEndpoint,
@@ -92,10 +93,25 @@ export const buildMessageRequest = ({
     mode,
     pipeline,
   );
+  const classic = pipeline === "classic";
+  // The classic routes accept custom_model_id but answer with the default
+  // model, and a stored custom_model_id would send a later retry down the
+  // agentic graph. Reconciling against the list without custom models falls
+  // back to the first platform model, like a deleted custom model does.
+  const generationPayload = buildGenerationPayload({
+    ...generation,
+    models: classic
+      ? withoutCustomModels(generation.models)
+      : generation.models,
+  });
+  if (classic) {
+    // Covers the case with no model list to reconcile against.
+    delete generationPayload.custom_model_id;
+  }
   return {
     url,
     payload: {
-      ...buildGenerationPayload(generation),
+      ...generationPayload,
       ...(attachments?.length
         ? { artifact_ids: attachments.map((a) => a.id) }
         : {}),

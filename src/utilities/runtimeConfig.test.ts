@@ -180,6 +180,17 @@ describe("FEATURE_AGENTIC_CHAT", () => {
     });
     expect(on.TOOLKITS_ENABLED).toBe(true);
   });
+
+  it("hides custom models when off, even where FEATURE_CUSTOM_MODELS is true", async () => {
+    const off = await loadFeatures({
+      FEATURE_AGENTIC_CHAT: "false",
+      FEATURE_CUSTOM_MODELS: "true",
+    });
+    expect(off.CUSTOM_MODELS_ENABLED).toBe(false);
+
+    const on = await loadFeatures({ FEATURE_CUSTOM_MODELS: "true" });
+    expect(on.CUSTOM_MODELS_ENABLED).toBe(true);
+  });
 });
 
 describe("FEATURE_WELCOME_DIALOG", () => {

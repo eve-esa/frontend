@@ -27,11 +27,6 @@ import { isEnabled } from "./runtimeConfig";
 /** The per-message model selector, listing platform and custom models. */
 export const MODEL_PICKER_ENABLED = isEnabled("FEATURE_MODEL_PICKER", true);
 
-/**
- * Bring-your-own-key: the "Manage custom models" button and its dialog, which let a user
- * register an external provider with their own API key.
- */
-export const CUSTOM_MODELS_ENABLED = isEnabled("FEATURE_CUSTOM_MODELS", true);
 
 /**
  * Token-by-token rendering over SSE. Off falls back to the blocking request, which answers only
@@ -66,8 +61,8 @@ export const ARTIFACTS_ENABLED = isEnabled("FEATURE_ARTIFACTS", false);
  * Agentic chat: new turns go to the agentic pipeline (`stream-generate-agentic`, or
  * `generate-agentic` without streaming), where the model decides which MCP tools to call,
  * retrieval included. Off sends them to the classic pipeline (`stream_messages`, or `messages`),
- * which always searches the knowledge base and runs no tools, and hides the Toolkits entry with
- * it (`TOOLKITS_ENABLED` below). For an environment with no MCP tools, where an agentic turn
+ * which always searches the knowledge base and runs no tools, and hides Toolkits and custom
+ * models with it (`TOOLKITS_ENABLED`, `CUSTOM_MODELS_ENABLED` below). For an environment with no MCP tools, where an agentic turn
  * would answer without sources.
  *
  * Default on, like the original flags: an environment opts out. Messages already in a
@@ -83,6 +78,15 @@ export const AGENTIC_CHAT_ENABLED = isEnabled("FEATURE_AGENTIC_CHAT", true);
  */
 export const TOOLKITS_ENABLED =
   AGENTIC_CHAT_ENABLED && isEnabled("FEATURE_TOOLKITS", false);
+
+/**
+ * Bring-your-own-key: the "Manage custom models" button and its dialog, which let a user
+ * register an external provider with their own API key, and the custom entries in the model
+ * picker. Always off with agentic chat off: the classic pipeline cannot answer with a custom
+ * model, so offering one would silently answer with the default model instead.
+ */
+export const CUSTOM_MODELS_ENABLED =
+  AGENTIC_CHAT_ENABLED && isEnabled("FEATURE_CUSTOM_MODELS", true);
 
 /**
  * Personal document collections: the "My collections" menu item and panel, the `/collections`

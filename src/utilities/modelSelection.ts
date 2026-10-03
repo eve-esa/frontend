@@ -141,6 +141,13 @@ export function resolveCustomModelDisplayName(
   );
 }
 
+/** The model list with the custom (bring-your-own-key) models removed. */
+export function withoutCustomModels(
+  models?: ModelListResponse,
+): ModelListResponse | undefined {
+  return models && { ...models, custom: [] };
+}
+
 export function reconcileModelSelection(
   selection: ModelSelection,
   models?: ModelListResponse,

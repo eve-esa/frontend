@@ -327,6 +327,48 @@ describe("buildMessageRequest", () => {
     });
   });
 
+  it("classic: a selected custom model never reaches the payload", () => {
+    const withCustom: ModelListResponse = {
+      ...MODELS,
+      custom: [
+        {
+          id: "byok-1",
+          display_name: "My model",
+          provider_id: "openai",
+          catalog_model_id: "gpt",
+          provider_display_name: "OpenAI",
+          model_display_name: "GPT",
+          model_name: "gpt",
+          has_api_key: true,
+          created_at: "2026-10-01T00:00:00Z",
+          updated_at: "2026-10-01T00:00:00Z",
+        },
+      ],
+    };
+    const custom = { type: "custom" as const, id: "byok-1" };
+    const build = (pipeline: "agentic" | "classic", models?: ModelListResponse) =>
+      buildMessageRequest({
+        conversationId: "conv-1",
+        mode: "stream",
+        pipeline,
+        mcpServers: [],
+        query: "hello",
+        settings: SETTINGS,
+        modelSelection: custom,
+        models,
+      }).payload;
+
+    // Falls back to the first platform model, like a deleted custom model.
+    expect(build("classic", withCustom)).not.toHaveProperty("custom_model_id");
+    expect(build("classic", withCustom)).toMatchObject({ llm_type: "main" });
+    // No model list to reconcile against: still dropped.
+    expect(build("classic")).not.toHaveProperty("custom_model_id");
+    // The agentic pipeline keeps it.
+    expect(build("agentic", withCustom)).toMatchObject({
+      custom_model_id: "byok-1",
+    });
+  });
+
   it("agentic blocking: generate-agentic, no artifact_ids without attachments", () => {
     const { url, payload } = request("agentic", "sync", ["eve_retrieval"], []);
 
