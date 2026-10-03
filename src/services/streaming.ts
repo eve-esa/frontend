@@ -54,10 +54,6 @@ let nextErrorShouldSuppressToast = false;
 // so a hung stream would be silently filed as "user pressed stop".
 let lastAbortWasWatchdogTimeout = false;
 
-export function markNextErrorAsUserCanceled() {
-  nextErrorShouldSuppressToast = true;
-}
-
 export function consumeSuppressToastFlag(): boolean {
   const shouldSuppress = nextErrorShouldSuppressToast;
   nextErrorShouldSuppressToast = false;

@@ -188,10 +188,6 @@ export type DetailsError = {
   msg: string;
 };
 
-export type DetailsErrorArr = {
-  detail: DetailsError[];
-};
-
 // Structured error detail the backend sends for a refusal that has its own
 // user-facing message: the create throttle (429) and the active-key cap
 // (409). `code` lets a caller branch on the specific refusal (see
@@ -219,10 +215,6 @@ export const OptionSchema = z.object({
 });
 
 export type OptionType = z.infer<typeof OptionSchema>;
-
-export enum SSEEventType {
-  CHAT = "chat:new-message",
-}
 
 export enum LLMType {
   Main = "main",

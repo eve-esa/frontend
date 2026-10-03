@@ -59,19 +59,6 @@ const formatDate = (iso: string): string => {
 
 const pad2 = (n: number): string => String(n).padStart(2, "0");
 
-export const apiKeyStatusLabel = (status: ApiKeyStatus): string => {
-  switch (status) {
-    case "active":
-      return "Active";
-    case "expired":
-      return "Expired";
-    case "revoked":
-      return "Revoked";
-    default:
-      return status;
-  }
-};
-
 export const createdLabel = (createdAt: string): string =>
   `Created ${formatDate(createdAt)}`;
 
