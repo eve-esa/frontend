@@ -32,24 +32,6 @@ export const setStoredStringArray = (key: string, values: string[]): void => {
   notifyStoredStringArrayListeners(key);
 };
 
-export const ensureStoredStringArray = (
-  key: string,
-  defaultValues: string[],
-): void => {
-  const raw = localStorage.getItem(key);
-
-  if (!raw) {
-    setStoredStringArray(key, defaultValues);
-    return;
-  }
-
-  try {
-    JSON.parse(raw);
-  } catch {
-    setStoredStringArray(key, defaultValues);
-  }
-};
-
 export const subscribeStoredStringArray = (
   key: string,
   listener: StoredStringArrayListener,

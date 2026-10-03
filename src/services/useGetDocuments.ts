@@ -25,11 +25,6 @@ export type PublicCollectionsResponse = {
   meta: Meta;
 };
 
-export type GetDocumentsParamsProps = {
-  limit?: number;
-  page?: number;
-};
-
 export const getDocuments = async ({
   collectionId,
   limit = 15,
