@@ -16,6 +16,27 @@ Release and promotes staging. Production is promoted from there by an explicit d
 The `[1.0.0]` entry below is historical and predates this repository's current version series. The
 released tags run `v0.0.1` through `v0.0.6`; no `v1.0.0` was ever tagged here.
 
+## [1.0.0](https://github.com/eve-esa/frontend/compare/v0.0.20...v1.0.0) (2026-10-03)
+
+
+### Added
+
+* **chat:** route turns to the classic pipeline when agentic chat is off ([#124](https://github.com/eve-esa/frontend/issues/124)) ([6ed52db](https://github.com/eve-esa/frontend/commit/6ed52db23de21014d4437c41ed904ee2183f47f4))
+
+
+### Fixed
+
+* **chat:** show Title not available for placeholder source titles ([#115](https://github.com/eve-esa/frontend/issues/115)) ([d5e3047](https://github.com/eve-esa/frontend/commit/d5e304772e84a7031d7042f9c36508e3774bdfc6))
+* **chat:** turn on the retrieval toolkit by default ([#113](https://github.com/eve-esa/frontend/issues/113)) ([89a79d9](https://github.com/eve-esa/frontend/commit/89a79d9b2eff48066480b417c41b8324668e9a81))
+* **deps:** patch fflate and vitest advisories ([#116](https://github.com/eve-esa/frontend/issues/116)) ([1660aaf](https://github.com/eve-esa/frontend/commit/1660aafc1a868ee7d2d6e13f6728475944bd4646))
+
+
+### Changed
+
+* drop exports and query keys nothing reads ([#121](https://github.com/eve-esa/frontend/issues/121)) ([95ea23b](https://github.com/eve-esa/frontend/commit/95ea23b885c821e4b7bac1462a66931f99072443))
+* remove unused date picker, checkbox and dead hooks ([#120](https://github.com/eve-esa/frontend/issues/120)) ([311c857](https://github.com/eve-esa/frontend/commit/311c8576ada5dbf7e575e98ebaa90f8f7441813b))
+* **ui:** load the markdown renderer and the tour on demand ([#125](https://github.com/eve-esa/frontend/issues/125)) ([5e4e911](https://github.com/eve-esa/frontend/commit/5e4e911b14476b873b94e3181896b3560410f63c))
+
 ## [0.0.20](https://github.com/eve-esa/frontend/compare/v0.0.19...v0.0.20) (2026-09-24)
 
 
