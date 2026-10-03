@@ -154,6 +154,45 @@ describe("the opening-scope flags", () => {
   });
 });
 
+describe("FEATURE_AGENTIC_CHAT", () => {
+  it("is on when nothing sets it, and on blank", async () => {
+    expect((await loadFeatures({})).AGENTIC_CHAT_ENABLED).toBe(true);
+    expect(
+      (await loadFeatures({ FEATURE_AGENTIC_CHAT: "" })).AGENTIC_CHAT_ENABLED,
+    ).toBe(true);
+  });
+
+  it("is off only where the environment says false", async () => {
+    const features = await loadFeatures({ FEATURE_AGENTIC_CHAT: "false" });
+    expect(features.AGENTIC_CHAT_ENABLED).toBe(false);
+  });
+
+  it("hides toolkits when off, even where FEATURE_TOOLKITS is true", async () => {
+    const off = await loadFeatures({
+      FEATURE_AGENTIC_CHAT: "false",
+      FEATURE_TOOLKITS: "true",
+    });
+    expect(off.TOOLKITS_ENABLED).toBe(false);
+
+    const on = await loadFeatures({
+      FEATURE_AGENTIC_CHAT: "true",
+      FEATURE_TOOLKITS: "true",
+    });
+    expect(on.TOOLKITS_ENABLED).toBe(true);
+  });
+
+  it("hides custom models when off, even where FEATURE_CUSTOM_MODELS is true", async () => {
+    const off = await loadFeatures({
+      FEATURE_AGENTIC_CHAT: "false",
+      FEATURE_CUSTOM_MODELS: "true",
+    });
+    expect(off.CUSTOM_MODELS_ENABLED).toBe(false);
+
+    const on = await loadFeatures({ FEATURE_CUSTOM_MODELS: "true" });
+    expect(on.CUSTOM_MODELS_ENABLED).toBe(true);
+  });
+});
+
 describe("FEATURE_WELCOME_DIALOG", () => {
   it("is off when nothing sets it", async () => {
     const { WELCOME_DIALOG_ENABLED } = await loadFeatures({});

@@ -14,7 +14,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { useDropzone } from "react-dropzone";
 import { toast } from "sonner";
 import { useSidebar } from "./DynamicSidebarProvider";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AttachmentPreviewList,
   type PendingAttachment,
@@ -35,6 +35,7 @@ import {
   modelSelectionToValue,
   parseModelSelectionValue,
   reconcileModelSelection,
+  withoutCustomModels,
   setStoredModelSelection,
 } from "@/utilities/modelSelection";
 import { useListModels } from "@/services/useListModels";
@@ -341,7 +342,15 @@ export const MessageInput = ({
     modelSelectionToValue(getStoredModelSelection()),
   );
   const [customModelsOpen, setCustomModelsOpen] = useState(false);
-  const { data: models } = useListModels();
+  const { data: listedModels } = useListModels();
+  // Custom models are listed, and reconciled against, only where they are
+  // enabled: off (or with agentic chat off) a stored custom selection falls
+  // back to the default platform model instead of naming a hidden entry.
+  const models = useMemo(
+    () =>
+      CUSTOM_MODELS_ENABLED ? listedModels : withoutCustomModels(listedModels),
+    [listedModels],
+  );
   const [isAnimatingOut, setIsAnimatingOut] = useState(false);
 
   useEffect(() => {

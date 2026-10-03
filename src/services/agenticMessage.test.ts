@@ -47,6 +47,7 @@ const buildRequest = (conversationId: string) => {
     conversationId,
     mcpServers,
     "stream",
+    "agentic",
   );
   return {
     url,
@@ -191,6 +192,7 @@ describe("classification filters with the flag off", () => {
       conversationId,
       getSelectedMcpServerNames(),
       "stream",
+      "agentic",
     );
     const payload: Record<string, unknown> = {
       ...buildGenerationPayload({ query: "hello", settings, models: MODELS }),
@@ -254,5 +256,124 @@ describe("classification filters with the flag off", () => {
     expect(
       JSON.parse(localStorage.getItem(LOCAL_STORAGE_SETTINGS) as string),
     ).toMatchObject(PERSPECTIVES);
+  });
+});
+
+describe("buildMessageRequest", () => {
+  let buildMessageRequest: typeof import("./agenticMessage").buildMessageRequest;
+
+  const ATTACHMENT = {
+    id: "art-1",
+    url: "/artifacts/art-1",
+    filename: "map.png",
+    content_type: "image/png",
+  };
+
+  const GENERATION_FIELDS = {
+    query: "hello",
+    score_threshold: 0.42,
+    temperature: 0.3,
+    k: 7,
+    llm_type: "main",
+    public_collections: ["wikipedia-512", "EVE open access"],
+    private_collections: ["my-private"],
+  };
+
+  const request = (
+    pipeline: "agentic" | "classic",
+    mode: "stream" | "sync",
+    mcpServers: string[],
+    attachments?: (typeof ATTACHMENT)[],
+  ) =>
+    buildMessageRequest({
+      conversationId: "conv-1",
+      mode,
+      pipeline,
+      mcpServers,
+      attachments,
+      query: "hello",
+      settings: SETTINGS,
+      models: MODELS,
+    });
+
+  beforeEach(async () => {
+    ({ buildMessageRequest } = await import("./agenticMessage"));
+  });
+
+  it("classic streaming: stream_messages, generation fields and attachments, no MCP servers", () => {
+    expect(
+      request("classic", "stream", ["eve_retrieval", "weather"], [ATTACHMENT]),
+    ).toEqual({
+      url: "/conversations/conv-1/stream_messages",
+      payload: { ...GENERATION_FIELDS, artifact_ids: ["art-1"] },
+    });
+  });
+
+  it("classic blocking: messages, same body as the streaming request", () => {
+    expect(request("classic", "sync", ["eve_retrieval"])).toEqual({
+      url: "/conversations/conv-1/messages",
+      payload: GENERATION_FIELDS,
+    });
+  });
+
+  it("agentic streaming: stream-generate-agentic with the MCP servers and attachments", () => {
+    expect(request("agentic", "stream", ["eve_retrieval"], [ATTACHMENT])).toEqual({
+      url: "/conversations/conv-1/stream-generate-agentic",
+      payload: {
+        ...GENERATION_FIELDS,
+        artifact_ids: ["art-1"],
+        public_mcp_servers: ["eve_retrieval"],
+      },
+    });
+  });
+
+  it("classic: a selected custom model never reaches the payload", () => {
+    const withCustom: ModelListResponse = {
+      ...MODELS,
+      custom: [
+        {
+          id: "byok-1",
+          display_name: "My model",
+          provider_id: "openai",
+          catalog_model_id: "gpt",
+          provider_display_name: "OpenAI",
+          model_display_name: "GPT",
+          model_name: "gpt",
+          has_api_key: true,
+          created_at: "2026-10-01T00:00:00Z",
+          updated_at: "2026-10-01T00:00:00Z",
+        },
+      ],
+    };
+    const custom = { type: "custom" as const, id: "byok-1" };
+    const build = (pipeline: "agentic" | "classic", models?: ModelListResponse) =>
+      buildMessageRequest({
+        conversationId: "conv-1",
+        mode: "stream",
+        pipeline,
+        mcpServers: [],
+        query: "hello",
+        settings: SETTINGS,
+        modelSelection: custom,
+        models,
+      }).payload;
+
+    // Falls back to the first platform model, like a deleted custom model.
+    expect(build("classic", withCustom)).not.toHaveProperty("custom_model_id");
+    expect(build("classic", withCustom)).toMatchObject({ llm_type: "main" });
+    // No model list to reconcile against: still dropped.
+    expect(build("classic")).not.toHaveProperty("custom_model_id");
+    // The agentic pipeline keeps it.
+    expect(build("agentic", withCustom)).toMatchObject({
+      custom_model_id: "byok-1",
+    });
+  });
+
+  it("agentic blocking: generate-agentic, no artifact_ids without attachments", () => {
+    const { url, payload } = request("agentic", "sync", ["eve_retrieval"], []);
+
+    expect(url).toBe("/conversations/conv-1/generate-agentic");
+    expect(payload).not.toHaveProperty("artifact_ids");
+    expect(payload).toMatchObject({ public_mcp_servers: ["eve_retrieval"] });
   });
 });
