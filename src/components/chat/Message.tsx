@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import SmartText from "@/components/ui/SmartText";
+import SmartText from "@/components/ui/LazySmartText";
 import { MessageFooter } from "./MessageFooter";
 import type { MessageType } from "@/types";
 import { Skeleton } from "@/components/ui/Skeleton";

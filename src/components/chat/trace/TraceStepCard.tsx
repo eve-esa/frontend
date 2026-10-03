@@ -14,7 +14,7 @@ import { CopyButton } from "@/components/ui/CopyButton";
 import { ExpandableContent } from "@/components/ui/ExpandableContent";
 import { ExpandablePlainText } from "@/components/ui/ExpandablePlainText";
 import { JsonTree } from "@/components/ui/JsonTree";
-import SmartText from "@/components/ui/SmartText";
+import SmartText from "@/components/ui/LazySmartText";
 import { cn } from "@/lib/utils";
 import {
   DISPLAY_TEXT_LIMIT,
