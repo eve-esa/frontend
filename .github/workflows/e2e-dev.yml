@@ -1,0 +1,62 @@
+# Browser end-to-end suite (e2e/) against dev after every successful dev deploy.
+# Read-only for the repository: it only signs in to dev with a test account and
+# reports. The prod-readonly project is never run from here.
+name: "e2e: dev"
+
+on:
+  workflow_run:
+    workflows: ["deploy: dev"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Project to run (dev, staging, local needs a reachable host)"
+        required: false
+        default: dev
+        type: choice
+        options: [dev, staging]
+
+concurrency:
+  group: e2e-dev
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    name: Playwright
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: esa-eve-dev
+    container:
+      # Same Playwright version as the devDependency: the browsers ship in the image.
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+    env:
+      CI: "true"
+      E2E_EMAIL: ${{ secrets.E2E_EMAIL }}
+      E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+      E2E_PROJECT: ${{ inputs.target || 'dev' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The commit dev just deployed, not the head of main at run time.
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Install dependencies
+        run: |
+          corepack enable
+          corepack yarn install --frozen-lockfile
+
+      - name: Run the suite
+        run: corepack yarn e2e --project="$E2E_PROJECT"
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: e2e-report-${{ env.E2E_PROJECT }}
+          path: e2e/report
+          retention-days: 14

@@ -68,6 +68,7 @@ export const SettingsForm = ({ onToggle }: SettingsFormProps) => {
     <form
       className="flex flex-col h-full gap-4"
       data-tour="control-panel"
+      data-testid="settings-panel"
       onSubmit={handleSubmit(onSubmit)}
     >
       {/* Header */}
@@ -221,7 +222,10 @@ export const SettingsForm = ({ onToggle }: SettingsFormProps) => {
               )}
             </div>
             {/* Document Date Range */}
-            <div className="flex flex-col gap-2 p-[1px]">
+            <div
+              className="flex flex-col gap-2 p-[1px]"
+              data-testid="settings-year-range"
+            >
               <label
                 htmlFor="documentDateRange"
                 className="flex items-center gap-1"
@@ -254,7 +258,10 @@ export const SettingsForm = ({ onToggle }: SettingsFormProps) => {
             {/* TOPIC FILTERS */}
             {/* Semantic Perspective */}
             {CLASSIFICATION_FILTERS_ENABLED && (
-              <div className="flex flex-col gap-2 p-[1px]">
+              <div
+                className="flex flex-col gap-2 p-[1px]"
+                data-testid="settings-filter-thematic"
+              >
                 <label className="flex items-center gap-1">
                   <p className="font-['NotesESA'] text-sm 3xl:text-xl">
                     {settingsTooltipExplanation.thematic_perspective.title}
@@ -295,7 +302,10 @@ export const SettingsForm = ({ onToggle }: SettingsFormProps) => {
             )}
             {/* Scientific and Technical */}
             {CLASSIFICATION_FILTERS_ENABLED && (
-              <div className="flex flex-col gap-2 p-[1px]">
+              <div
+                className="flex flex-col gap-2 p-[1px]"
+                data-testid="settings-filter-scientific"
+              >
                 <label className="flex items-center gap-1">
                   <p className="font-['NotesESA'] text-sm 3xl:text-xl 3xl:leading-6">
                     {settingsTooltipExplanation.scientific_and_technical.title}
@@ -336,7 +346,10 @@ export const SettingsForm = ({ onToggle }: SettingsFormProps) => {
             )}
             {/* Market Perspective */}
             {CLASSIFICATION_FILTERS_ENABLED && (
-              <div className="flex flex-col gap-2 p-[1px]">
+              <div
+                className="flex flex-col gap-2 p-[1px]"
+                data-testid="settings-filter-market"
+              >
                 <label className="flex items-center gap-1">
                   <p className="font-['NotesESA'] text-sm 3xl:text-xl 3xl:leading-6">
                     {settingsTooltipExplanation.market_perspective.title}
@@ -376,7 +389,10 @@ export const SettingsForm = ({ onToggle }: SettingsFormProps) => {
               </div>
             )}
             {/* Min citations */}
-            <div className="flex flex-col gap-2 p-[1px]">
+            <div
+              className="flex flex-col gap-2 p-[1px]"
+              data-testid="settings-min-citations"
+            >
               <label htmlFor="maxDocuments" className="flex items-center gap-1">
                 <p className="font-['NotesESA'] text-sm 3xl:text-xl 3xl:leading-6">
                   {settingsTooltipExplanation.n_citations.title}

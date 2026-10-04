@@ -45,6 +45,7 @@ export const ProfileMenubar = ({
 
   const triggerContent = (
     <MenubarTrigger
+      data-testid="user-menu"
       className={`flex items-center gap-2 rounded-lg hover:bg-primary-400 p-2 text-natural-50 hover:text-white cursor-pointer ${className}`}
     >
       <FontAwesomeIcon
@@ -57,7 +58,10 @@ export const ProfileMenubar = ({
           {isLoadingProfile ? (
             <Skeleton className="h-[20px]  w-full" />
           ) : (
-            <span className="whitespace-nowrap mt-[2px] overflow-hidden text-ellipsis text-md">
+            <span
+              data-testid="user-menu-email"
+              className="whitespace-nowrap mt-[2px] overflow-hidden text-ellipsis text-md"
+            >
               {email}
             </span>
           )}
@@ -82,7 +86,7 @@ export const ProfileMenubar = ({
           triggerContent
         )}
         <MenubarContent side="bottom">
-          <MenubarItem onClick={onProfileClick}>
+          <MenubarItem data-testid="user-menu-profile" onClick={onProfileClick}>
             <span>Profile</span>
           </MenubarItem>
           <MenubarItem onClick={onCO2eqClick}>
@@ -97,7 +101,7 @@ export const ProfileMenubar = ({
           <MenubarItem onClick={onPrivacyPolicyClick}>
             <span>Privacy Policy</span>
           </MenubarItem>
-          <MenubarItem onClick={onLogoutClick}>
+          <MenubarItem data-testid="user-menu-logout" onClick={onLogoutClick}>
             <span className="text-danger-300">Logout</span>
           </MenubarItem>
         </MenubarContent>

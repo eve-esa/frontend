@@ -195,7 +195,12 @@ export const Message = ({
   }**\n\n`;
 
   return (
-    <div className="flex flex-col gap-3" ref={messageRef}>
+    <div
+      className="flex flex-col gap-3"
+      ref={messageRef}
+      data-testid="message"
+      data-message-id={message.id}
+    >
       {/* USER BUBBLE */}
       <div className="flex justify-end">
         <div className="max-w-[min(1200px,90%)] bg-primary-900 border-2 border-primary-400 text-natural-50 rounded-2xl rounded-br-sm px-4 py-3 shadow-sm">
@@ -266,9 +271,19 @@ export const Message = ({
                   <ToolActivityBar activity={toolActivity} />
                 </div>
               )}
-              <SmartText text={`${isRequery ? requery : ""}${displayOutput}`} />
+              <div
+                data-testid="message-answer"
+                data-searched-for={isRequery ? "true" : "false"}
+              >
+                <SmartText
+                  text={`${isRequery ? requery : ""}${displayOutput}`}
+                />
+              </div>
               {message.stopped && (
-                <p className="mt-2 text-sm text-natural-500 italic">
+                <p
+                  data-testid="message-stopped"
+                  className="mt-2 text-sm text-natural-500 italic"
+                >
                   Generation stopped
                 </p>
               )}
@@ -299,7 +314,10 @@ export const Message = ({
               )}
             </div>
           ) : message.stopped ? (
-            <p className="text-sm text-natural-500 italic">
+            <p
+              data-testid="message-stopped"
+              className="text-sm text-natural-500 italic"
+            >
               Generation stopped
             </p>
           ) : !message.output &&

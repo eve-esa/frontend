@@ -18,7 +18,10 @@
     "lint": "eslint .",
     "type-check": "tsc -p tsconfig.app.json",
     "test": "vitest run",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "e2e": "playwright test -c e2e/playwright.config.ts",
+    "e2e:report": "playwright show-report e2e/report",
+    "e2e:type-check": "tsc -p e2e/tsconfig.json"
   },
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^6.7.2",
@@ -65,6 +68,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
+    "@playwright/test": "1.63.0",
     "@types/hast": "^3.0.0",
     "@types/node": "^24.13.5",
     "@types/react": "^19.3.0",
