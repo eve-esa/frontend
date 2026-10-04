@@ -283,3 +283,72 @@ export const getRenderableDocuments = (documents: unknown): Document[] => {
   }
   return out;
 };
+
+export type SourceGroup = {
+  /** Stable React key and grouping identity, never shown to the user. */
+  key: string;
+  /** Title shown for the group, "Title not available" when it has none. */
+  title: string;
+  sources: Document[];
+};
+
+const asIdentity = (value: unknown): string | undefined => {
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  const text = asText(value);
+  return text === undefined || isMissingId(text.trim()) ? undefined : text.trim();
+};
+
+/**
+ * Which parent document a retrieved chunk belongs to. Chunks only carry the
+ * fields of their document, so the strongest one present wins:
+ *
+ * 1. metadata.document_id: set on every chunk of a private upload (the Mongo
+ *    id of the uploaded file).
+ * 2. the document link (additionalMetadata.link, then payload.url), normalized
+ *    like the dedupe keys, plus the title: the title keeps two documents apart
+ *    if a collection ever reuses one link.
+ * 3. the title, when it is a real one.
+ * 4. the chunk id, then the position: a chunk with no document identity and
+ *    no title is its own group rather than merged with other untitled chunks.
+ */
+export const getSourceGroupKey = (
+  source: Document | null | undefined,
+  index = 0,
+): string => {
+  const documentId = asIdentity(source?.metadata?.document_id);
+  if (documentId) return `document:${documentId}`;
+
+  const title =
+    asTitle(source?.metadata?.additionalMetadata?.title) ??
+    asTitle(source?.payload?.title);
+  const link =
+    asText(source?.metadata?.additionalMetadata?.link) ??
+    asText(source?.payload?.url);
+  if (link) return `link:${normalizeArticleUrl(link)}|${title ?? ""}`;
+
+  if (title) return `title:${title}`;
+
+  const chunkId = asIdentity(source?.id);
+  return chunkId ? `chunk:${chunkId}` : `index:${index}`;
+};
+
+/**
+ * Sources grouped by the document they come from, in order of first
+ * appearance. Two untitled chunks from different documents stay apart even
+ * though both are listed under "Title not available".
+ */
+export const groupSourcesByDocument = (
+  sources: Document[] | null | undefined,
+): SourceGroup[] => {
+  const groups = new Map<string, SourceGroup>();
+  for (const [index, source] of (sources ?? []).entries()) {
+    const key = getSourceGroupKey(source, index);
+    const group = groups.get(key);
+    if (group) {
+      group.sources.push(source);
+    } else {
+      groups.set(key, { key, title: getSourceTitle(source), sources: [source] });
+    }
+  }
+  return [...groups.values()];
+};

@@ -4,7 +4,7 @@ import { type Document } from "@/types";
 import { SourceContent } from "./SourceContent";
 import { useParams } from "react-router-dom";
 import { useLogSourceClick } from "@/services/useLogSourceClick";
-import { getSourceTitle } from "@/utilities/messageDocuments";
+import { groupSourcesByDocument } from "@/utilities/messageDocuments";
 
 type SourcesProps = {
   onToggle: () => void;
@@ -15,17 +15,8 @@ type SourcesProps = {
 export const Sources = ({ onToggle, sources, messageId }: SourcesProps) => {
   const { conversationId } = useParams();
   const { mutate: logSourceClick } = useLogSourceClick();
-  // Group sources by title only
-  const groupedSources =
-    sources?.reduce((acc, source) => {
-      const title = getSourceTitle(source);
-
-      if (!acc[title]) {
-        acc[title] = [];
-      }
-      acc[title].push(source);
-      return acc;
-    }, {} as Record<string, Document[]>) || {};
+  // One group per parent document: untitled documents stay apart.
+  const groupedSources = groupSourcesByDocument(sources);
 
   return (
     <div className="flex flex-col h-full py-6 gap-8">
@@ -49,7 +40,7 @@ export const Sources = ({ onToggle, sources, messageId }: SourcesProps) => {
       {/* Content */}
       <div className="flex-1 overflow-y-auto min-w-0 flex flex-col gap-8 mask-y-from-97% mask-y-to-100% px-6 ">
         <div className="flex flex-col gap-6">
-          {Object.entries(groupedSources).map(([title, groupSources]) => {
+          {groupedSources.map(({ key, title, sources: groupSources }) => {
             // Use the first source's link for the title
             const firstSource = groupSources[0];
             const sourcesLink =
@@ -58,7 +49,7 @@ export const Sources = ({ onToggle, sources, messageId }: SourcesProps) => {
 
             return (
               <div
-                key={title}
+                key={key}
                 className="flex flex-col gap-4 py-4 overflow-hidden text-ellipsis"
               >
                 {/* Title header for the group */}
