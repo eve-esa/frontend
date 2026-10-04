@@ -147,3 +147,13 @@ export const STREAM_STATUS_NOTICES_ENABLED = isEnabled(
  * where browser telemetry is on, so an environment opts in once both are there.
  */
 export const REPORT_BUG_ENABLED = isEnabled("FEATURE_REPORT_BUG", false);
+
+/**
+ * Country and institution in the profile dialog: two optional inputs next to the name fields,
+ * prefilled from `GET /users/me` and saved with the same `PATCH /users`. Off, the dialog is
+ * unchanged and the update sends only the names, so a backend without the two fields never
+ * receives them.
+ *
+ * Default off: a new capability ships off in production and on where an environment opts in.
+ */
+export const PROFILE_FIELDS_ENABLED = isEnabled("FEATURE_PROFILE_FIELDS", false);
