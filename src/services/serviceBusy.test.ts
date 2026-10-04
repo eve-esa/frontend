@@ -76,17 +76,33 @@ describe("parseRetryAfterSeconds", () => {
 });
 
 describe("takeBusyDraft", () => {
-  it("hands the text over once and keeps the final notice", () => {
-    setBusyNotice({ conversationId: "c1", phase: "stopped", draft: "hello" });
+  it("hands the draft over once and keeps the final notice", () => {
+    const attachments = [
+      { id: "a1", url: "/a1", filename: "map.png", content_type: "image/png" },
+    ];
+    setBusyNotice({
+      conversationId: "c1",
+      phase: "stopped",
+      draft: { text: "hello", attachments },
+    });
     expect(takeBusyDraft("other")).toBeNull();
-    expect(takeBusyDraft("c1")).toBe("hello");
+    expect(takeBusyDraft("c1")).toEqual({ text: "hello", attachments });
     expect(takeBusyDraft("c1")).toBeNull();
-    expect(getBusyNotice()).toMatchObject({ phase: "stopped" });
+    expect(getBusyNotice("c1")).toMatchObject({ phase: "stopped" });
   });
 
-  it("clears a canceled wait once the text is taken", () => {
-    setBusyNotice({ conversationId: "c1", phase: "canceled", draft: "hi" });
-    expect(takeBusyDraft("c1")).toBe("hi");
-    expect(getBusyNotice()).toBeNull();
+  it("clears a canceled wait once the draft is taken", () => {
+    setBusyNotice({ conversationId: "c1", phase: "canceled", draft: { text: "hi" } });
+    expect(takeBusyDraft("c1")).toEqual({ text: "hi" });
+    expect(getBusyNotice("c1")).toBeNull();
+  });
+
+  it("keeps one notice per conversation", () => {
+    setBusyNotice({ conversationId: "a", phase: "waiting", secondsLeft: 4 });
+    setBusyNotice({ conversationId: "b", phase: "waiting", secondsLeft: 9 });
+    expect(getBusyNotice("a")).toMatchObject({ secondsLeft: 4 });
+    clearBusyNotice("b");
+    expect(getBusyNotice("a")).toMatchObject({ secondsLeft: 4 });
+    expect(getBusyNotice("b")).toBeNull();
   });
 });

@@ -27,7 +27,7 @@ describe("ComposerBusyNotice", () => {
     expect(
       renderToStaticMarkup(
         <ComposerBusyNotice
-          notice={{ conversationId: "c1", phase: "canceled", draft: "x" }}
+          notice={{ conversationId: "c1", phase: "canceled", draft: { text: "x" } }}
         />,
       ),
     ).toBe("");

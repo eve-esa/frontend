@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => ({
   post: vi.fn(),
   postStream: vi.fn(),
   toastError: vi.fn(),
+  logError: vi.fn(),
 }));
 
 vi.mock("sonner", () => ({ toast: { error: mocks.toastError } }));
@@ -26,7 +27,7 @@ vi.mock("./streaming", () => ({
   consumeSuppressToastFlag: () => false,
   consumeWatchdogTimeoutFlag: () => false,
 }));
-vi.mock("./errorLogging", () => ({ logError: vi.fn() }));
+vi.mock("./errorLogging", () => ({ logError: mocks.logError }));
 vi.mock("react", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react")>()),
   useRef: (initial: unknown) => ({ current: initial }),
@@ -96,6 +97,7 @@ beforeEach(() => {
   mocks.post.mockReset();
   mocks.postStream.mockReset();
   mocks.toastError.mockReset();
+  mocks.logError.mockReset();
   mocks.post.mockResolvedValue({
     data: {
       id: "m1",
@@ -197,15 +199,17 @@ const VARIABLES = {
 
 // Loads the hook with streaming on, then gives the stubbed window the location
 // the error logging path reads.
-const loadBusy = async () => {
+const loadBusy = async (conversationId = "conv-1") => {
   const hook = await load("false");
   const busy = await import("./serviceBusy");
   vi.stubGlobal("window", {
     __EVE_CONFIG__: { FEATURE_AGENTIC_CHAT: "false" },
-    location: { href: "http://localhost/chat/conv-1" },
+    location: { href: `http://localhost/chat/${conversationId}` },
   });
-  const options = hook.useSendRequest("conv-1") as unknown as BusyMutationOptions;
-  return { options, busy };
+  const options = hook.useSendRequest(
+    conversationId,
+  ) as unknown as BusyMutationOptions;
+  return { options, busy, hook };
 };
 
 describe("send refused by an overloaded backend", () => {
@@ -225,7 +229,7 @@ describe("send refused by an overloaded backend", () => {
 
     const run = options.mutationFn(VARIABLES);
     await vi.advanceTimersByTimeAsync(0);
-    expect(busy.getBusyNotice()).toEqual({
+    expect(busy.getBusyNotice("conv-1")).toEqual({
       conversationId: "conv-1",
       phase: "waiting",
       secondsLeft: 3,
@@ -233,15 +237,15 @@ describe("send refused by an overloaded backend", () => {
     expect(mocks.postStream).toHaveBeenCalledTimes(1);
 
     await vi.advanceTimersByTimeAsync(1000);
-    expect(busy.getBusyNotice()).toMatchObject({ secondsLeft: 2 });
+    expect(busy.getBusyNotice("conv-1")).toMatchObject({ secondsLeft: 2 });
     await vi.advanceTimersByTimeAsync(1000);
-    expect(busy.getBusyNotice()).toMatchObject({ secondsLeft: 1 });
+    expect(busy.getBusyNotice("conv-1")).toMatchObject({ secondsLeft: 1 });
     expect(mocks.postStream).toHaveBeenCalledTimes(1);
 
     await vi.advanceTimersByTimeAsync(1000);
     await expect(run).resolves.toMatchObject({ output: "done" });
     expect(mocks.postStream).toHaveBeenCalledTimes(2);
-    expect(busy.getBusyNotice()).toBeNull();
+    expect(busy.getBusyNotice("conv-1")).toBeNull();
   });
 
   it("waits 10 s when Retry-After is missing", async () => {
@@ -252,7 +256,7 @@ describe("send refused by an overloaded backend", () => {
 
     const run = options.mutationFn(VARIABLES);
     await vi.advanceTimersByTimeAsync(0);
-    expect(busy.getBusyNotice()).toMatchObject({ secondsLeft: 10 });
+    expect(busy.getBusyNotice("conv-1")).toMatchObject({ secondsLeft: 10 });
     await vi.advanceTimersByTimeAsync(9000);
     expect(mocks.postStream).toHaveBeenCalledTimes(1);
     await vi.advanceTimersByTimeAsync(1000);
@@ -276,14 +280,14 @@ describe("send refused by an overloaded backend", () => {
 
     options.onError(error, VARIABLES);
     expect(mocks.toastError).not.toHaveBeenCalled();
-    expect(busy.getBusyNotice()).toEqual({
+    expect(busy.getBusyNotice("conv-1")).toEqual({
       conversationId: "conv-1",
       phase: "stopped",
-      draft: "hello",
+      draft: { text: "hello", attachments: undefined },
     });
     // What the composer reads back into its text area.
-    expect(busy.takeBusyDraft("conv-1")).toBe("hello");
-    expect(busy.getBusyNotice()).toMatchObject({ phase: "stopped" });
+    expect(busy.takeBusyDraft("conv-1")).toMatchObject({ text: "hello" });
+    expect(busy.getBusyNotice("conv-1")).toMatchObject({ phase: "stopped" });
   });
 
   it("returns the text without a notice when Stop is pressed mid countdown", async () => {
@@ -293,13 +297,16 @@ describe("send refused by an overloaded backend", () => {
     const run = options.mutationFn(VARIABLES);
     const outcome = run.catch((error: unknown) => error);
     await vi.advanceTimersByTimeAsync(1000);
-    expect(busy.isBusyWaitActive()).toBe(true);
-    busy.cancelBusyWait();
+    expect(busy.isBusyWaitActive("conv-1")).toBe(true);
+    busy.cancelBusyWait("conv-1");
     const error = await outcome;
 
     expect(mocks.postStream).toHaveBeenCalledTimes(1);
     options.onError(error, VARIABLES);
-    expect(busy.getBusyNotice()).toMatchObject({ phase: "canceled", draft: "hello" });
+    expect(busy.getBusyNotice("conv-1")).toMatchObject({
+      phase: "canceled",
+      draft: { text: "hello" },
+    });
   });
 
   it("keeps today's token-budget 429 handling: no retry, no notice, credits toast", async () => {
@@ -315,12 +322,73 @@ describe("send refused by an overloaded backend", () => {
 
     await expect(options.mutationFn(VARIABLES)).rejects.toBe(budget);
     expect(mocks.postStream).toHaveBeenCalledTimes(1);
-    expect(busy.getBusyNotice()).toBeNull();
+    expect(busy.getBusyNotice("conv-1")).toBeNull();
 
     options.onError(budget, VARIABLES);
     expect(mocks.toastError).toHaveBeenCalledWith(
       "You've run out of free credits. Please recharge and try again.",
     );
-    expect(busy.getBusyNotice()).toBeNull();
+    expect(busy.getBusyNotice("conv-1")).toBeNull();
+  });
+
+  it("hands the uploaded attachments back with the text", async () => {
+    const { options, busy } = await loadBusy();
+    const attachments = [
+      { id: "a1", url: "/a1", filename: "map.png", content_type: "image/png" },
+    ];
+    mocks.postStream
+      .mockRejectedValueOnce(overloaded("1"))
+      .mockRejectedValueOnce(overloaded("1"));
+
+    const variables = { ...VARIABLES, attachments };
+    const outcome = options.mutationFn(variables).catch((e: unknown) => e);
+    await vi.advanceTimersByTimeAsync(1000);
+    options.onError(await outcome, variables);
+
+    expect(busy.takeBusyDraft("conv-1")).toEqual({ text: "hello", attachments });
+  });
+
+  it("keeps countdowns of two conversations apart", async () => {
+    const a = await loadBusy("conv-a");
+    const b = a.hook.useSendRequest("conv-b") as unknown as BusyMutationOptions;
+    mocks.postStream
+      .mockRejectedValueOnce(overloaded("5"))
+      .mockRejectedValueOnce(overloaded("8"))
+      .mockResolvedValue(undefined);
+
+    const runA = a.options.mutationFn({ ...VARIABLES, conversationId: "conv-a" });
+    const runB = b
+      .mutationFn({ ...VARIABLES, conversationId: "conv-b" })
+      .catch((e: unknown) => e);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(a.busy.getBusyNotice("conv-a")).toMatchObject({ secondsLeft: 5 });
+    expect(a.busy.getBusyNotice("conv-b")).toMatchObject({ secondsLeft: 8 });
+
+    // Stop in B ends B's wait only.
+    a.busy.cancelBusyWait("conv-b");
+    expect(a.busy.isServiceBusyError(await runB)).toBe(true);
+    expect(a.busy.isBusyWaitActive("conv-a")).toBe(true);
+    expect(a.busy.isBusyWaitActive("conv-b")).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(5000);
+    await runA;
+    expect(mocks.postStream).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe("blocking send (FEATURE_STREAMING=false)", () => {
+  it("does not log a failure as a streaming error", async () => {
+    stubRuntimeConfig({ FEATURE_AGENTIC_CHAT: "false", FEATURE_STREAMING: "false" });
+    installMemoryLocalStorage();
+    const { useSendRequest } = await import("./useSendRequest");
+    const failure = Object.assign(new Error("Request failed with status code 500"), {
+      response: { status: 500, data: { detail: "boom" }, headers: {} },
+    });
+    mocks.post.mockRejectedValueOnce(failure);
+    const options = useSendRequest("conv-1") as unknown as MutationOptions;
+
+    await expect(options.mutationFn(VARIABLES)).rejects.toBe(failure);
+    expect(mocks.post).toHaveBeenCalledTimes(1);
+    expect(mocks.logError).not.toHaveBeenCalled();
   });
 });

@@ -156,20 +156,22 @@ export const useSendRequest = (conversationId?: string) => {
       // safe to repeat once (see withBusyRetry).
       const busyKey = conversationId ?? "";
 
-      try {
-        if (!STREAMING_ENABLED) {
-          return await withBusyRetry(busyKey, () =>
-            sendRequest({
-              query,
-              conversationId,
-              settings,
-              modelSelection,
-              models: cachedModels,
-              attachments,
-            }),
-          );
-        }
+      // Outside the try below: the blocking path never went through the
+      // streaming error logging and must not start now.
+      if (!STREAMING_ENABLED) {
+        return withBusyRetry(busyKey, () =>
+          sendRequest({
+            query,
+            conversationId,
+            settings,
+            modelSelection,
+            models: cachedModels,
+            attachments,
+          }),
+        );
+      }
 
+      try {
         const updateTemp = (updater: (msg: MessageType) => MessageType) =>
           updateLastTempMessage(queryClient, conversationId, updater);
 
@@ -385,7 +387,9 @@ export const useSendRequest = (conversationId?: string) => {
         setBusyNotice({
           conversationId: conversationId ?? "",
           phase: error.canceled ? "canceled" : "stopped",
-          draft: variables?.query ?? null,
+          draft: variables
+            ? { text: variables.query, attachments: variables.attachments }
+            : null,
         });
         return;
       }

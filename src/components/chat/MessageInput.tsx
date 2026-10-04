@@ -65,6 +65,11 @@ import {
   useBusyNotice,
 } from "@/services/serviceBusy";
 import { ComposerBusyNotice } from "./ComposerBusyNotice";
+import {
+  releaseSentAttachments,
+  restoreSentAttachments,
+  stashSentAttachments,
+} from "@/utilities/busyAttachments";
 import { stopConversation as stopConversationApi } from "@/services/stopConversation";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { useQueryClient } from "@tanstack/react-query";
@@ -155,16 +160,6 @@ export const MessageInput = ({
 
   const inputValue = useWatch({ control, name: "input" });
 
-  // A send refused twice by an overloaded backend comes back here: the text
-  // returns to the composer, ahead of anything typed during the countdown.
-  const busyNotice = useBusyNotice(conversationId);
-  useEffect(() => {
-    if (!conversationId || !busyNotice || busyNotice.phase === "waiting") return;
-    const draft = takeBusyDraft(conversationId);
-    if (draft === null) return;
-    const typed = getValues("input");
-    setValue("input", typed.trim() ? `${draft}\n\n${typed}` : draft);
-  }, [busyNotice, conversationId, getValues, setValue]);
   const maxCharacters = 100000;
   const inputLengthWithoutNewlines = inputValue.replace(/\n/g, "").length;
   const isOverLimit = inputLengthWithoutNewlines > maxCharacters;
@@ -175,6 +170,28 @@ export const MessageInput = ({
   const { mutateAsync: uploadImage } = useUploadImage();
 
   const isUploading = attachments.some((a) => a.status === "uploading");
+
+  // A refused send (overloaded backend, twice, or Stop during the countdown)
+  // comes back here: text and attachments return to the composer, ahead of
+  // anything added during the countdown.
+  const busyNotice = useBusyNotice(conversationId);
+  useEffect(() => {
+    if (!conversationId || !busyNotice || busyNotice.phase === "waiting") return;
+    const draft = takeBusyDraft(conversationId);
+    if (draft === null) return;
+    const typed = getValues("input");
+    setValue("input", typed.trim() ? `${draft.text}\n\n${typed}` : draft.text);
+    const restored = restoreSentAttachments(conversationId, draft.attachments);
+    if (restored.length > 0) {
+      setAttachments((prev) => [...restored, ...prev]);
+    }
+  }, [busyNotice, conversationId, getValues, setValue]);
+
+  // Previews kept for a possible busy refusal go with the composer.
+  useEffect(() => {
+    if (!conversationId) return;
+    return () => releaseSentAttachments(conversationId);
+  }, [conversationId]);
 
   const uploadOne = useCallback(
     async (item: PendingAttachment) => {
@@ -330,10 +347,25 @@ export const MessageInput = ({
       .filter((a) => a.status === "done" && a.uploaded)
       .map((a) => a.uploaded as ImageAttachment);
 
-    if (conversationId) clearBusyNotice(conversationId);
+    if (conversationId) {
+      clearBusyNotice(conversationId);
+      // Kept, previews alive, in case the backend is busy and the send comes
+      // back; released at the next send.
+      const sentItems = attachments.filter(
+        (a) => a.status === "done" && a.uploaded,
+      );
+      stashSentAttachments(conversationId, sentItems);
+      setAttachments((prev) => {
+        prev
+          .filter((a) => !sentItems.includes(a))
+          .forEach((a) => URL.revokeObjectURL(a.previewUrl));
+        return [];
+      });
+    } else {
+      clearAttachments();
+    }
     sendRequest?.(data.input, uploaded.length > 0 ? uploaded : undefined);
     reset();
-    clearAttachments();
   };
 
   const { getRootProps, isDragActive } = useDropzone({
@@ -430,8 +462,8 @@ export const MessageInput = ({
     // Stop during the busy countdown: nothing is streaming yet, so there is
     // nothing to abort or to stop on the backend. Canceling the wait ends the
     // turn and returns the text to the composer.
-    if (isBusyWaitActive()) {
-      cancelBusyWait();
+    if (conversationId && isBusyWaitActive(conversationId)) {
+      cancelBusyWait(conversationId);
       return;
     }
     try {

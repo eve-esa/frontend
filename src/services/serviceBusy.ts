@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import type { ImageAttachment } from "@/types";
 
 // Past its in-flight cap a backend worker refuses a generation with
 // 429 {"detail": {"code": "overloaded", ...}} and Retry-After. Unlike the
@@ -94,51 +95,61 @@ export const isServiceBusyError = (error: unknown): error is ServiceBusyError =>
 
 // ─── Notice store ────────────────────────────────────────────────────────────
 // Shared by the send mutation (writer) and the composer (reader), which live in
-// different components. Keyed by conversation so a notice never shows on
-// another chat.
+// different components. One entry per conversation, so a countdown in one chat
+// neither shows nor overwrites anything in another.
+
+// What the composer gets back: the text and the attachments already uploaded
+// for the refused send.
+export type BusyDraft = {
+  text: string;
+  attachments?: ImageAttachment[];
+};
 
 // waiting: countdown before the one retry. stopped: the retry was refused too,
 // the final copy shows. canceled: Stop pressed during the countdown, nothing
-// shows. The last two carry the text back to the composer until it takes it.
+// shows. The last two carry the draft back to the composer until it takes it.
 export type BusyNotice =
   | { conversationId: string; phase: "waiting"; secondsLeft: number }
   | {
       conversationId: string;
       phase: "stopped" | "canceled";
-      draft: string | null;
+      draft: BusyDraft | null;
     };
 
-let notice: BusyNotice | null = null;
+const notices = new Map<string, BusyNotice>();
 const listeners = new Set<() => void>();
 
 const emit = () => listeners.forEach((listener) => listener());
 
-export const getBusyNotice = () => notice;
+export const getBusyNotice = (conversationId: string): BusyNotice | null =>
+  notices.get(conversationId) ?? null;
 
-export const setBusyNotice = (next: BusyNotice | null) => {
-  notice = next;
+export const setBusyNotice = (next: BusyNotice) => {
+  notices.set(next.conversationId, next);
   emit();
 };
 
+// Without an id, clears every conversation (tests).
 export const clearBusyNotice = (conversationId?: string) => {
-  if (!notice) return;
-  if (conversationId && notice.conversationId !== conversationId) return;
-  setBusyNotice(null);
+  if (conversationId === undefined) {
+    if (notices.size === 0) return;
+    notices.clear();
+  } else if (!notices.delete(conversationId)) {
+    return;
+  }
+  emit();
 };
 
-// The composer takes the returned text once; the final copy stays visible
+// The composer takes the returned draft once; the final copy stays visible
 // until the next send.
-export const takeBusyDraft = (conversationId: string): string | null => {
-  if (
-    !notice ||
-    notice.phase === "waiting" ||
-    notice.conversationId !== conversationId ||
-    notice.draft === null
-  ) {
+export const takeBusyDraft = (conversationId: string): BusyDraft | null => {
+  const current = notices.get(conversationId);
+  if (!current || current.phase === "waiting" || current.draft === null) {
     return null;
   }
-  const { draft } = notice;
-  setBusyNotice(notice.phase === "canceled" ? null : { ...notice, draft: null });
+  const { draft } = current;
+  if (current.phase === "canceled") clearBusyNotice(conversationId);
+  else setBusyNotice({ ...current, draft: null });
   return draft;
 };
 
@@ -150,21 +161,22 @@ const subscribe = (listener: () => void) => {
 };
 
 export const useBusyNotice = (conversationId?: string): BusyNotice | null => {
-  const current = useSyncExternalStore(subscribe, getBusyNotice, getBusyNotice);
-  return current && conversationId && current.conversationId === conversationId
-    ? current
-    : null;
+  const read = () => (conversationId ? getBusyNotice(conversationId) : null);
+  return useSyncExternalStore(subscribe, read, read);
 };
 
 // ─── Countdown and retry ─────────────────────────────────────────────────────
 
-let cancelWait: (() => void) | null = null;
+// One cancel handle per conversation: Stop in one chat must not end another
+// chat's countdown.
+const cancelWaits = new Map<string, () => void>();
 
-export const isBusyWaitActive = () => cancelWait !== null;
+export const isBusyWaitActive = (conversationId: string) =>
+  cancelWaits.has(conversationId);
 
 // Stop pressed during the countdown: there is no stream to abort yet.
-export const cancelBusyWait = () => {
-  cancelWait?.();
+export const cancelBusyWait = (conversationId: string) => {
+  cancelWaits.get(conversationId)?.();
 };
 
 const countdown = (
@@ -174,14 +186,17 @@ const countdown = (
   new Promise<void>((resolve, reject) => {
     let left = seconds;
     let timer: ReturnType<typeof setTimeout> | null = null;
-    const finish = () => {
-      if (timer) clearTimeout(timer);
-      cancelWait = null;
-    };
-    cancelWait = () => {
+    const cancel = () => {
       finish();
       reject(new ServiceBusyError(true));
     };
+    const finish = () => {
+      if (timer) clearTimeout(timer);
+      if (cancelWaits.get(conversationId) === cancel) {
+        cancelWaits.delete(conversationId);
+      }
+    };
+    cancelWaits.set(conversationId, cancel);
     const tick = () => {
       if (left <= 0) {
         finish();
