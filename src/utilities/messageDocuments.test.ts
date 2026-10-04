@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   getRenderableDocuments,
+  getSourceGroupKey,
   getSourceText,
   getSourceTitle,
+  groupSourcesByDocument,
 } from "./messageDocuments";
 import type { Document } from "@/types";
 import { wileyEnvelopeDoc } from "./wileyEnvelope.fixture";
@@ -309,5 +311,100 @@ describe("getSourceTitle", () => {
     expect(getSourceTitle(titled("Nan Shan glacier survey"))).toBe(
       "Nan Shan glacier survey",
     );
+  });
+});
+
+describe("groupSourcesByDocument", () => {
+  const chunk = (
+    id: string,
+    fields: { title?: string | null; link?: string; documentId?: string },
+  ): Document =>
+    ({
+      id,
+      text: `body ${id}`,
+      collection_name: "qwen-512-filtered",
+      payload: { title: fields.title ?? null, url: fields.link ?? "" },
+      metadata: {
+        document_id: fields.documentId,
+        additionalMetadata: {
+          title: fields.title ?? null,
+          link: fields.link ?? "",
+        },
+      },
+    }) as unknown as Document;
+
+  const shape = (sources: Document[]) =>
+    groupSourcesByDocument(sources).map((g) => [g.title, g.sources.length]);
+
+  it("keeps two untitled documents apart", () => {
+    expect(
+      shape([
+        chunk("1", { link: "https://example.org/a" }),
+        chunk("2", { link: "https://example.org/b" }),
+      ]),
+    ).toEqual([
+      ["Title not available", 1],
+      ["Title not available", 1],
+    ]);
+  });
+
+  it("keeps untitled chunks with no document identity apart", () => {
+    expect(shape([chunk("1", {}), chunk("2", {})])).toEqual([
+      ["Title not available", 1],
+      ["Title not available", 1],
+    ]);
+  });
+
+  it("groups the chunks of one document, titled or not", () => {
+    const link = "https://doi.org/10.1002/esp.5041";
+    expect(
+      shape([
+        chunk("1", { link }),
+        chunk("2", { link: `${link}/` }),
+        chunk("3", { title: "Glaciers", link: "https://example.org/g" }),
+        chunk("4", { title: "Glaciers", link: "https://example.org/g" }),
+        chunk("5", { title: "Glaciers", link: "https://example.org/g" }),
+      ]),
+    ).toEqual([
+      ["Title not available", 2],
+      ["Glaciers", 3],
+    ]);
+  });
+
+  it("groups a private upload by its document id", () => {
+    expect(
+      shape([
+        chunk("1", { documentId: "6ab5", link: "https://s3/x" }),
+        chunk("2", { documentId: "6ab5", title: "Report", link: "https://s3/x" }),
+        chunk("3", { documentId: "6ab6", link: "https://s3/x" }),
+      ]),
+    ).toEqual([
+      ["Title not available", 2],
+      ["Title not available", 1],
+    ]);
+  });
+
+  it("keeps two documents with the same title apart", () => {
+    expect(
+      shape([
+        chunk("1", { title: "Introduction", link: "https://example.org/a" }),
+        chunk("2", { title: "Introduction", link: "https://example.org/b" }),
+      ]),
+    ).toEqual([
+      ["Introduction", 1],
+      ["Introduction", 1],
+    ]);
+  });
+
+  it("falls back to the title, then to the chunk id", () => {
+    expect(getSourceGroupKey(chunk("1", { title: "Only title" }))).toBe(
+      "title:Only title",
+    );
+    expect(getSourceGroupKey(chunk("7", { title: "nan" }))).toBe("chunk:7");
+    expect(getSourceGroupKey(undefined, 3)).toBe("index:3");
+  });
+
+  it("returns no groups for missing sources", () => {
+    expect(groupSourcesByDocument(undefined)).toEqual([]);
   });
 });

@@ -72,6 +72,8 @@ export type Document = {
     content?: string;
   };
   metadata: {
+    // Set on every chunk of a private upload: the id of the uploaded document.
+    document_id?: string | null;
     additionalMetadata: {
       link: string;
       title: string;
