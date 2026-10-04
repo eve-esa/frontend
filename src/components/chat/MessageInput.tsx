@@ -580,6 +580,7 @@ export const MessageInput = ({
             )}
             <Textarea
               ref={textareaRef}
+              data-testid="composer-input"
               data-private
               value={inputValue}
               onChange={(e) => setValue("input", e.target.value)}
@@ -645,6 +646,7 @@ export const MessageInput = ({
                         }}
                       >
                         <SelectTrigger
+                          data-testid="composer-model-picker"
                           size="sm"
                           className="bg-primary-900/60 border border-primary-400/60"
                         >
@@ -694,6 +696,7 @@ export const MessageInput = ({
                         className="h-8 w-8 p-0 cursor-pointer"
                         onClick={() => setCustomModelsOpen(true)}
                         aria-label="Manage custom models"
+                        data-testid="composer-manage-models"
                       >
                         <FontAwesomeIcon icon={faPlus} className="size-4" />
                       </Button>
@@ -716,6 +719,8 @@ export const MessageInput = ({
                     }}
                     className="h-8 w-8 p-0 cursor-pointer settings-button-tour"
                     data-tour="settings-button"
+                    data-testid="composer-settings"
+                    aria-label="Control Panel"
                   >
                     <FontAwesomeIcon icon={faSliders} className="size-4" />
                   </Button>

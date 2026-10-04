@@ -59,7 +59,7 @@ export const ProfileDialog = ({ isOpen, onOpenChange }: ProfileDialogProps) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent data-testid="profile-dialog">
         <DialogHeader>
           <DialogTitle>Profile</DialogTitle>
         </DialogHeader>
@@ -78,6 +78,7 @@ export const ProfileDialog = ({ isOpen, onOpenChange }: ProfileDialogProps) => {
             <div className="flex flex-col gap-2">
               <Input
                 className="w-full"
+                data-testid="profile-email"
                 {...register("email")}
                 disabled
                 type="email"
@@ -97,6 +98,7 @@ export const ProfileDialog = ({ isOpen, onOpenChange }: ProfileDialogProps) => {
             <div className="flex flex-col gap-2">
               <Input
                 className="w-full"
+                data-testid="profile-first-name"
                 {...register("first_name")}
                 type="text"
               />
@@ -117,6 +119,7 @@ export const ProfileDialog = ({ isOpen, onOpenChange }: ProfileDialogProps) => {
             <div className="flex flex-col gap-2">
               <Input
                 className="w-full"
+                data-testid="profile-last-name"
                 {...register("last_name")}
                 type="text"
               />
@@ -201,6 +204,7 @@ export const ProfileDialog = ({ isOpen, onOpenChange }: ProfileDialogProps) => {
                 tabIndex={-1}
                 variant="ghost"
                 size="md"
+                data-testid="profile-cancel"
                 onClick={() => onOpenChange(false)}
               >
                 Cancel
@@ -210,6 +214,7 @@ export const ProfileDialog = ({ isOpen, onOpenChange }: ProfileDialogProps) => {
                 tabIndex={-1}
                 size="md"
                 type="submit"
+                data-testid="profile-save"
               >
                 Update Profile
               </Button>

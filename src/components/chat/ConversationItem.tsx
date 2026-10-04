@@ -63,6 +63,8 @@ export const ConversationItem = ({
     <div
       role="button"
       tabIndex={0}
+      data-testid="conversation-item"
+      data-conversation-id={conversation.id}
       aria-label={`Select conversation: ${conversation.name}`}
       aria-pressed={isActive}
       onClick={handleClick}
@@ -90,7 +92,10 @@ export const ConversationItem = ({
               onCancel={onRenameCancel}
             />
           ) : (
-            <span className="truncate px-2 py-2 font-medium text-natural-100">
+            <span
+              data-testid="conversation-title"
+              className="truncate px-2 py-2 font-medium text-natural-100"
+            >
               {conversationName}
             </span>
           )}

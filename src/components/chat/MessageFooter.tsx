@@ -492,6 +492,7 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
             {hasTrace ? (
               <Button
                 variant="primary"
+                data-testid="message-trace-button"
                 onClick={() =>
                   toggleMessageSidebar("trace", {
                     trace: message?.trace || [],
@@ -560,7 +561,12 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
             />
           </Button>
 
-          <Button variant="icon" onClick={handleCopy}>
+          <Button
+            variant="icon"
+            data-testid="message-copy"
+            aria-label="Copy answer"
+            onClick={handleCopy}
+          >
             {isCopied ? (
               <FontAwesomeIcon
                 icon={faCheck}

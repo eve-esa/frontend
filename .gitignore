@@ -26,3 +26,8 @@ dist-ssr
 .env*
 !.env.example
 .playwright-mcp/
+
+# Playwright e2e output
+e2e/report/
+e2e/.auth/
+e2e/.results/

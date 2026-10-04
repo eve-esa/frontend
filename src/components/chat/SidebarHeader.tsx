@@ -110,6 +110,7 @@ export const SidebarHeader = ({
               size="md"
               onClick={handleNewChat}
               data-tour="new-chat-button"
+              data-testid="sidebar-new-chat"
             >
               <FontAwesomeIcon icon={faPlus} className="w-4 h-4" />
               <span className="whitespace-nowrap mt-[2px] overflow-hidden text-ellipsis font-['NotesESA']">
