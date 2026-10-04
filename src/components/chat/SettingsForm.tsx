@@ -26,10 +26,8 @@ import {
   scientificAndTechnicalOptions,
   thematicPerspectiveOptions,
 } from "@/utilities/filtersSelectOptions";
-import { Autocomplete } from "../ui/Autocomplete";
 import { AnimatedLink } from "../ui/AnimatedLink";
 import { settingsTooltipExplanation } from "@/utilities/settingsTooltipExplanation";
-import { journalOptions } from "@/utilities/journalOptions";
 import { CLASSIFICATION_FILTERS_ENABLED } from "@/utilities/features";
 
 
@@ -251,40 +249,6 @@ export const SettingsForm = ({ onToggle }: SettingsFormProps) => {
                     shouldValidate: true,
                   });
                 }}
-              />
-            </div>
-            {/* Journal */}
-            <div className="flex flex-col gap-2 p-[1px]">
-              <label htmlFor="journal" className="flex items-center gap-1">
-                <p className="font-['NotesESA'] text-sm 3xl:text-xl">
-                  {settingsTooltipExplanation.journal.title}
-                </p>
-                {settingsTooltipExplanation.journal.explanation && (
-                  <Tooltip
-                    content={
-                      <>{settingsTooltipExplanation.journal.explanation}</>
-                    }
-                    className="max-w-[280px] md:max-w-[350px]"
-                  >
-                    <FontAwesomeIcon
-                      icon={faCircleInfo}
-                      className="size-4 cursor-pointer"
-                    />
-                  </Tooltip>
-                )}
-              </label>
-              <Controller
-                name="journal"
-                control={control}
-                render={({ field }) => (
-                  <Autocomplete
-                    options={journalOptions}
-                    value={field.value || ""}
-                    onChange={field.onChange}
-                    placeholder="Enter or select journal name"
-                    variant="secondary"
-                  />
-                )}
               />
             </div>
             {/* TOPIC FILTERS */}

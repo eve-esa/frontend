@@ -221,10 +221,13 @@ describe("classification filters with the flag off", () => {
     ));
 
     installMemoryLocalStorage();
-    // journal is the control: an unrelated filter the flag must not touch.
+    // n_citations is the control: an unrelated filter the flag must not touch.
+    // journal is a value stored before that filter was removed: it must not
+    // reach the request in any form.
     seed(LOCAL_STORAGE_SETTINGS, {
       ...SETTINGS,
       ...PERSPECTIVES,
+      n_citations: 5,
       journal: "Nature",
     });
     seed(LOCAL_STORAGE_MODEL_SELECTION, {
@@ -238,7 +241,8 @@ describe("classification filters with the flag off", () => {
     const { url, payload } = sentRequest("conv-1");
 
     expect(url).toBe("/conversations/conv-1/stream-generate-agentic");
-    expect(mustKeys(payload)).toEqual(["journal"]);
+    expect(mustKeys(payload)).toEqual(["n_citations"]);
+    expect(JSON.stringify(payload)).not.toContain("journal");
   });
 
   it("keeps them out of the agentic request too", () => {
@@ -247,7 +251,8 @@ describe("classification filters with the flag off", () => {
     const { url, payload } = sentRequest("conv-2");
 
     expect(url).toBe("/conversations/conv-2/stream-generate-agentic");
-    expect(mustKeys(payload)).toEqual(["journal"]);
+    expect(mustKeys(payload)).toEqual(["n_citations"]);
+    expect(JSON.stringify(payload)).not.toContain("journal");
   });
 
   it("leaves the stored perspectives where they are", () => {

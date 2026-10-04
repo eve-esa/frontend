@@ -10,7 +10,6 @@ const base: AdvancedSettingsValidation = {
   k: 7,
   n_citations: 0,
   year: undefined,
-  journal: undefined,
   thematic_perspective: undefined,
   scientific_and_technical: undefined,
   market_perspective: undefined,
@@ -54,24 +53,13 @@ describe("adaptSettingsForRequest", () => {
     });
   });
 
-  it("pushes a journal match filter", () => {
-    const must = mustFilters(
-      adaptSettingsForRequest({ ...base, journal: "Nature" }),
-    );
-    expect(must).toHaveLength(1);
-    expect(must[0]).toMatchObject({
-      key: "journal",
-      match: { value: "Nature" },
-    });
-  });
-
   it("passes k, score_threshold and temperature through untouched", () => {
     const result = adaptSettingsForRequest({ ...base, n_citations: 3 });
     expect(result.k).toBe(7);
     expect(result.score_threshold).toBe(0.42);
     expect(result.temperature).toBe(0.11);
     expect(result.year).toBeUndefined();
-    expect(result.journal).toBeUndefined();
+    expect("journal" in result).toBe(false);
     expect(result.n_citations).toBeUndefined();
   });
 });
@@ -79,7 +67,7 @@ describe("adaptSettingsForRequest", () => {
 describe("adaptSettingsForRequest and the classification filters flag", () => {
   const SET: AdvancedSettingsValidation = {
     ...base,
-    journal: "Nature",
+    n_citations: 5,
     thematic_perspective: { label: "Climate", value: "climate" },
     scientific_and_technical: { label: "Sensors", value: "sensors" },
     market_perspective: { label: "Agriculture", value: "agriculture" },
@@ -102,15 +90,15 @@ describe("adaptSettingsForRequest and the classification filters flag", () => {
 
   it("pushes the three perspective filters when the flag is on", async () => {
     expect(await mustKeys("true")).toEqual([
-      "journal",
       "thematic_perspective",
       "scientific_and_technical",
       "market_perspective",
+      "n_citations",
     ]);
   });
 
   it("pushes none of them when the flag is off, and keeps the others", async () => {
-    expect(await mustKeys("false")).toEqual(["journal"]);
+    expect(await mustKeys("false")).toEqual(["n_citations"]);
   });
 });
 

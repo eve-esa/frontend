@@ -13,17 +13,6 @@ export const filters = {
     geo_polygon: null,
     values_count: null,
   },
-  journal: {
-    key: "journal",
-    match: {
-      value: "",
-    },
-    range: null,
-    geo_bounding_box: null,
-    geo_radius: null,
-    geo_polygon: null,
-    values_count: null,
-  },
   thematic_perspective: {
     key: "thematic_perspective",
     match: {

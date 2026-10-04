@@ -35,14 +35,24 @@ describe("readStoredSettings", () => {
   it("fills missing keys with defaults and keeps stored values", () => {
     storage.setItem(
       LOCAL_STORAGE_SETTINGS,
-      JSON.stringify({ k: 4, journal: "Nature" }),
+      JSON.stringify({ k: 4, year: { startYear: 2020 } }),
     );
     const settings = readStoredSettings();
     expect(settings.k).toBe(4);
-    expect(settings.journal).toBe("Nature");
+    expect(settings.year).toEqual({ startYear: 2020, endYear: undefined });
     expect(settings.score_threshold).toBe(messageDefaultSettings.score_threshold);
     expect(settings.temperature).toBe(messageDefaultSettings.temperature);
     expect(settings.n_citations).toBe(messageDefaultSettings.n_citations);
+  });
+
+  it("drops a journal value stored before the filter was removed", () => {
+    storage.setItem(
+      LOCAL_STORAGE_SETTINGS,
+      JSON.stringify({ k: 4, journal: "Nature" }),
+    );
+    const settings = readStoredSettings();
+    expect("journal" in settings).toBe(false);
+    expect(settings.k).toBe(4);
   });
 
   it("clamps k into 0..10 as an integer", () => {
@@ -94,7 +104,7 @@ describe("readStoredSettings and the classification filters flag", () => {
     thematic_perspective: { label: "Climate", value: "climate" },
     scientific_and_technical: { label: "Sensors", value: "sensors" },
     market_perspective: { label: "Agriculture", value: "agriculture" },
-    journal: "Nature",
+    n_citations: 5,
   };
 
   const load = (classificationFilters: "true" | "false") => {
@@ -159,7 +169,7 @@ describe("readStoredSettings and the classification filters flag", () => {
     const module = await load("false");
     const settings = module.readStoredSettings();
 
-    expect(settings.journal).toBe("Nature");
+    expect(settings.n_citations).toBe(5);
     expect(settings.k).toBe(messageDefaultSettings.k);
     expect(settings.score_threshold).toBe(
       messageDefaultSettings.score_threshold,
