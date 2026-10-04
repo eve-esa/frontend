@@ -4,12 +4,28 @@ import api from "./axios";
 import { z } from "zod";
 import { isPendingApproval } from "./approval";
 
+export const PROFILE_COUNTRY_MAX = 100;
+export const PROFILE_INSTITUTION_MAX = 200;
+
 export const ProfileSchema = z.object({
   first_name: z.string().min(1, "First name is required").optional(),
   last_name: z.string().min(1, "Last name is required").optional(),
   email: z.string().email().optional(),
   id: z.string().optional(),
   approval_status: z.string().nullish(),
+  // Optional, free text, null until the user sets them. Shown and saved only
+  // with FEATURE_PROFILE_FIELDS on; the limits match the backend's.
+  country: z
+    .string()
+    .max(PROFILE_COUNTRY_MAX, `Country must be at most ${PROFILE_COUNTRY_MAX} characters`)
+    .nullish(),
+  institution: z
+    .string()
+    .max(
+      PROFILE_INSTITUTION_MAX,
+      `Institution must be at most ${PROFILE_INSTITUTION_MAX} characters`
+    )
+    .nullish(),
 });
 
 export type ProfileType = z.infer<typeof ProfileSchema>;

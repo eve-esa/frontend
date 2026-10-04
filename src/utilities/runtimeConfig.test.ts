@@ -227,6 +227,23 @@ describe("FEATURE_REPORT_BUG", () => {
   });
 });
 
+describe("FEATURE_PROFILE_FIELDS", () => {
+  it("is off when nothing sets it", async () => {
+    const { PROFILE_FIELDS_ENABLED } = await loadFeatures({});
+    expect(PROFILE_FIELDS_ENABLED).toBe(false);
+  });
+
+  it("is off when the injected value is blank, which is what an unset GitHub variable sends", async () => {
+    const { PROFILE_FIELDS_ENABLED } = await loadFeatures({ FEATURE_PROFILE_FIELDS: "" });
+    expect(PROFILE_FIELDS_ENABLED).toBe(false);
+  });
+
+  it("is on only when an environment opts in", async () => {
+    const { PROFILE_FIELDS_ENABLED } = await loadFeatures({ FEATURE_PROFILE_FIELDS: "true" });
+    expect(PROFILE_FIELDS_ENABLED).toBe(true);
+  });
+});
+
 describe("FEATURE_API_KEYS", () => {
   it("is on when nothing sets it", async () => {
     const { API_KEYS_ENABLED } = await loadFeatures({});
