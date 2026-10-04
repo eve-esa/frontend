@@ -12,7 +12,6 @@ export const AdvancedSettingsSchema = z.object({
       endYear: z.number().optional(),
     })
     .optional(),
-  journal: z.string().optional(),
   thematic_perspective: OptionSchema.optional(),
   scientific_and_technical: OptionSchema.optional(),
   market_perspective: OptionSchema.optional(),

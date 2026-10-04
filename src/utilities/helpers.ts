@@ -22,7 +22,6 @@ export const adaptSettingsForRequest = (
   const {
     year,
     thematic_perspective,
-    journal,
     n_citations,
     scientific_and_technical,
     market_perspective,
@@ -40,17 +39,6 @@ export const adaptSettingsForRequest = (
         ...filters.year.range,
         gte: year?.startYear ? Number(year.startYear) : null,
         lte: year?.endYear ? Number(year.endYear) : null,
-      },
-    });
-  }
-
-  // Journal filter (match)
-  if (journal) {
-    filtersArray.push({
-      ...filters.journal,
-      match: {
-        ...filters.journal.match,
-        value: journal,
       },
     });
   }
@@ -111,7 +99,6 @@ export const adaptSettingsForRequest = (
     ...restSettings,
     year: undefined,
     thematic_perspective: undefined,
-    journal: undefined,
     scientific_and_technical: undefined,
     market_perspective: undefined,
     n_citations: undefined,

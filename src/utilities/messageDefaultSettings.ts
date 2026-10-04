@@ -14,7 +14,6 @@ export const messageDefaultSettings: AdvancedSettingsValidation = {
     startYear: undefined,
     endYear: undefined,
   },
-  journal: undefined,
   thematic_perspective: undefined,
   scientific_and_technical: undefined,
   market_perspective: undefined,
@@ -73,9 +72,14 @@ const parseStoredSettings = (): Record<string, unknown> => {
  * every mount and JSON.stringify omits undefined keys, so dropping them would
  * erase the user's choice rather than withhold it. helpers.ts keeps them out of
  * the request instead, the way collections.ts does for private collections.
+ *
+ * The journal filter is gone: a value stored before its removal is dropped
+ * here, so it never reaches a request and ChatLayout's re-serialisation erases
+ * it from localStorage.
  */
 export const readStoredSettings = (): AdvancedSettingsValidation => {
   const stored = parseStoredSettings();
+  delete stored.journal;
   const merged = { ...messageDefaultSettings, ...stored } as Record<
     string,
     unknown

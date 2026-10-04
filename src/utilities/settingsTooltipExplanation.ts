@@ -14,11 +14,6 @@ export const settingsTooltipExplanation = {
     explanation:
       "Filter results by publication date. Specify a start and end year to narrow the search to documents from a specific time range.",
   },
-  journal: {
-    title: "Journal",
-    explanation:
-      "Restrict results to a particular journal or publication. Useful for focusing on trusted or domain-specific sources.",
-  },
   thematic_perspective: {
     title: "Thematic perspective",
     explanation: "Filter documents by semantic perspective.",
