@@ -208,7 +208,7 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
   const handleCopy = () => {
     copyToClipboard(message.output);
 
-    if (!wasCopied) {
+    if (!wasCopied && isPersistedId(message?.id)) {
       sendFeedback({
         messageId: message?.id,
         conversationId,

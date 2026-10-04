@@ -11,7 +11,11 @@ import type { MessageType } from "@/types";
  * sidebar provider is stubbed: the footer only reads it to toggle panels.
  */
 vi.mock("@/services/axios", () => ({
-  default: { post: vi.fn(), get: vi.fn(() => new Promise(() => undefined)) },
+  default: {
+    post: vi.fn(),
+    get: vi.fn(() => new Promise(() => undefined)),
+    patch: vi.fn(() => Promise.resolve({ data: {} })),
+  },
 }));
 vi.mock("@/services/streaming", () => ({ postStream: vi.fn() }));
 vi.mock("./DynamicSidebarProvider", () => ({
@@ -251,4 +255,79 @@ describe("MessageFooter report a bug click", () => {
       expect(events).toEqual(["open"]);
     },
   );
+});
+
+/**
+ * Copy always writes the answer to the clipboard; the was_copied mark goes
+ * to the server only once the answer has its persisted id, else the PATCH
+ * names a message the server does not know and answers 404.
+ */
+describe("MessageFooter copy", () => {
+  const clickCopy = async (message: MessageType) => {
+    const config = {};
+    stubRuntimeConfig(config);
+    const writeText = vi.fn(() => Promise.resolve());
+    vi.stubGlobal("window", {
+      __EVE_CONFIG__: config,
+      innerWidth: 1440,
+      isSecureContext: true,
+      location: { origin: "http://localhost:5173" },
+    });
+    vi.stubGlobal("navigator", { clipboard: { writeText } });
+    const buttons: Array<ComponentProps<"button">> = [];
+    vi.doMock("@/components/ui/Button", async (importOriginal) => {
+      const real = await importOriginal<typeof import("@/components/ui/Button")>();
+      return {
+        Button: (props: ComponentProps<typeof real.Button>) => {
+          buttons.push(props);
+          return real.Button(props);
+        },
+      };
+    });
+    const api = (await import("@/services/axios")).default;
+    vi.mocked(api.patch).mockClear();
+    const { MessageFooter } = await import("./MessageFooter");
+    renderToStaticMarkup(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter initialEntries={[`/chat/${CONVERSATION}`]}>
+          <Routes>
+            <Route
+              path="/chat/:conversationId"
+              element={<MessageFooter message={message} />}
+            />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    const copy = buttons.find((b) =>
+      renderToStaticMarkup(<>{b.children as ReactNode}</>).includes("fa-copy"),
+    );
+    expect(copy?.onClick).toBeTypeOf("function");
+    copy!.onClick!({} as never);
+    await vi.waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
+    expect(writeText).toHaveBeenCalledWith(message.output);
+    return api;
+  };
+
+  afterEach(() => {
+    vi.doUnmock("@/components/ui/Button");
+  });
+
+  it.each(["temp-1759500000000", "srv-1759500000000"])(
+    "copies an answer with the optimistic id %s without a request",
+    async (id) => {
+      const api = await clickCopy(answer({ id }));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(api.patch).not.toHaveBeenCalled();
+    },
+  );
+
+  it("copies a persisted answer and sends one PATCH with was_copied", async () => {
+    const api = await clickCopy(answer());
+    await vi.waitFor(() => expect(api.patch).toHaveBeenCalledTimes(1));
+    expect(api.patch).toHaveBeenCalledWith(
+      `/conversations/${CONVERSATION}/messages/${MESSAGE}`,
+      expect.objectContaining({ was_copied: true }),
+    );
+  });
 });
