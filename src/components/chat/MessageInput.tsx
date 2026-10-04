@@ -57,6 +57,14 @@ import {
 } from "@/types";
 import { useParams } from "react-router-dom";
 import { abortCurrentStream } from "@/services/streaming";
+import {
+  cancelBusyWait,
+  clearBusyNotice,
+  isBusyWaitActive,
+  takeBusyDraft,
+  useBusyNotice,
+} from "@/services/serviceBusy";
+import { ComposerBusyNotice } from "./ComposerBusyNotice";
 import { stopConversation as stopConversationApi } from "@/services/stopConversation";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { useQueryClient } from "@tanstack/react-query";
@@ -135,7 +143,7 @@ export const MessageInput = ({
   suggestions,
 }: MessageInputProps) => {
   const { isRunning, currentStep, totalSteps } = useTour();
-  const { handleSubmit, reset, setValue, control } = useForm({
+  const { handleSubmit, reset, setValue, getValues, control } = useForm({
     defaultValues: {
       input: "",
     },
@@ -146,6 +154,17 @@ export const MessageInput = ({
   const { conversationId } = useParams();
 
   const inputValue = useWatch({ control, name: "input" });
+
+  // A send refused twice by an overloaded backend comes back here: the text
+  // returns to the composer, ahead of anything typed during the countdown.
+  const busyNotice = useBusyNotice(conversationId);
+  useEffect(() => {
+    if (!conversationId || !busyNotice || busyNotice.phase === "waiting") return;
+    const draft = takeBusyDraft(conversationId);
+    if (draft === null) return;
+    const typed = getValues("input");
+    setValue("input", typed.trim() ? `${draft}\n\n${typed}` : draft);
+  }, [busyNotice, conversationId, getValues, setValue]);
   const maxCharacters = 100000;
   const inputLengthWithoutNewlines = inputValue.replace(/\n/g, "").length;
   const isOverLimit = inputLengthWithoutNewlines > maxCharacters;
@@ -311,6 +330,7 @@ export const MessageInput = ({
       .filter((a) => a.status === "done" && a.uploaded)
       .map((a) => a.uploaded as ImageAttachment);
 
+    if (conversationId) clearBusyNotice(conversationId);
     sendRequest?.(data.input, uploaded.length > 0 ? uploaded : undefined);
     reset();
     clearAttachments();
@@ -407,6 +427,13 @@ export const MessageInput = ({
   );
 
   const handleStop = async () => {
+    // Stop during the busy countdown: nothing is streaming yet, so there is
+    // nothing to abort or to stop on the backend. Canceling the wait ends the
+    // turn and returns the text to the composer.
+    if (isBusyWaitActive()) {
+      cancelBusyWait();
+      return;
+    }
     try {
       abortCurrentStream();
       // Immediately mark the in-flight optimistic message as stopped to halt
@@ -489,6 +516,7 @@ export const MessageInput = ({
       )}
 
       <div className="flex flex-col gap-2 h-full">
+        <ComposerBusyNotice notice={busyNotice} />
         {/* Sending runs from the button handlers and the Enter key, never from a
             native submit: without this, any click that lands on the Send button
             submits the form with a GET and reloads the whole page. */}

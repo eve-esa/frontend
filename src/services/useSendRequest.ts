@@ -39,6 +39,12 @@ import {
 } from "@/utilities/features";
 import { shouldShowPreAnswerNotice } from "@/utilities/preAnswerNotices";
 import { rememberTraceFromFinalEvent } from "@/observability/lastTrace";
+import {
+  clearBusyNotice,
+  isServiceBusyError,
+  setBusyNotice,
+  withBusyRetry,
+} from "./serviceBusy";
 
 // FEATURE_AGENTIC_CHAT. The classic pipeline ignores the MCP selection, so it
 // is read only for agentic turns.
@@ -146,17 +152,22 @@ export const useSendRequest = (conversationId?: string) => {
       // onError uses it to decide whether a failure toast would contradict a
       // partial answer the user is already reading.
       let streamedOutput = "";
+      // An overloaded worker refuses before anything streams, so the start is
+      // safe to repeat once (see withBusyRetry).
+      const busyKey = conversationId ?? "";
 
       try {
         if (!STREAMING_ENABLED) {
-          return sendRequest({
-            query,
-            conversationId,
-            settings,
-            modelSelection,
-            models: cachedModels,
-            attachments,
-          });
+          return await withBusyRetry(busyKey, () =>
+            sendRequest({
+              query,
+              conversationId,
+              settings,
+              modelSelection,
+              models: cachedModels,
+              attachments,
+            }),
+          );
         }
 
         const updateTemp = (updater: (msg: MessageType) => MessageType) =>
@@ -177,7 +188,7 @@ export const useSendRequest = (conversationId?: string) => {
           current: { code?: string; message?: string } | null;
         } = { current: null };
 
-        await postStream({
+        await withBusyRetry(busyKey, () => postStream({
           url: streamUrl,
           payload,
           onEvent: (evt) => {
@@ -242,7 +253,7 @@ export const useSendRequest = (conversationId?: string) => {
               }));
             }
           },
-        });
+        }));
 
         if (streamError.current && finalAnswer === null) {
           const err = new Error(
@@ -275,6 +286,8 @@ export const useSendRequest = (conversationId?: string) => {
           artifact_ids: finalArtifactIds,
         });
       } catch (e) {
+        // Expected overload outcome, handled in onError: not an error to log.
+        if (isServiceBusyError(e)) throw e;
         console.error("streaming error", e);
         if (e && typeof e === "object") {
           // Structural check instead of instanceof: a cancellation can be a
@@ -294,6 +307,8 @@ export const useSendRequest = (conversationId?: string) => {
       }
     },
     onMutate: async (newMessage: SendRequestProps) => {
+      // A new send replaces the "still busy" notice of the previous one.
+      clearBusyNotice(conversationId);
       await queryClient.cancelQueries({
         queryKey: [QUERY_KEYS.conversation, conversationId],
       });
@@ -334,7 +349,7 @@ export const useSendRequest = (conversationId?: string) => {
 
       return { previousData };
     },
-    onError: (error: ApiError) => {
+    onError: (error: ApiError, variables: SendRequestProps) => {
       // AxiosError carries code/name/message, but a cancellation can also
       // surface as a bare DOMException, so read the three fields structurally
       // rather than asserting either shape.
@@ -350,6 +365,30 @@ export const useSendRequest = (conversationId?: string) => {
       // as "user pressed stop" with the refetch skipped.
       const watchdogTimedOut = consumeWatchdogTimeoutFlag();
       const userSuppressed = consumeSuppressToastFlag();
+
+      if (isServiceBusyError(error)) {
+        // The backend refused before persisting anything: drop the optimistic
+        // turn and hand the text back to the composer instead of painting a
+        // failed message. No toast: the composer notice says what happened.
+        queryClient.setQueryData<ChaMessageType>(
+          [QUERY_KEYS.conversation, conversationId],
+          (oldData) =>
+            oldData
+              ? {
+                  ...oldData,
+                  messages: (oldData.messages ?? []).filter(
+                    (msg: MessageType) => !msg.id?.startsWith("temp-"),
+                  ),
+                }
+              : oldData,
+        );
+        setBusyNotice({
+          conversationId: conversationId ?? "",
+          phase: error.canceled ? "canceled" : "stopped",
+          draft: variables?.query ?? null,
+        });
+        return;
+      }
       const msg = String(message || "").toLowerCase();
       const isCanceled =
         !watchdogTimedOut &&
