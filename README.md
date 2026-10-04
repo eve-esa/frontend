@@ -46,6 +46,18 @@ yarn dev
 | `yarn build`   | Build production bundle (`dist/`) |
 | `yarn preview` | Preview the production build      |
 | `yarn lint`    | Run ESLint across the codebase    |
+| `yarn e2e`     | Playwright end-to-end suite (`e2e/`), see below |
+| `yarn e2e:type-check` | Type-check the e2e suite |
+
+## End-to-end tests
+
+`e2e/` holds the Playwright suite: page objects in `e2e/pages/`, fixtures in `e2e/fixtures/` (one hosted login per worker, an API client that reads the persisted state with the app's bearer), specs in `e2e/specs/`. One project per environment (`dev`, `staging`, `prod-readonly`, `local`); `E2E_TARGET` overrides the base URL for a preview host. Credentials come from `E2E_EMAIL` and `E2E_PASSWORD`. Selectors are `data-testid` only, except on the identity provider page.
+
+```sh
+E2E_EMAIL=... E2E_PASSWORD=... yarn e2e --project=dev
+```
+
+`.github/workflows/e2e-dev.yml` runs the `dev` project after every successful `deploy: dev` with the secrets of the `esa-eve-dev` environment and uploads the HTML report. A spec tagged `@prod` is read-only and may run against production; `@dev` specs write conversations or the profile.
 
 ## Project Structure
 
