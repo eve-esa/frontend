@@ -66,7 +66,7 @@ describe("ProfileDialog country and institution", () => {
     },
   );
 
-  it("are two optional labelled inputs with FEATURE_PROFILE_FIELDS true", async () => {
+  it("are two labelled inputs with FEATURE_PROFILE_FIELDS true, required by the schema, not the markup", async () => {
     const html = await render("true");
     expect(html).toContain('data-testid="profile-country"');
     expect(html).toContain('data-testid="profile-institution"');

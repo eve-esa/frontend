@@ -7,9 +7,8 @@ import {
   DialogDescription,
 } from "@/components/ui/Dialog";
 import {
-  PROFILE_COUNTRY_MAX,
-  PROFILE_INSTITUTION_MAX,
   ProfileSchema,
+  RequiredProfileSchema,
   useGetProfile,
   type ProfileType,
 } from "@/services/useMe";
@@ -24,6 +23,7 @@ import {
 } from "@/services/useUpdateProfile";
 import { AppVersion } from "@/components/ui/AppVersion";
 import { PROFILE_FIELDS_ENABLED } from "@/utilities/features";
+import { ProfileExtraFields } from "./ProfileExtraFields";
 
 type ProfileDialogProps = {
   isOpen: boolean;
@@ -43,7 +43,11 @@ export const ProfileDialog = ({ isOpen, onOpenChange }: ProfileDialogProps) => {
     reset,
     formState: { errors, isValid, isDirty },
   } = useForm<ProfileType>({
-    resolver: zodResolver(ProfileSchema),
+    // With the flag on, country and institution cannot be emptied here: the
+    // required profile dialog would ask for them again on the next render.
+    resolver: zodResolver(
+      PROFILE_FIELDS_ENABLED ? RequiredProfileSchema : ProfileSchema
+    ),
   });
 
   // Reset form values when profile data loads
@@ -132,58 +136,11 @@ export const ProfileDialog = ({ isOpen, onOpenChange }: ProfileDialogProps) => {
           </div>
 
           {PROFILE_FIELDS_ENABLED && (
-            <>
-              {/* COUNTRY */}
-
-              <div className="flex w-full justify-center flex-col gap-2">
-                <label htmlFor="profile-country" className="flex items-center gap-1">
-                  <p className="font-['NotesESA'] text-sm">Country</p>
-                </label>
-                <div className="flex flex-col gap-2">
-                  <Input
-                    id="profile-country"
-                    data-testid="profile-country"
-                    className="w-full"
-                    placeholder="Optional, for example Italy"
-                    maxLength={PROFILE_COUNTRY_MAX}
-                    {...register("country")}
-                    type="text"
-                  />
-                  {errors?.country && (
-                    <p className="text-sm text-red-500">
-                      {errors.country.message}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* INSTITUTION */}
-
-              <div className="flex w-full justify-center flex-col gap-2">
-                <label
-                  htmlFor="profile-institution"
-                  className="flex items-center gap-1"
-                >
-                  <p className="font-['NotesESA'] text-sm">Institution</p>
-                </label>
-                <div className="flex flex-col gap-2">
-                  <Input
-                    id="profile-institution"
-                    data-testid="profile-institution"
-                    className="w-full"
-                    placeholder="Optional, your university, agency or company"
-                    maxLength={PROFILE_INSTITUTION_MAX}
-                    {...register("institution")}
-                    type="text"
-                  />
-                  {errors?.institution && (
-                    <p className="text-sm text-red-500">
-                      {errors.institution.message}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </>
+            <ProfileExtraFields
+              idPrefix="profile"
+              register={register}
+              errors={errors}
+            />
           )}
 
           {/* The running version and commit. They used to sit in the footer of

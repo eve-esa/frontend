@@ -32,6 +32,10 @@ export const ChatEmpty = () => {
   const handleWelcomeDialogClose = () => {
     localStorage.setItem(LOCAL_STORAGE_WELCOME_DIALOG_VIEWED, "true");
     setIsOpenWelcomeDialog(false);
+    // ProfileRequiredGate waits for this before it asks for the profile
+    // fields. useJoyride listens for it only on /onboarding, so it starts no
+    // tour here.
+    window.dispatchEvent(new CustomEvent("welcome-dialog-closed"));
   };
 
   const createConversationSuccess = (conversationId: string) => {

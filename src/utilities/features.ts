@@ -149,10 +149,12 @@ export const STREAM_STATUS_NOTICES_ENABLED = isEnabled(
 export const REPORT_BUG_ENABLED = isEnabled("FEATURE_REPORT_BUG", false);
 
 /**
- * Country and institution in the profile dialog: two optional inputs next to the name fields,
- * prefilled from `GET /users/me` and saved with the same `PATCH /users`. Off, the dialog is
- * unchanged and the update sends only the names, so a backend without the two fields never
- * receives them.
+ * Country and institution are required. On, a signed-in user whose `GET /users/me` lacks either
+ * meets a dialog that cannot be dismissed and asks for both before the chat can be used (after
+ * the onboarding tour and the welcome dialog); the profile dialog shows them next to the name
+ * fields and does not let them be emptied. Both save with the same `PATCH /users`. Off, neither
+ * dialog shows them and the update sends only the names, so a backend without the two fields
+ * never receives them.
  *
  * Default off: a new capability ships off in production and on where an environment opts in.
  */

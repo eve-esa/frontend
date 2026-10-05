@@ -20,6 +20,7 @@ import {
 } from "@/utilities/collections";
 import { PRIVATE_COLLECTIONS_ENABLED } from "@/utilities/features";
 import { preloadSmartText } from "@/components/ui/LazySmartText";
+import { ProfileRequiredGate } from "@/components/profile/ProfileRequiredGate";
 
 // The tour library (joyride, floater, popper) is fetched only when a tour runs:
 // most visits never start one.
@@ -143,6 +144,8 @@ export const ChatLayout = () => {
 
             {/* Right Dynamic Sidebar: Settings, Sources, Knowledge Base  */}
             <DynamicSidebar />
+
+            <ProfileRequiredGate tourRunning={run} />
           </div>
         </DynamicSidebarProvider>
       </TourProvider>
