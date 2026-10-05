@@ -74,7 +74,11 @@ export const ApiKeyCreateForm = ({ onCancel, onCreated }: ApiKeyCreateFormProps)
           <legend className="text-sm font-medium text-natural-100">Expiration</legend>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {EXPIRY_OPTIONS.map((option) => (
-              <label key={option.value} htmlFor={`api-key-expiry-${option.value}`}>
+              <label
+                key={option.value}
+                htmlFor={`api-key-expiry-${option.value}`}
+                data-testid={`api-key-expiry-option-${option.value}`}
+              >
                 <input
                   id={`api-key-expiry-${option.value}`}
                   data-testid={`api-key-expiry-${option.value}`}
