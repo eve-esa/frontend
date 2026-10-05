@@ -23,9 +23,14 @@ export type ProfileFormValues = {
   institution?: string | null;
 };
 
+/** A stored name that is empty or blank counts as no name, so it does not fail the form. */
+const nameOrUndefined = (name?: string | null) => (name?.trim() ? name : undefined);
+
 /**
  * The form values a profile from `GET /users/me` prefills. A null country or institution becomes
- * "" so the input starts empty and an untouched field does not count as a change.
+ * "" so the input starts empty and an untouched field does not count as a change. An empty or
+ * blank stored name becomes undefined: the schema accepts a missing name but not "", so an
+ * untouched empty name would otherwise keep Save disabled.
  */
 export const toProfileFormValues = (profile: {
   first_name?: string | null;
@@ -34,8 +39,8 @@ export const toProfileFormValues = (profile: {
   country?: string | null;
   institution?: string | null;
 }) => ({
-  first_name: profile.first_name ?? undefined,
-  last_name: profile.last_name ?? undefined,
+  first_name: nameOrUndefined(profile.first_name),
+  last_name: nameOrUndefined(profile.last_name),
   email: profile.email ?? undefined,
   country: profile.country ?? "",
   institution: profile.institution ?? "",
@@ -44,14 +49,17 @@ export const toProfileFormValues = (profile: {
 /**
  * Turn the submitted form into the request body. With the extra fields on, both are always
  * sent, trimmed, so an emptied input reaches the backend as "" and clears the stored value.
+ * `PATCH /users` always writes both names, so a name left empty sends the stored one: emptying
+ * the input never wipes a name.
  */
 export const toProfileUpdate = (
   data: ProfileFormValues,
-  withProfileFields: boolean
+  withProfileFields: boolean,
+  stored?: { first_name?: string | null; last_name?: string | null }
 ): ProfileUpdate => {
   const body: ProfileUpdate = {
-    first_name: data.first_name || "",
-    last_name: data.last_name || "",
+    first_name: data.first_name?.trim() ? data.first_name : stored?.first_name || "",
+    last_name: data.last_name?.trim() ? data.last_name : stored?.last_name || "",
   };
   if (withProfileFields) {
     body.country = (data.country ?? "").trim();

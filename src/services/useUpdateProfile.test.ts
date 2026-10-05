@@ -46,6 +46,27 @@ describe("toProfileFormValues, what the dialog is prefilled with", () => {
     expect(values.country).toBe("");
     expect(values.institution).toBe("");
   });
+
+  it.each(["", "   "])("treats a stored name of %j as no name", (name) => {
+    const values = toProfileFormValues({ first_name: name, last_name: name });
+    expect(values.first_name).toBeUndefined();
+    expect(values.last_name).toBeUndefined();
+  });
+
+  it("lets a profile with empty names save once country and institution are set", () => {
+    // What react-hook-form holds: a name input with no default reads back "" from the DOM.
+    const edited = { first_name: "", last_name: "  ", country: "Italy", institution: "ESA ESRIN" };
+    const parsed = RequiredProfileSchema.safeParse(edited);
+    expect(parsed.success).toBe(true);
+    expect(parsed.data?.first_name).toBeUndefined();
+    expect(parsed.data?.last_name).toBeUndefined();
+    expect(toProfileUpdate(parsed.data!, true, { first_name: "", last_name: "" })).toEqual({
+      first_name: "",
+      last_name: "",
+      country: "Italy",
+      institution: "ESA ESRIN",
+    });
+  });
 });
 
 describe("toProfileUpdate, the PATCH /users body", () => {
@@ -82,6 +103,33 @@ describe("toProfileUpdate, the PATCH /users body", () => {
     expect(
       toProfileUpdate({ first_name: "Ada", last_name: "Lovelace", country: null }, true),
     ).toMatchObject({ country: "", institution: "" });
+  });
+});
+
+describe("toProfileUpdate, an emptied name", () => {
+  it("sends the stored name instead of wiping it", () => {
+    expect(
+      toProfileUpdate({ first_name: undefined, last_name: "  " }, false, {
+        first_name: "Ada",
+        last_name: "Lovelace",
+      }),
+    ).toEqual({ first_name: "Ada", last_name: "Lovelace" });
+  });
+
+  it("sends a typed name over the stored one", () => {
+    expect(
+      toProfileUpdate({ first_name: "Grace", last_name: "Hopper" }, false, {
+        first_name: "Ada",
+        last_name: "Lovelace",
+      }),
+    ).toEqual({ first_name: "Grace", last_name: "Hopper" });
+  });
+
+  it("never sends null: a profile with no stored name sends empty strings", () => {
+    expect(toProfileUpdate({}, false, { first_name: null })).toEqual({
+      first_name: "",
+      last_name: "",
+    });
   });
 });
 
