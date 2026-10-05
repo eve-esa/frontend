@@ -58,7 +58,7 @@ export const ProfileDialog = ({ isOpen, onOpenChange }: ProfileDialogProps) => {
   }, [profile]);
 
   const onSubmit = (data: ProfileType) => {
-    updateProfile(toProfileUpdate(data, PROFILE_FIELDS_ENABLED));
+    updateProfile(toProfileUpdate(data, PROFILE_FIELDS_ENABLED, profile));
   };
 
   return (

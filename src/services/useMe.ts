@@ -8,9 +8,17 @@ import { requireProfileFields } from "@/utilities/profileRequired";
 export const PROFILE_COUNTRY_MAX = 100;
 export const PROFILE_INSTITUTION_MAX = 200;
 
+// An empty or blank name, stored or typed, counts as no name. A name input left
+// without a default reads back "" from the DOM, so a rule on "" would keep the
+// form invalid with nothing to show.
+const OptionalName = z
+  .string()
+  .optional()
+  .transform((name) => (name?.trim() ? name : undefined));
+
 export const ProfileSchema = z.object({
-  first_name: z.string().min(1, "First name is required").optional(),
-  last_name: z.string().min(1, "Last name is required").optional(),
+  first_name: OptionalName,
+  last_name: OptionalName,
   email: z.string().email().optional(),
   id: z.string().optional(),
   approval_status: z.string().nullish(),

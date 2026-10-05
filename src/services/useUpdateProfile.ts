@@ -49,14 +49,17 @@ export const toProfileFormValues = (profile: {
 /**
  * Turn the submitted form into the request body. With the extra fields on, both are always
  * sent, trimmed, so an emptied input reaches the backend as "" and clears the stored value.
+ * `PATCH /users` always writes both names, so a name left empty sends the stored one: emptying
+ * the input never wipes a name.
  */
 export const toProfileUpdate = (
   data: ProfileFormValues,
-  withProfileFields: boolean
+  withProfileFields: boolean,
+  stored?: { first_name?: string | null; last_name?: string | null }
 ): ProfileUpdate => {
   const body: ProfileUpdate = {
-    first_name: data.first_name || "",
-    last_name: data.last_name || "",
+    first_name: data.first_name?.trim() ? data.first_name : stored?.first_name || "",
+    last_name: data.last_name?.trim() ? data.last_name : stored?.last_name || "",
   };
   if (withProfileFields) {
     body.country = (data.country ?? "").trim();
