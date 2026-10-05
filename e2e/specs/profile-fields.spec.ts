@@ -11,16 +11,16 @@ test.describe("profile fields @dev", () => {
 
     await profile.open();
     const before = await profile.read();
-    await profile.fill({ country: `Italy ${stamp}`, institution: `Pi School ${stamp}` });
+    await profile.fill({ country: "Italy", institution: `Pi School ${stamp}` });
     await profile.save();
 
     const me = await api.get<Record<string, unknown>>("/users/me");
     expect(me.status).toBe(200);
-    expect(me.body.country).toBe(`Italy ${stamp}`);
+    expect(me.body.country).toBe("Italy");
     expect(me.body.institution).toBe(`Pi School ${stamp}`);
 
     await profile.open();
-    expect((await profile.read()).country).toBe(`Italy ${stamp}`);
+    expect((await profile.read()).country).toBe("Italy");
     // Leave the account as it was found.
     await profile.fill({ country: before.country ?? "", institution: before.institution ?? "" });
     if (await profile.saveButton.isEnabled()) await profile.save();

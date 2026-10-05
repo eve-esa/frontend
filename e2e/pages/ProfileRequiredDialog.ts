@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page } from "@playwright/test";
+import { pickCountry } from "./ProfileDialog";
 
 /**
  * The dialog that asks for country and institution before the chat, with
@@ -24,7 +25,7 @@ export class ProfileRequiredDialog {
   }
 
   async fill(fields: { country: string; institution: string }): Promise<void> {
-    await this.country.fill(fields.country);
+    await pickCountry(this.country, fields.country);
     await this.institution.fill(fields.institution);
   }
 
