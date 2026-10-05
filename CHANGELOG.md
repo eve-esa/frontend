@@ -16,6 +16,33 @@ Release and promotes staging. Production is promoted from there by an explicit d
 The "Pilot history" section at the bottom predates this repository's version series: no tag was ever
 cut for it. The released tags start at `v0.0.1`.
 
+## [1.0.0](https://github.com/eve-esa/frontend/compare/v0.0.20...v1.0.0) (2026-10-05)
+
+
+### Added
+
+* **chat:** route turns to the classic pipeline when agentic chat is off ([#124](https://github.com/eve-esa/frontend/issues/124)) ([6ed52db](https://github.com/eve-esa/frontend/commit/6ed52db23de21014d4437c41ed904ee2183f47f4))
+* **profile:** country and institution fields (flag FEATURE_PROFILE_FIELDS, prod off) ([#131](https://github.com/eve-esa/frontend/issues/131)) ([4fcc0b0](https://github.com/eve-esa/frontend/commit/4fcc0b0785a02bb36687aeb1e831404e928a029b))
+
+
+### Fixed
+
+* **chat:** retry once on a rate limited 429 like a busy one ([#133](https://github.com/eve-esa/frontend/issues/133)) ([90a68af](https://github.com/eve-esa/frontend/commit/90a68afd7a556feffc3436dbeb4e0568b351c5a4))
+* **chat:** send the copy mark only for persisted messages ([#129](https://github.com/eve-esa/frontend/issues/129)) ([cb0ce20](https://github.com/eve-esa/frontend/commit/cb0ce20db2fd3dc61ab1febcddc0262c7316d7ff))
+* **chat:** show a retry notice when the service is busy ([#130](https://github.com/eve-esa/frontend/issues/130)) ([b098a7d](https://github.com/eve-esa/frontend/commit/b098a7d5faaa65c0a7c74eaa12b86290c128b878))
+* **chat:** show Title not available for placeholder source titles ([#115](https://github.com/eve-esa/frontend/issues/115)) ([d5e3047](https://github.com/eve-esa/frontend/commit/d5e304772e84a7031d7042f9c36508e3774bdfc6))
+* **chat:** turn on the retrieval toolkit by default ([#113](https://github.com/eve-esa/frontend/issues/113)) ([89a79d9](https://github.com/eve-esa/frontend/commit/89a79d9b2eff48066480b417c41b8324668e9a81))
+* **deps:** patch fflate and vitest advisories ([#116](https://github.com/eve-esa/frontend/issues/116)) ([1660aaf](https://github.com/eve-esa/frontend/commit/1660aafc1a868ee7d2d6e13f6728475944bd4646))
+* **settings:** remove the journal filter from the control panel ([#127](https://github.com/eve-esa/frontend/issues/127)) ([2fda6c1](https://github.com/eve-esa/frontend/commit/2fda6c1668d7c5d49ae60d3f7606c76f5da83d14))
+* **sources:** group chunks by document instead of title ([#128](https://github.com/eve-esa/frontend/issues/128)) ([9bd3c03](https://github.com/eve-esa/frontend/commit/9bd3c03eabdfe1c4669bdd62ef8cb1e5d7632e74))
+
+
+### Changed
+
+* drop exports and query keys nothing reads ([#121](https://github.com/eve-esa/frontend/issues/121)) ([95ea23b](https://github.com/eve-esa/frontend/commit/95ea23b885c821e4b7bac1462a66931f99072443))
+* remove unused date picker, checkbox and dead hooks ([#120](https://github.com/eve-esa/frontend/issues/120)) ([311c857](https://github.com/eve-esa/frontend/commit/311c8576ada5dbf7e575e98ebaa90f8f7441813b))
+* **ui:** load the markdown renderer and the tour on demand ([#125](https://github.com/eve-esa/frontend/issues/125)) ([5e4e911](https://github.com/eve-esa/frontend/commit/5e4e911b14476b873b94e3181896b3560410f63c))
+
 ## [0.0.20](https://github.com/eve-esa/frontend/compare/v0.0.19...v0.0.20) (2026-09-24)
 
 
@@ -278,4 +305,3 @@ This project follows [Semantic Versioning](https://semver.org/):
 - **Patch Release** (x.y.z): Bug fixes, security updates
 
 ### Links
-
