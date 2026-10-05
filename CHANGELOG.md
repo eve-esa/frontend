@@ -18,30 +18,28 @@ cut for it. The released tags start at `v0.0.1`.
 
 ## [1.0.0](https://github.com/eve-esa/frontend/compare/v0.0.20...v1.0.0) (2026-10-05)
 
-
 ### Added
-
-* **chat:** route turns to the classic pipeline when agentic chat is off ([#124](https://github.com/eve-esa/frontend/issues/124)) ([6ed52db](https://github.com/eve-esa/frontend/commit/6ed52db23de21014d4437c41ed904ee2183f47f4))
-* **profile:** country and institution fields (flag FEATURE_PROFILE_FIELDS, prod off) ([#131](https://github.com/eve-esa/frontend/issues/131)) ([4fcc0b0](https://github.com/eve-esa/frontend/commit/4fcc0b0785a02bb36687aeb1e831404e928a029b))
-
-
-### Fixed
-
-* **chat:** retry once on a rate limited 429 like a busy one ([#133](https://github.com/eve-esa/frontend/issues/133)) ([90a68af](https://github.com/eve-esa/frontend/commit/90a68afd7a556feffc3436dbeb4e0568b351c5a4))
-* **chat:** send the copy mark only for persisted messages ([#129](https://github.com/eve-esa/frontend/issues/129)) ([cb0ce20](https://github.com/eve-esa/frontend/commit/cb0ce20db2fd3dc61ab1febcddc0262c7316d7ff))
-* **chat:** show a retry notice when the service is busy ([#130](https://github.com/eve-esa/frontend/issues/130)) ([b098a7d](https://github.com/eve-esa/frontend/commit/b098a7d5faaa65c0a7c74eaa12b86290c128b878))
-* **chat:** show Title not available for placeholder source titles ([#115](https://github.com/eve-esa/frontend/issues/115)) ([d5e3047](https://github.com/eve-esa/frontend/commit/d5e304772e84a7031d7042f9c36508e3774bdfc6))
-* **chat:** turn on the retrieval toolkit by default ([#113](https://github.com/eve-esa/frontend/issues/113)) ([89a79d9](https://github.com/eve-esa/frontend/commit/89a79d9b2eff48066480b417c41b8324668e9a81))
-* **deps:** patch fflate and vitest advisories ([#116](https://github.com/eve-esa/frontend/issues/116)) ([1660aaf](https://github.com/eve-esa/frontend/commit/1660aafc1a868ee7d2d6e13f6728475944bd4646))
-* **settings:** remove the journal filter from the control panel ([#127](https://github.com/eve-esa/frontend/issues/127)) ([2fda6c1](https://github.com/eve-esa/frontend/commit/2fda6c1668d7c5d49ae60d3f7606c76f5da83d14))
-* **sources:** group chunks by document instead of title ([#128](https://github.com/eve-esa/frontend/issues/128)) ([9bd3c03](https://github.com/eve-esa/frontend/commit/9bd3c03eabdfe1c4669bdd62ef8cb1e5d7632e74))
-
-
+- Sign-in through the EVE identity provider; existing accounts keep their password and sign in once more.
+- Streamed answers with Stop, keepalives on the stream, partial answer kept after a stop.
+- OpenAI-compatible gateway at `/api/v1` with API keys and token budget charging (API key creation closed in prod, `API_KEY_MAX_ACTIVE_PER_USER=0`).
+- Operator approval past the sign-up limit, with on hold, approved and welcome mails (`SIGNUP_AUTO_APPROVE_LIMIT`; prod 0 at launch, D16: every sign-up is approved, the gate can be re-armed with one tfvars change).
+- Country and institution on the profile (flag FEATURE_PROFILE_FIELDS, prod off).
+- Launch invite command for legacy accounts (`send_cohort_invite`, dry run by default).
+- A retry notice when the service is busy: past the in-flight cap the backend answers 429 with `Retry-After`.
+- Retention for conversation checkpoints (`CHECKPOINT_RETENTION_DAYS`, 30 days).
+- Per-user request rate limit on chat, retrieval, uploads, `/api/v1` and MCP tool calls (flag FEATURE_REQUEST_RATE_LIMIT, prod off): 429 `rate_limited` with `Retry-After`, the chat retries once after the countdown.
+- Behind flags: agentic chat (flag FEATURE_AGENTIC_CHAT, prod off), toolkits (flag FEATURE_TOOLKITS, prod off), model picker (flag FEATURE_MODEL_PICKER, prod off), custom models (flag FEATURE_CUSTOM_MODELS, prod off), API keys page (flag FEATURE_API_KEYS, prod off), attachments, artifacts, answered-by, bug report, status notices (prod off).
 ### Changed
-
-* drop exports and query keys nothing reads ([#121](https://github.com/eve-esa/frontend/issues/121)) ([95ea23b](https://github.com/eve-esa/frontend/commit/95ea23b885c821e4b7bac1462a66931f99072443))
-* remove unused date picker, checkbox and dead hooks ([#120](https://github.com/eve-esa/frontend/issues/120)) ([311c857](https://github.com/eve-esa/frontend/commit/311c8576ada5dbf7e575e98ebaa90f8f7441813b))
-* **ui:** load the markdown renderer and the tour on demand ([#125](https://github.com/eve-esa/frontend/issues/125)) ([5e4e911](https://github.com/eve-esa/frontend/commit/5e4e911b14476b873b94e3181896b3560410f63c))
+- Answers come from an ordered model chain with failover, JSC first; token budgets apply to every chat route and to `/api/v1`.
+- Retrieval no longer blocks the server: embeddings, rerank and Qdrant reads are async with a deadline and a provider fallback; the model breaker is shared across workers.
+- Sources are grouped by document; the copy mark is sent only for persisted messages; the journal filter left the control panel.
+- Deleting a collection that holds documents works on DocumentDB and frees the document slots.
+- Copy without the pilot wording, base font follows the browser, About, Contact and Privacy links open their pages.
+- Classification filters, My collections and the beta badge are flags (prod on).
+### Removed
+- Legacy auth endpoints and in-app login pages; `/users/me` no longer returns a password hash.
+- `DELETE /artifacts/{id}`: an uploaded artifact is permanent.
+- Dead settings, packages and modules (JWT settings, SATCOM Qdrant pair, SiliconFlow, fallback embedding key).
 
 ## [0.0.20](https://github.com/eve-esa/frontend/compare/v0.0.19...v0.0.20) (2026-09-24)
 
