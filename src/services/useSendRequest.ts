@@ -387,6 +387,7 @@ export const useSendRequest = (conversationId?: string) => {
         setBusyNotice({
           conversationId: conversationId ?? "",
           phase: error.canceled ? "canceled" : "stopped",
+          ...(error.reason ? { reason: error.reason } : {}),
           draft: variables
             ? { text: variables.query, attachments: variables.attachments }
             : null,

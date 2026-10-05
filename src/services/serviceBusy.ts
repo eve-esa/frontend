@@ -6,17 +6,31 @@ import type { ImageAttachment } from "@/types";
 // token-budget 429 nothing is wrong with the user's account, so the send is
 // retried once after the advertised delay while a notice counts down on the
 // composer. A second refusal ends the turn and hands the text back to the
-// composer.
+// composer. The per-user rate limiter refuses with 429
+// {"detail": {"code": "rate_limited", ...}} and Retry-After: same single
+// retry, with copy that blames the pace of requests instead of the service.
+// A rate limit window longer than the cap is not retried at all: the retry
+// would be refused again, so the draft goes back at once.
 
 export const OVERLOADED_CODE = "overloaded";
+export const RATE_LIMITED_CODE = "rate_limited";
+// Absent on a notice means overloaded, so notices written before the reason
+// existed keep their shape.
+export type BusyReason = typeof OVERLOADED_CODE | typeof RATE_LIMITED_CODE;
 export const DEFAULT_RETRY_AFTER_S = 10;
 // Upper bound on how long the composer waits: a misconfigured header must not
 // park a send for minutes.
 const MAX_RETRY_AFTER_S = 60;
 
-export const busyCountdownCopy = (seconds: number) =>
-  `EVE is busy right now. Retrying in ${seconds} s`;
+export const busyCountdownCopy = (seconds: number, reason?: BusyReason) =>
+  reason === RATE_LIMITED_CODE
+    ? `You are sending requests too fast. Retrying in ${seconds} s`
+    : `EVE is busy right now. Retrying in ${seconds} s`;
 export const BUSY_FINAL_COPY = "Still busy. Please try again in a moment";
+export const RATE_LIMITED_FINAL_COPY =
+  "Still too many requests. Please try again in a moment";
+export const busyFinalCopy = (reason?: BusyReason) =>
+  reason === RATE_LIMITED_CODE ? RATE_LIMITED_FINAL_COPY : BUSY_FINAL_COPY;
 
 type ErrorLike = {
   response?: {
@@ -67,24 +81,44 @@ export const parseRetryAfterSeconds = (value: unknown): number => {
   return Math.min(Math.ceil(seconds), MAX_RETRY_AFTER_S);
 };
 
-// The retry delay in seconds when the error is the overload refusal, null for
-// anything else (the token-budget 429 included).
-export const overloadedRetryAfter = (error: unknown): number | null => {
+const exceedsRetryCap = (value: unknown): boolean => {
+  const seconds = Number(String(value ?? "").trim());
+  return Number.isFinite(seconds) && seconds > MAX_RETRY_AFTER_S;
+};
+
+// Which retryable refusal the error is, with its delay in seconds; null for
+// anything else (the token-budget 429 and any other 429 code included), which
+// keeps the usual error path.
+export const busyRefusal = (
+  error: unknown,
+): { reason: BusyReason; seconds: number; overCap: boolean } | null => {
   const response = (error as ErrorLike | null | undefined)?.response;
   if (response?.status !== 429) return null;
-  if (readDetailCode(response.data) !== OVERLOADED_CODE) return null;
-  return parseRetryAfterSeconds(readRetryAfter(response.headers));
+  const code = readDetailCode(response.data);
+  if (code !== OVERLOADED_CODE && code !== RATE_LIMITED_CODE) return null;
+  const header = readRetryAfter(response.headers);
+  return {
+    reason: code,
+    seconds: parseRetryAfterSeconds(header),
+    overCap: exceedsRetryCap(header),
+  };
 };
+
+// The retry delay in seconds for either retryable refusal, null otherwise.
+export const busyRetryAfter = (error: unknown): number | null =>
+  busyRefusal(error)?.seconds ?? null;
 
 export class ServiceBusyError extends Error {
   // True when the user pressed Stop during the countdown rather than the
   // retry being refused again.
   readonly canceled: boolean;
+  readonly reason?: BusyReason;
 
-  constructor(canceled: boolean) {
+  constructor(canceled: boolean, reason?: BusyReason) {
     super(canceled ? "Busy retry canceled" : "Service busy");
     this.name = "ServiceBusyError";
     this.canceled = canceled;
+    if (reason === RATE_LIMITED_CODE) this.reason = reason;
   }
 }
 
@@ -109,11 +143,17 @@ export type BusyDraft = {
 // the final copy shows. canceled: Stop pressed during the countdown, nothing
 // shows. The last two carry the draft back to the composer until it takes it.
 export type BusyNotice =
-  | { conversationId: string; phase: "waiting"; secondsLeft: number }
+  | {
+      conversationId: string;
+      phase: "waiting";
+      secondsLeft: number;
+      reason?: BusyReason;
+    }
   | {
       conversationId: string;
       phase: "stopped" | "canceled";
       draft: BusyDraft | null;
+      reason?: BusyReason;
     };
 
 const notices = new Map<string, BusyNotice>();
@@ -182,13 +222,14 @@ export const cancelBusyWait = (conversationId: string) => {
 const countdown = (
   conversationId: string,
   seconds: number,
+  reason: BusyReason,
 ): Promise<void> =>
   new Promise<void>((resolve, reject) => {
     let left = seconds;
     let timer: ReturnType<typeof setTimeout> | null = null;
     const cancel = () => {
       finish();
-      reject(new ServiceBusyError(true));
+      reject(new ServiceBusyError(true, reason));
     };
     const finish = () => {
       if (timer) clearTimeout(timer);
@@ -203,16 +244,22 @@ const countdown = (
         resolve();
         return;
       }
-      setBusyNotice({ conversationId, phase: "waiting", secondsLeft: left });
+      setBusyNotice({
+        conversationId,
+        phase: "waiting",
+        secondsLeft: left,
+        ...(reason === RATE_LIMITED_CODE ? { reason } : {}),
+      });
       left -= 1;
       timer = setTimeout(tick, 1000);
     };
     tick();
   });
 
-// Runs `attempt`; on the overload refusal waits Retry-After seconds with the
-// countdown notice and runs it once more. A second refusal rejects with
-// ServiceBusyError; any other error passes through untouched.
+// Runs `attempt`; on an overload or rate limit refusal waits Retry-After
+// seconds with the countdown notice and runs it once more. A second refusal
+// of either kind rejects with ServiceBusyError; any other error passes
+// through untouched.
 export const withBusyRetry = async <T>(
   conversationId: string,
   attempt: () => Promise<T>,
@@ -220,15 +267,19 @@ export const withBusyRetry = async <T>(
   try {
     return await attempt();
   } catch (error) {
-    const delay = overloadedRetryAfter(error);
-    if (delay === null) throw error;
-    await countdown(conversationId, delay);
+    const refusal = busyRefusal(error);
+    if (refusal === null) throw error;
+    if (refusal.reason === RATE_LIMITED_CODE && refusal.overCap) {
+      throw new ServiceBusyError(false, refusal.reason);
+    }
+    await countdown(conversationId, refusal.seconds, refusal.reason);
   }
   clearBusyNotice(conversationId);
   try {
     return await attempt();
   } catch (error) {
-    if (overloadedRetryAfter(error) !== null) throw new ServiceBusyError(false);
+    const refusal = busyRefusal(error);
+    if (refusal !== null) throw new ServiceBusyError(false, refusal.reason);
     throw error;
   }
 };

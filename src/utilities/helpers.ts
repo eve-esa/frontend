@@ -116,8 +116,26 @@ export const adaptSettingsForRequest = (
 
 const FALLBACK_API_ERROR_MESSAGE = "Something went wrong!";
 
+// A streaming request reads its error body as text, so the detail may arrive
+// inside a raw JSON string.
+const readErrorDetail = (data: unknown): unknown => {
+  if (typeof data === "string") {
+    try {
+      const parsed: unknown = JSON.parse(data);
+      return parsed && typeof parsed === "object"
+        ? (parsed as { detail?: unknown }).detail
+        : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+  return (data as { detail?: unknown } | undefined)?.detail;
+};
+
 export const handleApiError = (error: ApiError) => {
-  const detail = error?.response?.data?.detail;
+  const detail = readErrorDetail(error?.response?.data) as
+    | NonNullable<ApiError["response"]>["data"]["detail"]
+    | undefined;
 
   // An object detail ({code, message}) carries its own user-facing text, such
   // as the API key create throttle or the active-key cap. It must be checked
