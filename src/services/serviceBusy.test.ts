@@ -1,12 +1,16 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   DEFAULT_RETRY_AFTER_S,
+  busyCountdownCopy,
+  busyFinalCopy,
   clearBusyNotice,
   getBusyNotice,
+  isServiceBusyError,
   overloadedRetryAfter,
   parseRetryAfterSeconds,
   setBusyNotice,
   takeBusyDraft,
+  withBusyRetry,
 } from "./serviceBusy";
 
 const OVERLOADED_BODY = {
@@ -16,11 +20,21 @@ const OVERLOADED_BODY = {
   },
 };
 
+const RATE_LIMITED_BODY = {
+  detail: {
+    code: "rate_limited",
+    message: "Too many requests, retry in a few seconds",
+  },
+};
+
 const refusal = (data: unknown, headers: unknown = {}, status = 429) => ({
   response: { status, data, headers },
 });
 
-afterEach(() => clearBusyNotice());
+afterEach(() => {
+  clearBusyNotice();
+  vi.useRealTimers();
+});
 
 describe("overloadedRetryAfter", () => {
   it("reads the parsed body of the blocking request", () => {
@@ -104,5 +118,110 @@ describe("takeBusyDraft", () => {
     clearBusyNotice("b");
     expect(getBusyNotice("a")).toMatchObject({ secondsLeft: 4 });
     expect(getBusyNotice("b")).toBeNull();
+  });
+});
+
+describe("withBusyRetry on a rate limited 429", () => {
+  it("waits the Retry-After seconds and retries once", async () => {
+    vi.useFakeTimers();
+    const attempt = vi
+      .fn()
+      .mockRejectedValueOnce(
+        refusal(JSON.stringify(RATE_LIMITED_BODY), { "retry-after": "7" }),
+      )
+      .mockResolvedValueOnce("ok");
+
+    const run = withBusyRetry("c1", attempt);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(getBusyNotice("c1")).toEqual({
+      conversationId: "c1",
+      phase: "waiting",
+      secondsLeft: 7,
+      reason: "rate_limited",
+    });
+
+    await vi.advanceTimersByTimeAsync(6000);
+    expect(attempt).toHaveBeenCalledTimes(1);
+    expect(getBusyNotice("c1")).toMatchObject({ secondsLeft: 1 });
+
+    await vi.advanceTimersByTimeAsync(1000);
+    await expect(run).resolves.toBe("ok");
+    expect(attempt).toHaveBeenCalledTimes(2);
+    expect(getBusyNotice("c1")).toBeNull();
+  });
+
+  it("uses the default delay without a Retry-After header", async () => {
+    vi.useFakeTimers();
+    const attempt = vi
+      .fn()
+      .mockRejectedValueOnce(refusal(RATE_LIMITED_BODY))
+      .mockResolvedValueOnce("ok");
+
+    const run = withBusyRetry("c1", attempt);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(getBusyNotice("c1")).toMatchObject({
+      secondsLeft: DEFAULT_RETRY_AFTER_S,
+      reason: "rate_limited",
+    });
+
+    await vi.advanceTimersByTimeAsync((DEFAULT_RETRY_AFTER_S - 1) * 1000);
+    expect(attempt).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1000);
+    await expect(run).resolves.toBe("ok");
+    expect(attempt).toHaveBeenCalledTimes(2);
+  });
+
+  it("caps a long Retry-After at 60 s", async () => {
+    vi.useFakeTimers();
+    const attempt = vi
+      .fn()
+      .mockRejectedValueOnce(refusal(RATE_LIMITED_BODY, { "retry-after": "3600" }))
+      .mockResolvedValueOnce("ok");
+
+    const run = withBusyRetry("c1", attempt);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(getBusyNotice("c1")).toMatchObject({ secondsLeft: 60 });
+    await vi.advanceTimersByTimeAsync(60000);
+    await expect(run).resolves.toBe("ok");
+  });
+
+  it("gives up after a second refusal and keeps the reason", async () => {
+    vi.useFakeTimers();
+    const attempt = vi
+      .fn()
+      .mockRejectedValue(refusal(RATE_LIMITED_BODY, { "retry-after": "1" }));
+
+    const run = withBusyRetry("c1", attempt).catch((error: unknown) => error);
+    await vi.advanceTimersByTimeAsync(1000);
+    const error = await run;
+    expect(isServiceBusyError(error)).toBe(true);
+    expect(error).toMatchObject({ canceled: false, reason: "rate_limited" });
+    expect(attempt).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not retry a 429 with another code", async () => {
+    vi.useFakeTimers();
+    const other = refusal(
+      { detail: { code: "token_budget", message: "Token limit exceeded" } },
+      { "retry-after": "5" },
+    );
+    const attempt = vi.fn().mockRejectedValue(other);
+
+    await expect(withBusyRetry("c1", attempt)).rejects.toBe(other);
+    expect(attempt).toHaveBeenCalledTimes(1);
+    expect(getBusyNotice("c1")).toBeNull();
+  });
+});
+
+describe("busy copy", () => {
+  it("blames the pace of requests on a rate limit", () => {
+    expect(busyCountdownCopy(7, "rate_limited")).toBe(
+      "You are sending requests too fast, retrying in 7 s",
+    );
+    expect(busyCountdownCopy(7)).toBe("EVE is busy right now. Retrying in 7 s");
+    expect(busyFinalCopy("rate_limited")).toBe(
+      "Still too many requests. Please try again in a moment",
+    );
+    expect(busyFinalCopy()).toBe("Still busy. Please try again in a moment");
   });
 });

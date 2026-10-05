@@ -22,6 +22,35 @@ describe("ComposerBusyNotice", () => {
     expect(html).toContain("Still busy. Please try again in a moment");
   });
 
+  it("blames the pace of requests on a rate limit", () => {
+    const waiting = renderToStaticMarkup(
+      <ComposerBusyNotice
+        notice={{
+          conversationId: "c1",
+          phase: "waiting",
+          secondsLeft: 7,
+          reason: "rate_limited",
+        }}
+      />,
+    );
+    expect(waiting).toContain(
+      "You are sending requests too fast, retrying in 7 s",
+    );
+    const stopped = renderToStaticMarkup(
+      <ComposerBusyNotice
+        notice={{
+          conversationId: "c1",
+          phase: "stopped",
+          draft: null,
+          reason: "rate_limited",
+        }}
+      />,
+    );
+    expect(stopped).toContain(
+      "Still too many requests. Please try again in a moment",
+    );
+  });
+
   it("renders nothing without a notice or after a canceled wait", () => {
     expect(renderToStaticMarkup(<ComposerBusyNotice notice={null} />)).toBe("");
     expect(
