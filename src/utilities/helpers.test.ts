@@ -143,6 +143,21 @@ describe("handleApiError", () => {
     ).toBe("Too many keys created recently. Try again later.");
   });
 
+  it("reads a rate limit message from a streamed raw JSON body", () => {
+    const error = {
+      response: {
+        status: 429,
+        data: JSON.stringify({
+          detail: {
+            code: "rate_limited",
+            message: "Too many requests, retry in 30 s",
+          },
+        }),
+      },
+    } as unknown as ApiError;
+    expect(handleApiError(error)).toBe("Too many requests, retry in 30 s");
+  });
+
   it("falls back to the free-credits text on a plain 429", () => {
     expect(handleApiError(apiError(429, "ignored"))).toBe(
       "You've run out of free credits. Please recharge and try again.",

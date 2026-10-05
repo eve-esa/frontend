@@ -6,7 +6,7 @@ import {
   clearBusyNotice,
   getBusyNotice,
   isServiceBusyError,
-  overloadedRetryAfter,
+  busyRetryAfter,
   parseRetryAfterSeconds,
   setBusyNotice,
   takeBusyDraft,
@@ -36,16 +36,16 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe("overloadedRetryAfter", () => {
+describe("busyRetryAfter", () => {
   it("reads the parsed body of the blocking request", () => {
     expect(
-      overloadedRetryAfter(refusal(OVERLOADED_BODY, { "retry-after": "4" })),
+      busyRetryAfter(refusal(OVERLOADED_BODY, { "retry-after": "4" })),
     ).toBe(4);
   });
 
   it("reads the raw JSON string of the streaming request", () => {
     expect(
-      overloadedRetryAfter(
+      busyRetryAfter(
         refusal(JSON.stringify(OVERLOADED_BODY), { "retry-after": "7" }),
       ),
     ).toBe(7);
@@ -53,11 +53,11 @@ describe("overloadedRetryAfter", () => {
 
   it("reads Retry-After through an AxiosHeaders-like getter", () => {
     const headers = { get: (name: string) => (name === "retry-after" ? "5" : null) };
-    expect(overloadedRetryAfter(refusal(OVERLOADED_BODY, headers))).toBe(5);
+    expect(busyRetryAfter(refusal(OVERLOADED_BODY, headers))).toBe(5);
   });
 
   it("falls back to 10 s without a usable Retry-After", () => {
-    expect(overloadedRetryAfter(refusal(OVERLOADED_BODY))).toBe(
+    expect(busyRetryAfter(refusal(OVERLOADED_BODY))).toBe(
       DEFAULT_RETRY_AFTER_S,
     );
     expect(DEFAULT_RETRY_AFTER_S).toBe(10);
@@ -65,7 +65,7 @@ describe("overloadedRetryAfter", () => {
 
   it("ignores the token-budget 429 even though it carries Retry-After", () => {
     expect(
-      overloadedRetryAfter(
+      busyRetryAfter(
         refusal(
           JSON.stringify({ detail: "Token limit exceeded for this period" }),
           { "retry-after": "3600" },
@@ -75,7 +75,7 @@ describe("overloadedRetryAfter", () => {
   });
 
   it("ignores another status with the same code", () => {
-    expect(overloadedRetryAfter(refusal(OVERLOADED_BODY, {}, 503))).toBeNull();
+    expect(busyRetryAfter(refusal(OVERLOADED_BODY, {}, 503))).toBeNull();
   });
 });
 
@@ -171,11 +171,25 @@ describe("withBusyRetry on a rate limited 429", () => {
     expect(attempt).toHaveBeenCalledTimes(2);
   });
 
-  it("caps a long Retry-After at 60 s", async () => {
+  it("gives up at once when Retry-After exceeds 60 s", async () => {
     vi.useFakeTimers();
     const attempt = vi
       .fn()
       .mockRejectedValueOnce(refusal(RATE_LIMITED_BODY, { "retry-after": "3600" }))
+      .mockResolvedValueOnce("ok");
+
+    const error = await withBusyRetry("c1", attempt).catch((e: unknown) => e);
+    expect(isServiceBusyError(error)).toBe(true);
+    expect(error).toMatchObject({ canceled: false, reason: "rate_limited" });
+    expect(attempt).toHaveBeenCalledTimes(1);
+    expect(getBusyNotice("c1")).toBeNull();
+  });
+
+  it("still caps an overload Retry-After at 60 s and retries", async () => {
+    vi.useFakeTimers();
+    const attempt = vi
+      .fn()
+      .mockRejectedValueOnce(refusal(OVERLOADED_BODY, { "retry-after": "3600" }))
       .mockResolvedValueOnce("ok");
 
     const run = withBusyRetry("c1", attempt);
@@ -216,7 +230,7 @@ describe("withBusyRetry on a rate limited 429", () => {
 describe("busy copy", () => {
   it("blames the pace of requests on a rate limit", () => {
     expect(busyCountdownCopy(7, "rate_limited")).toBe(
-      "You are sending requests too fast, retrying in 7 s",
+      "You are sending requests too fast. Retrying in 7 s",
     );
     expect(busyCountdownCopy(7)).toBe("EVE is busy right now. Retrying in 7 s");
     expect(busyFinalCopy("rate_limited")).toBe(

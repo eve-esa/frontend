@@ -212,6 +212,57 @@ const loadBusy = async (conversationId = "conv-1") => {
   return { options, busy, hook };
 };
 
+const rateLimited = (retryAfter?: string) =>
+  Object.assign(new Error("Request failed with status code 429"), {
+    response: {
+      status: 429,
+      data: JSON.stringify({
+        detail: {
+          code: "rate_limited",
+          message: "Too many requests, retry in a few seconds",
+        },
+      }),
+      headers: retryAfter ? { "retry-after": retryAfter } : {},
+    },
+  });
+
+describe("send refused by the rate limiter", () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(async () => {
+    vi.useRealTimers();
+    (await import("./serviceBusy")).clearBusyNotice();
+  });
+
+  it("stops after a second refusal with the rate limit reason and the draft", async () => {
+    const { options, busy } = await loadBusy();
+    mocks.postStream
+      .mockRejectedValueOnce(rateLimited("1"))
+      .mockRejectedValueOnce(rateLimited("1"));
+
+    const outcome = options
+      .mutationFn(VARIABLES)
+      .catch((error: unknown) => error);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(busy.getBusyNotice("conv-1")).toMatchObject({
+      phase: "waiting",
+      reason: "rate_limited",
+    });
+    await vi.advanceTimersByTimeAsync(1000);
+    const error = await outcome;
+
+    expect(mocks.postStream).toHaveBeenCalledTimes(2);
+    options.onError(error, VARIABLES);
+    expect(mocks.toastError).not.toHaveBeenCalled();
+    expect(busy.getBusyNotice("conv-1")).toEqual({
+      conversationId: "conv-1",
+      phase: "stopped",
+      reason: "rate_limited",
+      draft: { text: "hello", attachments: undefined },
+    });
+    expect(busy.takeBusyDraft("conv-1")).toMatchObject({ text: "hello" });
+  });
+});
+
 describe("send refused by an overloaded backend", () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());

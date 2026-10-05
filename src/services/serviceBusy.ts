@@ -9,6 +9,8 @@ import type { ImageAttachment } from "@/types";
 // composer. The per-user rate limiter refuses with 429
 // {"detail": {"code": "rate_limited", ...}} and Retry-After: same single
 // retry, with copy that blames the pace of requests instead of the service.
+// A rate limit window longer than the cap is not retried at all: the retry
+// would be refused again, so the draft goes back at once.
 
 export const OVERLOADED_CODE = "overloaded";
 export const RATE_LIMITED_CODE = "rate_limited";
@@ -22,7 +24,7 @@ const MAX_RETRY_AFTER_S = 60;
 
 export const busyCountdownCopy = (seconds: number, reason?: BusyReason) =>
   reason === RATE_LIMITED_CODE
-    ? `You are sending requests too fast, retrying in ${seconds} s`
+    ? `You are sending requests too fast. Retrying in ${seconds} s`
     : `EVE is busy right now. Retrying in ${seconds} s`;
 export const BUSY_FINAL_COPY = "Still busy. Please try again in a moment";
 export const RATE_LIMITED_FINAL_COPY =
@@ -79,24 +81,31 @@ export const parseRetryAfterSeconds = (value: unknown): number => {
   return Math.min(Math.ceil(seconds), MAX_RETRY_AFTER_S);
 };
 
+const exceedsRetryCap = (value: unknown): boolean => {
+  const seconds = Number(String(value ?? "").trim());
+  return Number.isFinite(seconds) && seconds > MAX_RETRY_AFTER_S;
+};
+
 // Which retryable refusal the error is, with its delay in seconds; null for
 // anything else (the token-budget 429 and any other 429 code included), which
 // keeps the usual error path.
 export const busyRefusal = (
   error: unknown,
-): { reason: BusyReason; seconds: number } | null => {
+): { reason: BusyReason; seconds: number; overCap: boolean } | null => {
   const response = (error as ErrorLike | null | undefined)?.response;
   if (response?.status !== 429) return null;
   const code = readDetailCode(response.data);
   if (code !== OVERLOADED_CODE && code !== RATE_LIMITED_CODE) return null;
+  const header = readRetryAfter(response.headers);
   return {
     reason: code,
-    seconds: parseRetryAfterSeconds(readRetryAfter(response.headers)),
+    seconds: parseRetryAfterSeconds(header),
+    overCap: exceedsRetryCap(header),
   };
 };
 
 // The retry delay in seconds for either retryable refusal, null otherwise.
-export const overloadedRetryAfter = (error: unknown): number | null =>
+export const busyRetryAfter = (error: unknown): number | null =>
   busyRefusal(error)?.seconds ?? null;
 
 export class ServiceBusyError extends Error {
@@ -260,6 +269,9 @@ export const withBusyRetry = async <T>(
   } catch (error) {
     const refusal = busyRefusal(error);
     if (refusal === null) throw error;
+    if (refusal.reason === RATE_LIMITED_CODE && refusal.overCap) {
+      throw new ServiceBusyError(false, refusal.reason);
+    }
     await countdown(conversationId, refusal.seconds, refusal.reason);
   }
   clearBusyNotice(conversationId);

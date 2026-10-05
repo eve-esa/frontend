@@ -34,7 +34,7 @@ describe("ComposerBusyNotice", () => {
       />,
     );
     expect(waiting).toContain(
-      "You are sending requests too fast, retrying in 7 s",
+      "You are sending requests too fast. Retrying in 7 s",
     );
     const stopped = renderToStaticMarkup(
       <ComposerBusyNotice
