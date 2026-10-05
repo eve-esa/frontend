@@ -27,16 +27,11 @@ test.describe("profile required @dev", () => {
       last_name: before.body.last_name ?? "",
     };
 
+    // The backend clears a field sent as an empty string: the dialog must have something to ask.
     const cleared = await api.patch<Me>("/users", { ...names, country: "", institution: "" });
-    if (cleared.status !== 200 || cleared.body.country || cleared.body.institution) {
-      // The backend kept the values: the dialog has nothing to ask.
-      await chat.goto();
-      await expect(profileRequired.root).toBeHidden();
-      const me = await api.get<Me>("/users/me");
-      expect(me.body.country).toBeTruthy();
-      expect(me.body.institution).toBeTruthy();
-      return;
-    }
+    expect(cleared.status).toBe(200);
+    expect(cleared.body.country ?? null).toBeNull();
+    expect(cleared.body.institution ?? null).toBeNull();
 
     try {
       await chat.goto();

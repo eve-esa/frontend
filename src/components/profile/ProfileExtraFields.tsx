@@ -46,11 +46,14 @@ export const ProfileExtraFields = <T extends ProfileExtraFieldValues>({
             className="w-full"
             placeholder="For example Italy"
             maxLength={PROFILE_COUNTRY_MAX}
+            aria-required="true"
+            aria-invalid={Boolean(fieldErrors?.country)}
+            aria-describedby={fieldErrors?.country ? `${countryId}-error` : undefined}
             {...register("country" as Path<T>)}
             type="text"
           />
           {fieldErrors?.country && (
-            <p className="text-sm text-red-500">
+            <p id={`${countryId}-error`} className="text-sm text-red-500">
               {fieldErrors.country.message}
             </p>
           )}
@@ -70,11 +73,14 @@ export const ProfileExtraFields = <T extends ProfileExtraFieldValues>({
             className="w-full"
             placeholder="Your university, agency or company"
             maxLength={PROFILE_INSTITUTION_MAX}
+            aria-required="true"
+            aria-invalid={Boolean(fieldErrors?.institution)}
+            aria-describedby={fieldErrors?.institution ? `${institutionId}-error` : undefined}
             {...register("institution" as Path<T>)}
             type="text"
           />
           {fieldErrors?.institution && (
-            <p className="text-sm text-red-500">
+            <p id={`${institutionId}-error`} className="text-sm text-red-500">
               {fieldErrors.institution.message}
             </p>
           )}

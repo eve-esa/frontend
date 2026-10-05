@@ -62,6 +62,9 @@ export const ProfileRequiredDialog = ({
     <Dialog open={true} onOpenChange={() => undefined}>
       <DialogContent
         data-testid="profile-required-dialog"
+        // Scrolls inside the viewport so Save stays reachable on a short
+        // mobile screen with the keyboard open.
+        className="max-h-[90dvh] overflow-y-auto"
         showCloseButton={false}
         onEscapeKeyDown={keepOpen}
         onPointerDownOutside={keepOpen}
