@@ -86,6 +86,7 @@ export const ProfileRequiredDialog = ({
             idPrefix="profile-required"
             register={register}
             errors={errors}
+            storedCountry={profile.country}
           />
 
           <div className="flex gap-2 justify-end mt-4">

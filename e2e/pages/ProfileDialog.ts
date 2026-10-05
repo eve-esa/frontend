@@ -9,6 +9,14 @@ export type ProfileFields = {
   institution: string | null;
 };
 
+/**
+ * Country is a select of country names: pick by label, "" picks the empty choice. A stored
+ * country outside the list is one of the options, so restoring it works the same way.
+ */
+export const pickCountry = async (select: Locator, country: string): Promise<void> => {
+  await select.selectOption(country === "" ? { value: "" } : { label: country });
+};
+
 /** Profile dialog, opened from the user menu. */
 export class ProfileDialog {
   readonly root: Locator;
@@ -52,7 +60,7 @@ export class ProfileDialog {
   async fill(fields: Partial<Omit<ProfileFields, "email">>): Promise<void> {
     if (fields.firstName !== undefined) await this.firstName.fill(fields.firstName);
     if (fields.lastName !== undefined) await this.lastName.fill(fields.lastName);
-    if (fields.country != null) await this.country.fill(fields.country);
+    if (fields.country != null) await pickCountry(this.country, fields.country);
     if (fields.institution != null) await this.institution.fill(fields.institution);
   }
 

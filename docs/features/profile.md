@@ -12,7 +12,7 @@ The app provides email-based authentication plus basic profile management.
 ## Profile updates
 - Open the profile menu from the sidebar and choose **Profile**.
 - Update first and last name; email is displayed but not editable.
-- Where `FEATURE_PROFILE_FIELDS` is on, **Country** and **Institution** follow the names and are required: neither can be emptied.
+- Where `FEATURE_PROFILE_FIELDS` is on, **Country** and **Institution** follow the names and are required: neither can be emptied. Country is picked from a list of country names (English); a country saved earlier as free text stays selected until the user picks another.
 
 ## Required profile fields
 - Where `FEATURE_PROFILE_FIELDS` is on, a signed-in user whose profile lacks a country or an institution sees **Complete your profile** before the chat can be used, new and existing accounts alike.

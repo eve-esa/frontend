@@ -72,7 +72,8 @@ describe("ProfileDialog country and institution", () => {
     expect(html).toContain('data-testid="profile-institution"');
     expect(html).toMatch(/<label for="profile-country"[^>]*>.*Country/);
     expect(html).toMatch(/<label for="profile-institution"[^>]*>.*Institution/);
-    expect(html).toMatch(/id="profile-country"[^>]*maxLength="100"|maxLength="100"[^>]*id="profile-country"/);
+    expect(html).toMatch(/<select id="profile-country"/);
+    expect(html).toContain('<option value="Italy" data-testid="profile-country-option">');
     expect(html).toMatch(/id="profile-institution"[^>]*maxLength="200"|maxLength="200"[^>]*id="profile-institution"/);
     expect(html).not.toMatch(/name="(country|institution)"[^>]*required/);
   });

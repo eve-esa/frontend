@@ -44,12 +44,12 @@ test.describe("profile required @dev", () => {
       await expect(profileRequired.saveButton).toBeDisabled();
 
       const stamp = `e2e ${Date.now()}`;
-      await profileRequired.fill({ country: `Italy ${stamp}`, institution: `Pi School ${stamp}` });
+      await profileRequired.fill({ country: "Italy", institution: `Pi School ${stamp}` });
       await profileRequired.save();
 
       const me = await api.get<Me>("/users/me");
       expect(me.status).toBe(200);
-      expect(me.body.country).toBe(`Italy ${stamp}`);
+      expect(me.body.country).toBe("Italy");
       expect(me.body.institution).toBe(`Pi School ${stamp}`);
       expect(me.body.first_name ?? "").toBe(names.first_name);
       expect(me.body.last_name ?? "").toBe(names.last_name);

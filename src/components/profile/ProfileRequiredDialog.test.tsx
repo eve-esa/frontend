@@ -105,7 +105,7 @@ describe("ProfileRequiredDialog", () => {
     );
   };
 
-  it("renders both inputs, save and logout under their test ids, with the profile limits", async () => {
+  it("renders the country picker, the institution input, save and logout under their test ids", async () => {
     const html = await render();
     expect(html).toContain('data-testid="profile-required-dialog"');
     expect(html).toContain('data-testid="profile-required-country"');
@@ -115,7 +115,7 @@ describe("ProfileRequiredDialog", () => {
     // Uncontrolled inputs render no value on the server, so the prefill is not
     // visible here; save starts disabled until the schema has run.
     expect(html).toMatch(/disabled=""[^>]*data-testid="profile-required-save"/);
-    expect(html).toMatch(/maxLength="100"/);
+    expect(html).toMatch(/<select id="profile-required-country"/);
     expect(html).toMatch(/maxLength="200"/);
   });
 

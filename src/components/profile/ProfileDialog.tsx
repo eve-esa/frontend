@@ -140,6 +140,7 @@ export const ProfileDialog = ({ isOpen, onOpenChange }: ProfileDialogProps) => {
               idPrefix="profile"
               register={register}
               errors={errors}
+              storedCountry={profile?.country}
             />
           )}
 
