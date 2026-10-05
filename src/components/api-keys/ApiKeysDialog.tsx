@@ -224,7 +224,10 @@ export const ApiKeysDialog = ({
                 )}
 
                 <details className="rounded-lg border border-primary-400/40">
-                  <summary className="cursor-pointer p-3 text-sm font-medium text-natural-100">
+                  <summary
+                    data-testid="api-keys-quickstart-toggle"
+                    className="cursor-pointer p-3 text-sm font-medium text-natural-100"
+                  >
                     Quickstart
                   </summary>
                   <div className="px-3 pb-3">
@@ -268,7 +271,10 @@ export const ApiKeysDialog = ({
               </DialogDescription>
             </DialogHeader>
 
-            <div className="rounded-md border border-primary-400/60 px-3 py-2">
+            <div
+              data-testid="api-key-delete-target"
+              className="rounded-md border border-primary-400/60 px-3 py-2"
+            >
               <div className="truncate text-sm font-medium text-natural-50">
                 {view.key.name}
               </div>

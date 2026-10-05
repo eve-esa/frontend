@@ -104,6 +104,8 @@ export type Api = {
   get<T = unknown>(path: string): Promise<ApiResponse<T>>;
   /** PATCH `/api<path>` with a JSON body and the same bearer. Throws on a production target. */
   patch<T = unknown>(path: string, body: unknown): Promise<ApiResponse<T>>;
+  /** DELETE `/api<path>` with the same bearer, for cleanup. Throws on a production target. */
+  delete<T = unknown>(path: string): Promise<ApiResponse<T>>;
   /** The OIDC access token from the `oidc.user:` session storage entry. */
   bearer(): Promise<string>;
 };
@@ -200,10 +202,13 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
           headers: { Authorization: `Bearer ${await bearer()}` },
         }),
       );
-    const patch = async <T>(apiPath: string, data: unknown): Promise<ApiResponse<T>> => {
+    const refuseOnProd = (method: string, apiPath: string) => {
       if (!canWrite(new URL(baseURL as string).origin, testInfo.project.name)) {
-        throw new Error(`refusing PATCH ${apiPath}: ${baseURL} is a production target`);
+        throw new Error(`refusing ${method} ${apiPath}: ${baseURL} is a production target`);
       }
+    };
+    const patch = async <T>(apiPath: string, data: unknown): Promise<ApiResponse<T>> => {
+      refuseOnProd("PATCH", apiPath);
       return toApiResponse<T>(
         await authedPage.request.patch(`${baseURL}/api${apiPath}`, {
           headers: { Authorization: `Bearer ${await bearer()}` },
@@ -211,7 +216,15 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
         }),
       );
     };
-    await use({ get, patch, bearer });
+    const del = async <T>(apiPath: string): Promise<ApiResponse<T>> => {
+      refuseOnProd("DELETE", apiPath);
+      return toApiResponse<T>(
+        await authedPage.request.delete(`${baseURL}/api${apiPath}`, {
+          headers: { Authorization: `Bearer ${await bearer()}` },
+        }),
+      );
+    };
+    await use({ get, patch, delete: del, bearer });
   },
 });
 
