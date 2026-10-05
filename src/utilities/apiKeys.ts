@@ -230,3 +230,60 @@ export const buildQuickstartSteps = (
     ].join("\n"),
   },
 ];
+
+export type ShellTokenKind = "command" | "flag" | "string" | "variable" | "operator" | "text";
+export type ShellToken = { kind: ShellTokenKind; text: string };
+
+// A double-quoted string (escapes included), a $VAR, a -flag after a space, a
+// VAR= assignment name, then `=` or a trailing line continuation.
+const SHELL_PATTERN =
+  /("(?:\\.|[^"\\])*")|(\$[A-Za-z_]\w*)|((?<=\s)-{1,2}[A-Za-z][\w-]*)|([A-Za-z_]\w*(?==))|(=|\\$)/g;
+const SHELL_PATTERN_KINDS: ShellTokenKind[] = ["string", "variable", "flag", "variable", "operator"];
+const LEADING_WORD = /^(\s*)([A-Za-z_][\w-]*)(?=\s|$)/;
+
+const pushToken = (tokens: ShellToken[], kind: ShellTokenKind, text: string) => {
+  if (!text) return;
+  const last = tokens[tokens.length - 1];
+  if (last?.kind === kind) last.text += text;
+  else tokens.push({ kind, text });
+};
+
+/**
+ * Splits a Quickstart command into coloured runs, for display only: joining
+ * the texts gives back `code` exactly. Covers the shell the Quickstart writes
+ * (`export`, `curl` with flags, quoted strings with `$VAR` inside, `\`
+ * continuations), not shell in general. The first word of a line that does not
+ * continue the previous one is the command.
+ */
+export const tokenizeShell = (code: string): ShellToken[] => {
+  const tokens: ShellToken[] = [];
+  let continued = false;
+  code.split("\n").forEach((line, index) => {
+    if (index > 0) pushToken(tokens, "text", "\n");
+    let rest = line;
+    const leading = continued ? null : LEADING_WORD.exec(line);
+    if (leading) {
+      pushToken(tokens, "text", leading[1]);
+      pushToken(tokens, "command", leading[2]);
+      rest = line.slice(leading[0].length);
+    }
+    let cursor = 0;
+    for (const match of rest.matchAll(SHELL_PATTERN)) {
+      pushToken(tokens, "text", rest.slice(cursor, match.index));
+      const group = match.slice(1).findIndex((value) => value !== undefined);
+      const kind = SHELL_PATTERN_KINDS[group];
+      if (kind === "string") {
+        // The shell expands $VAR inside double quotes: colour it there too.
+        for (const part of match[0].split(/(\$[A-Za-z_]\w*)/)) {
+          pushToken(tokens, part.startsWith("$") ? "variable" : "string", part);
+        }
+      } else {
+        pushToken(tokens, kind, match[0]);
+      }
+      cursor = match.index + match[0].length;
+    }
+    pushToken(tokens, "text", rest.slice(cursor));
+    continued = line.endsWith("\\");
+  });
+  return tokens;
+};
