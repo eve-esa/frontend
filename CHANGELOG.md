@@ -16,6 +16,14 @@ Release and promotes staging. Production is promoted from there by an explicit d
 The "Pilot history" section at the bottom predates this repository's version series: no tag was ever
 cut for it. The released tags start at `v0.0.1`.
 
+## [1.1.1](https://github.com/eve-esa/frontend/compare/v1.1.0...v1.1.1) (2026-10-05)
+
+
+### Fixed
+
+* **api-keys:** clearer delete confirmation ([#138](https://github.com/eve-esa/frontend/issues/138)) ([32e50d9](https://github.com/eve-esa/frontend/commit/32e50d966717e59b580625cee32e3facf9fac2f6))
+* **api-keys:** tidy the key dialog and colour the quickstart ([#136](https://github.com/eve-esa/frontend/issues/136)) ([d4b9a34](https://github.com/eve-esa/frontend/commit/d4b9a34f6b3dee7ef0750c576cd5c2b0fa4a45d8))
+
 ## [1.1.0](https://github.com/eve-esa/frontend/compare/v1.0.0...v1.1.0) (2026-10-05)
 
 
