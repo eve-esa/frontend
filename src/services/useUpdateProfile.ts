@@ -60,6 +60,24 @@ export const toProfileUpdate = (
   return body;
 };
 
+/**
+ * The body the required profile dialog sends. `PATCH /users` always writes both names, so the
+ * ones the profile already has go along unchanged and only country and institution change.
+ */
+export const toRequiredProfileUpdate = (
+  profile: { first_name?: string | null; last_name?: string | null },
+  data: { country?: string | null; institution?: string | null }
+): ProfileUpdate =>
+  toProfileUpdate(
+    {
+      first_name: profile.first_name,
+      last_name: profile.last_name,
+      country: data.country,
+      institution: data.institution,
+    },
+    true
+  );
+
 export const httpUpdateProfile = async (body: ProfileUpdate) => {
   const { data } = await api.patch(`/users`, body);
   return data;

@@ -31,7 +31,7 @@ The suite signs in once per worker through the hosted login and keeps the identi
 ## Layout
 
 - `e2e/pages/`: one page object per screen or dialog. Methods return typed values (`sourcesCount(): Promise<number>`), never raw locators for a test to poke at.
-- `e2e/fixtures/index.ts`: the `test` to import. It provides `authedPage`, the page objects, and `api`, a `GET /api/...` helper that sends the bearer the signed-in app holds.
+- `e2e/fixtures/index.ts`: the `test` to import. It provides `authedPage`, the page objects, and `api`, `GET` and `PATCH /api/...` helpers that send the bearer the signed-in app holds. When the required profile dialog covers the chat after sign-in (`FEATURE_PROFILE_FIELDS` on, the test account lacking country or institution), the sign-in fills it with fixed values; the `prod-readonly` project fails instead of writing.
 - `e2e/specs/`: one file per behaviour. Each test checks the UI and then reads the persisted state through `api`.
 
 ## Add a page object

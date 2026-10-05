@@ -7,8 +7,15 @@ import {
   httpUpdateProfile,
   toProfileFormValues,
   toProfileUpdate,
+  toRequiredProfileUpdate,
 } from "./useUpdateProfile";
-import { ProfileSchema } from "./useMe";
+import {
+  PROFILE_COUNTRY_MAX,
+  PROFILE_INSTITUTION_MAX,
+  ProfileSchema,
+  RequiredProfileFieldsSchema,
+  RequiredProfileSchema,
+} from "./useMe";
 
 beforeEach(() => {
   patch.mockReset();
@@ -106,5 +113,62 @@ describe("ProfileSchema limits", () => {
   it("rejects a country over 100 and an institution over 200 characters", () => {
     expect(ProfileSchema.safeParse({ country: "a".repeat(101) }).success).toBe(false);
     expect(ProfileSchema.safeParse({ institution: "b".repeat(201) }).success).toBe(false);
+  });
+});
+
+describe("toRequiredProfileUpdate, the body of the required profile dialog", () => {
+  it("keeps the names the profile has and sends both fields trimmed", () => {
+    expect(
+      toRequiredProfileUpdate(
+        { first_name: "Ada", last_name: "Lovelace" },
+        { country: " Italy ", institution: "ESA ESRIN" },
+      ),
+    ).toEqual({
+      first_name: "Ada",
+      last_name: "Lovelace",
+      country: "Italy",
+      institution: "ESA ESRIN",
+    });
+  });
+
+  it("sends empty names when the profile has none, as the profile dialog does", () => {
+    expect(
+      toRequiredProfileUpdate({ first_name: null }, { country: "Italy", institution: "ESA" }),
+    ).toMatchObject({ first_name: "", last_name: "" });
+  });
+});
+
+describe("RequiredProfileFieldsSchema, the required profile dialog", () => {
+  it("accepts both fields set", () => {
+    expect(
+      RequiredProfileFieldsSchema.safeParse({ country: "Italy", institution: "ESA" }).success,
+    ).toBe(true);
+  });
+
+  it.each([
+    [{ country: "", institution: "ESA" }, ["country"]],
+    [{ country: "Italy", institution: "   " }, ["institution"]],
+    [{ country: null }, ["country", "institution"]],
+  ])("flags the missing field of %j", (value, paths) => {
+    const result = RequiredProfileFieldsSchema.safeParse(value);
+    expect(result.success).toBe(false);
+    expect(result.error?.issues.map((issue) => issue.path[0])).toEqual(paths);
+  });
+
+  it("keeps the length limits of the profile dialog", () => {
+    const result = RequiredProfileFieldsSchema.safeParse({
+      country: "x".repeat(PROFILE_COUNTRY_MAX + 1),
+      institution: "x".repeat(PROFILE_INSTITUTION_MAX + 1),
+    });
+    expect(result.error?.issues.map((issue) => issue.message)).toEqual([
+      `Country must be at most ${PROFILE_COUNTRY_MAX} characters`,
+      `Institution must be at most ${PROFILE_INSTITUTION_MAX} characters`,
+    ]);
+  });
+
+  it("is required only in RequiredProfileSchema: ProfileSchema still accepts empty fields", () => {
+    const profile = { first_name: "Ada", last_name: "Lovelace", country: "", institution: "" };
+    expect(ProfileSchema.safeParse(profile).success).toBe(true);
+    expect(RequiredProfileSchema.safeParse(profile).success).toBe(false);
   });
 });

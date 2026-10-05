@@ -1,11 +1,18 @@
 import fs from "node:fs";
 import path from "node:path";
-import { test as base, expect, type BrowserContext, type Page } from "@playwright/test";
+import {
+  test as base,
+  expect,
+  type APIResponse,
+  type BrowserContext,
+  type Page,
+} from "@playwright/test";
 import {
   ApiKeysDialog,
   ChatPage,
   LoginPage,
   ProfileDialog,
+  ProfileRequiredDialog,
   SettingsPanel,
 } from "../pages";
 
@@ -31,12 +38,18 @@ export async function skipOnboarding(context: BrowserContext, appOrigin: string)
   }, appOrigin);
 }
 
+/** What the sign-in fills when the required profile dialog blocks the chat. */
+export const E2E_PROFILE_FIELDS = { country: "Italy", institution: "EVE e2e" };
+
 /**
  * Opens the app and lands on the chat. With a live identity provider session
  * (cookie in the storage state) the redirect comes straight back; without one
- * the hosted login is filled.
+ * the hosted login is filled. With FEATURE_PROFILE_FIELDS on and the test
+ * account lacking country or institution, the required profile dialog covers
+ * the chat: it is filled with E2E_PROFILE_FIELDS, except where the project
+ * must not write (`canWrite` false), which fails with the reason instead.
  */
-export async function signIn(page: Page, appOrigin: string): Promise<void> {
+export async function signIn(page: Page, appOrigin: string, canWrite = true): Promise<void> {
   if (!E2E_EMAIL || !E2E_PASSWORD) {
     throw new Error("E2E_EMAIL and E2E_PASSWORD must be set to run the suite");
   }
@@ -58,6 +71,18 @@ export async function signIn(page: Page, appOrigin: string): Promise<void> {
     );
   }
   await chat.composer.waitReady();
+  // The profile has loaded before the chat renders, so the dialog is already
+  // up when the composer is.
+  const required = new ProfileRequiredDialog(page);
+  if (await required.isOpen()) {
+    if (!canWrite) {
+      throw new Error(
+        "the required profile dialog blocks the chat: set country and institution on the test account",
+      );
+    }
+    await required.fill(E2E_PROFILE_FIELDS);
+    await required.save();
+  }
 }
 
 export type ApiResponse<T> = { status: number; body: T };
@@ -65,6 +90,8 @@ export type ApiResponse<T> = { status: number; body: T };
 export type Api = {
   /** GET `/api<path>` with the bearer the signed-in app holds. */
   get<T = unknown>(path: string): Promise<ApiResponse<T>>;
+  /** PATCH `/api<path>` with a JSON body and the same bearer. */
+  patch<T = unknown>(path: string, body: unknown): Promise<ApiResponse<T>>;
   /** The OIDC access token from the `oidc.user:` session storage entry. */
   bearer(): Promise<string>;
 };
@@ -74,6 +101,7 @@ type TestFixtures = {
   chat: ChatPage;
   settings: SettingsPanel;
   profile: ProfileDialog;
+  profileRequired: ProfileRequiredDialog;
   apiKeys: ApiKeysDialog;
   api: Api;
 };
@@ -91,7 +119,7 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
       const origin = new URL(baseURL).origin;
       await skipOnboarding(context, origin);
       const page = await context.newPage();
-      await signIn(page, origin);
+      await signIn(page, origin, workerInfo.project.name !== "prod-readonly");
       await context.storageState({ path: file });
       await context.close();
       await use(file);
@@ -103,10 +131,10 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     await use(authState);
   },
 
-  authedPage: async ({ page, context, baseURL }, use) => {
+  authedPage: async ({ page, context, baseURL }, use, testInfo) => {
     const origin = new URL(baseURL as string).origin;
     await skipOnboarding(context, origin);
-    await signIn(page, origin);
+    await signIn(page, origin, testInfo.project.name !== "prod-readonly");
     await use(page);
   },
 
@@ -120,6 +148,10 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
 
   profile: async ({ authedPage, chat }, use) => {
     await use(new ProfileDialog(authedPage, chat));
+  },
+
+  profileRequired: async ({ authedPage }, use) => {
+    await use(new ProfileRequiredDialog(authedPage));
   },
 
   apiKeys: async ({ authedPage, chat }, use) => {
@@ -140,10 +172,7 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
       if (!token) throw new Error("no oidc.user: entry in session storage");
       return token;
     };
-    const get = async <T>(apiPath: string): Promise<ApiResponse<T>> => {
-      const response = await authedPage.request.get(`${baseURL}/api${apiPath}`, {
-        headers: { Authorization: `Bearer ${await bearer()}` },
-      });
+    const toApiResponse = async <T>(response: APIResponse): Promise<ApiResponse<T>> => {
       const text = await response.text();
       let body: unknown = text;
       try {
@@ -153,7 +182,20 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
       }
       return { status: response.status(), body: body as T };
     };
-    await use({ get, bearer });
+    const get = async <T>(apiPath: string): Promise<ApiResponse<T>> =>
+      toApiResponse<T>(
+        await authedPage.request.get(`${baseURL}/api${apiPath}`, {
+          headers: { Authorization: `Bearer ${await bearer()}` },
+        }),
+      );
+    const patch = async <T>(apiPath: string, data: unknown): Promise<ApiResponse<T>> =>
+      toApiResponse<T>(
+        await authedPage.request.patch(`${baseURL}/api${apiPath}`, {
+          headers: { Authorization: `Bearer ${await bearer()}` },
+          data,
+        }),
+      );
+    await use({ get, patch, bearer });
   },
 });
 

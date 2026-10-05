@@ -1,0 +1,73 @@
+import { flagOn } from "../pages";
+import { expect, test } from "../fixtures";
+
+type Me = {
+  first_name?: string | null;
+  last_name?: string | null;
+  country?: string | null;
+  institution?: string | null;
+};
+
+test.describe("profile required @dev", () => {
+  test("country and institution are asked before the chat and saved", async ({
+    chat,
+    profileRequired,
+    api,
+  }) => {
+    test.skip(
+      !flagOn(await chat.servedConfig(), "FEATURE_PROFILE_FIELDS", false),
+      "FEATURE_PROFILE_FIELDS is off in the served config",
+    );
+
+    // The sign-in fixture has already filled the dialog if the account needed it.
+    const before = await api.get<Me>("/users/me");
+    expect(before.status).toBe(200);
+    const names = {
+      first_name: before.body.first_name ?? "",
+      last_name: before.body.last_name ?? "",
+    };
+
+    const cleared = await api.patch<Me>("/users", { ...names, country: "", institution: "" });
+    if (cleared.status !== 200 || cleared.body.country || cleared.body.institution) {
+      // The backend kept the values: the dialog has nothing to ask.
+      await chat.goto();
+      await expect(profileRequired.root).toBeHidden();
+      const me = await api.get<Me>("/users/me");
+      expect(me.body.country).toBeTruthy();
+      expect(me.body.institution).toBeTruthy();
+      return;
+    }
+
+    try {
+      await chat.goto();
+      await expect(profileRequired.root).toBeVisible();
+
+      // No way out other than saving or signing out.
+      await chat.page.keyboard.press("Escape");
+      await chat.page.mouse.click(5, 5);
+      await expect(profileRequired.root).toBeVisible();
+      await expect(profileRequired.saveButton).toBeDisabled();
+
+      const stamp = `e2e ${Date.now()}`;
+      await profileRequired.fill({ country: `Italy ${stamp}`, institution: `Pi School ${stamp}` });
+      await profileRequired.save();
+
+      const me = await api.get<Me>("/users/me");
+      expect(me.status).toBe(200);
+      expect(me.body.country).toBe(`Italy ${stamp}`);
+      expect(me.body.institution).toBe(`Pi School ${stamp}`);
+      expect(me.body.first_name ?? "").toBe(names.first_name);
+      expect(me.body.last_name ?? "").toBe(names.last_name);
+
+      await chat.goto();
+      await expect(profileRequired.root).toBeHidden();
+    } finally {
+      // Leave the account as it was found.
+      await api.patch("/users", {
+        ...names,
+        country: before.body.country ?? "",
+        institution: before.body.institution ?? "",
+      });
+    }
+  });
+});
