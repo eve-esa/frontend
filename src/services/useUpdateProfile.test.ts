@@ -46,6 +46,31 @@ describe("toProfileFormValues, what the dialog is prefilled with", () => {
     expect(values.country).toBe("");
     expect(values.institution).toBe("");
   });
+
+  it.each(["", "   "])("treats a stored name of %j as no name", (name) => {
+    const values = toProfileFormValues({ first_name: name, last_name: name });
+    expect(values.first_name).toBeUndefined();
+    expect(values.last_name).toBeUndefined();
+  });
+
+  it("lets a profile with empty names save once country and institution are set", () => {
+    const stored = { first_name: "", last_name: "", country: "Italy", institution: null };
+    // Before the fix the prefilled "" failed the name rule and Save stayed disabled.
+    expect(RequiredProfileSchema.safeParse(stored).success).toBe(false);
+    const edited = { ...toProfileFormValues(stored), institution: "ESA ESRIN" };
+    expect(RequiredProfileSchema.safeParse(edited).success).toBe(true);
+    expect(toProfileUpdate(edited, true)).toEqual({
+      first_name: "",
+      last_name: "",
+      country: "Italy",
+      institution: "ESA ESRIN",
+    });
+  });
+
+  it("still refuses a name the user empties", () => {
+    const edited = { ...toProfileFormValues({ first_name: "Ada", last_name: "Lovelace" }), first_name: "" };
+    expect(ProfileSchema.safeParse(edited).success).toBe(false);
+  });
 });
 
 describe("toProfileUpdate, the PATCH /users body", () => {
