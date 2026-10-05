@@ -72,13 +72,9 @@ export const ApiKeyCreateForm = ({ onCancel, onCreated }: ApiKeyCreateFormProps)
 
         <fieldset className="flex flex-col gap-2">
           <legend className="text-sm font-medium text-natural-100">Expiration</legend>
-          <div className="flex flex-col gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {EXPIRY_OPTIONS.map((option) => (
-              <label
-                key={option.value}
-                htmlFor={`api-key-expiry-${option.value}`}
-                className="flex items-center gap-2 text-sm text-natural-100"
-              >
+              <label key={option.value} htmlFor={`api-key-expiry-${option.value}`}>
                 <input
                   id={`api-key-expiry-${option.value}`}
                   data-testid={`api-key-expiry-${option.value}`}
@@ -87,8 +83,11 @@ export const ApiKeyCreateForm = ({ onCancel, onCreated }: ApiKeyCreateFormProps)
                   value={option.value}
                   checked={expiry === option.value}
                   onChange={() => setExpiry(option.value)}
+                  className="peer sr-only"
                 />
-                {option.label}
+                <span className="flex h-full cursor-pointer items-center justify-center border-2 border-primary-400 px-3 py-2 text-center text-sm font-['NotesESA'] text-natural-100 [transition:background_0.3s_ease-in] hover:bg-primary-700 peer-checked:border-primary-300 peer-checked:bg-primary-500 peer-checked:text-natural-50 peer-focus-visible:ring-2 peer-focus-visible:ring-primary-400">
+                  {option.label}
+                </span>
               </label>
             ))}
           </div>

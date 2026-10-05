@@ -4,6 +4,7 @@ import {
   buildCreateApiKeyBody,
   buildQuickstartSteps,
   pickQuickstartModel,
+  tokenizeShell,
   cascadeWarning,
   countActive,
   countDescendants,
@@ -349,5 +350,48 @@ describe("pickQuickstartModel", () => {
   it("falls back to the first listed, then to null", () => {
     expect(pickQuickstartModel(["jsc/alias-eve"])).toBe("jsc/alias-eve");
     expect(pickQuickstartModel([])).toBeNull();
+  });
+});
+
+describe("tokenizeShell", () => {
+  const steps = buildQuickstartSteps("https://dev.eve-chat.chat/api", "eve/eve-esa/EVE-Instruct");
+  const runs = (code: string) =>
+    tokenizeShell(code).map((token) => `${token.kind}:${token.text}`);
+
+  it("gives back every Quickstart step exactly when joined", () => {
+    for (const step of steps) {
+      expect(tokenizeShell(step.code).map((token) => token.text).join("")).toBe(step.code);
+    }
+  });
+
+  it("colours an export: command, variable name, operator, string", () => {
+    expect(runs('export EVE_API_KEY="<your API key>"')).toEqual([
+      "command:export",
+      "text: ",
+      "variable:EVE_API_KEY",
+      "operator:=",
+      'string:"<your API key>"',
+    ]);
+  });
+
+  it("colours flags, $VAR inside strings and the line continuation", () => {
+    expect(runs('curl https://x/v1 \\\n  -H "Authorization: Bearer $EVE_API_KEY"')).toEqual([
+      "command:curl",
+      "text: https://x/v1 ",
+      "operator:\\",
+      "text:\n  ",
+      "flag:-H",
+      "text: ",
+      'string:"Authorization: Bearer ',
+      "variable:$EVE_API_KEY",
+      'string:"',
+    ]);
+  });
+
+  it("keeps escaped quotes inside one string", () => {
+    const tokens = tokenizeShell(steps[2].code);
+    const body = tokens.filter((token) => token.kind === "string").map((token) => token.text).join("");
+    expect(body).toContain('\\"messages\\"');
+    expect(tokens.some((token) => token.kind === "variable" && token.text === "$EVE_MODEL")).toBe(true);
   });
 });

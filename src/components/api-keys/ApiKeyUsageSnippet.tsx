@@ -4,7 +4,19 @@ import {
   buildQuickstartSteps,
   pickQuickstartModel,
   resolveApiBaseUrl,
+  tokenizeShell,
+  type ShellTokenKind,
 } from "@/utilities/apiKeys";
+
+// Same palette as the agent trace JSON (JsonTree), so code reads alike.
+const SHELL_TOKEN_CLASS: Record<ShellTokenKind, string> = {
+  command: "text-json-key",
+  flag: "text-json-boolean",
+  string: "text-json-string",
+  variable: "text-json-number",
+  operator: "text-primary-300",
+  text: "",
+};
 
 /**
  * Quickstart: the base URL, then one command per step, each with its own copy
@@ -53,7 +65,11 @@ export const ApiKeyUsageSnippet = () => {
             </span>
             <div className="relative rounded-md border border-primary-400/60 bg-natural-900/60">
               <pre className="overflow-x-auto whitespace-pre-wrap break-words py-2 pl-3 pr-10 font-mono text-xs leading-5 text-natural-100">
-                {step.code}
+                {tokenizeShell(step.code).map((token, tokenIndex) => (
+                  <span key={tokenIndex} className={SHELL_TOKEN_CLASS[token.kind]}>
+                    {token.text}
+                  </span>
+                ))}
               </pre>
               <CopyButton
                 value={step.code}
