@@ -16,6 +16,31 @@ Release and promotes staging. Production is promoted from there by an explicit d
 The "Pilot history" section at the bottom predates this repository's version series: no tag was ever
 cut for it. The released tags start at `v0.0.1`.
 
+## [1.0.0](https://github.com/eve-esa/frontend/compare/v0.0.20...v1.0.0) (2026-10-05)
+
+### Added
+- Sign-in through the EVE identity provider; existing accounts keep their password and sign in once more.
+- Streamed answers with Stop, keepalives on the stream, partial answer kept after a stop.
+- OpenAI-compatible gateway at `/api/v1` with API keys and token budget charging (API key creation closed in prod, `API_KEY_MAX_ACTIVE_PER_USER=0`).
+- Operator approval past the sign-up limit, with on hold, approved and welcome mails (`SIGNUP_AUTO_APPROVE_LIMIT`; prod 0 at launch, D16: every sign-up is approved, the gate can be re-armed with one tfvars change).
+- Country and institution on the profile (flag FEATURE_PROFILE_FIELDS, prod off).
+- Launch invite command for legacy accounts (`send_cohort_invite`, dry run by default).
+- A retry notice when the service is busy: past the in-flight cap the backend answers 429 with `Retry-After`.
+- Retention for conversation checkpoints (`CHECKPOINT_RETENTION_DAYS`, 30 days).
+- Per-user request rate limit on chat, retrieval, uploads, `/api/v1` and MCP tool calls (flag FEATURE_REQUEST_RATE_LIMIT, prod off): 429 `rate_limited` with `Retry-After`, the chat retries once after the countdown.
+- Behind flags: agentic chat (flag FEATURE_AGENTIC_CHAT, prod off), toolkits (flag FEATURE_TOOLKITS, prod off), model picker (flag FEATURE_MODEL_PICKER, prod off), custom models (flag FEATURE_CUSTOM_MODELS, prod off), API keys page (flag FEATURE_API_KEYS, prod off), attachments, artifacts, answered-by, bug report, status notices (prod off).
+### Changed
+- Answers come from an ordered model chain with failover, JSC first; token budgets apply to every chat route and to `/api/v1`.
+- Retrieval no longer blocks the server: embeddings, rerank and Qdrant reads are async with a deadline and a provider fallback; the model breaker is shared across workers.
+- Sources are grouped by document; the copy mark is sent only for persisted messages; the journal filter left the control panel.
+- Deleting a collection that holds documents works on DocumentDB and frees the document slots.
+- Copy without the pilot wording, base font follows the browser, About, Contact and Privacy links open their pages.
+- Classification filters, My collections and the beta badge are flags (prod on).
+### Removed
+- Legacy auth endpoints and in-app login pages; `/users/me` no longer returns a password hash.
+- `DELETE /artifacts/{id}`: an uploaded artifact is permanent.
+- Dead settings, packages and modules (JWT settings, SATCOM Qdrant pair, SiliconFlow, fallback embedding key).
+
 ## [0.0.20](https://github.com/eve-esa/frontend/compare/v0.0.19...v0.0.20) (2026-09-24)
 
 
@@ -278,4 +303,3 @@ This project follows [Semantic Versioning](https://semver.org/):
 - **Patch Release** (x.y.z): Bug fixes, security updates
 
 ### Links
-
