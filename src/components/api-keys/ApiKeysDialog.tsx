@@ -263,22 +263,28 @@ export const ApiKeysDialog = ({
             <DialogHeader>
               <DialogTitle>Delete API key?</DialogTitle>
               <DialogDescription>
-                {view.key.name} ({formatKeyMask(view.key.token_suffix)}) stops
-                working immediately; apps using it will get 401 errors. This
-                cannot be undone.
-                {view.descendants > 0 && (
-                  <>
-                    {" "}
-                    <span
-                      data-testid="api-key-delete-cascade-warning"
-                      className="text-danger-100"
-                    >
-                      {cascadeWarning(view.descendants)}
-                    </span>
-                  </>
-                )}
+                The key stops working right away. Any app or script that uses
+                it gets a 401 error. You cannot undo this.
               </DialogDescription>
             </DialogHeader>
+
+            <div className="rounded-md border border-primary-400/60 px-3 py-2">
+              <div className="truncate text-sm font-medium text-natural-50">
+                {view.key.name}
+              </div>
+              <code className="font-mono text-xs text-primary-300">
+                {formatKeyMask(view.key.token_suffix)}
+              </code>
+            </div>
+
+            {view.descendants > 0 && (
+              <p
+                data-testid="api-key-delete-cascade-warning"
+                className="rounded-md border border-danger-100/60 bg-danger-100/10 p-3 text-sm text-danger-100"
+              >
+                {cascadeWarning(view.descendants)}
+              </p>
+            )}
 
             {deleteError && (
               <p role="alert" data-testid="api-key-delete-error" className="text-sm text-danger-400">
