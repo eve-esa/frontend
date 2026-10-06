@@ -13,7 +13,7 @@ export type HallucinationCopyParts = {
  * empty, so the button copied an empty string while still flashing success.
  *
  * The sections mirror MessageFooter's rendered panel:
- *   - "Possible hallucination detected: <Yes|No> — <reason>"
+ *   - "Possible hallucination detected: <Yes|No>: <reason>"
  *   - "Searched for: <rewrittenQuery>"      (only when a rewrite exists)
  *   - "Alternative answer:\n<answer>"        (only when flagged, matching the UI)
  *
@@ -30,7 +30,7 @@ export function buildHallucinationCopyText({
   const verdict = label === 1 ? "Yes" : label === 0 ? "No" : "";
   const trimmedReason = reason.trim();
   if (verdict || trimmedReason) {
-    const detail = [verdict, trimmedReason].filter(Boolean).join(" — ");
+    const detail = [verdict, trimmedReason].filter(Boolean).join(": ");
     sections.push(`Possible hallucination detected: ${detail}`);
   }
 

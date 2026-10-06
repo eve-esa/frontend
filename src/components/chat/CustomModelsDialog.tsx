@@ -132,7 +132,7 @@ export const CustomModelsDialog = ({
                   <div className="min-w-0">
                     <p className="font-medium">{model.display_name}</p>
                     <p className="text-sm text-natural-400 truncate">
-                      {model.provider_display_name} · {model.model_display_name}
+                      {model.provider_display_name}: {model.model_display_name}
                     </p>
                   </div>
                   <div className="flex gap-2 shrink-0">
