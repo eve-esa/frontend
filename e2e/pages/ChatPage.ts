@@ -48,6 +48,23 @@ export class ChatPage {
     return this.conversationId() as string;
   }
 
+  /**
+   * Waits until the turn just sent has ended. `Composer.waitIdle` alone can pass
+   * before the stream starts (Stop not rendered yet, Send already gone), so this
+   * first waits for Stop or for an ended last turn (answer footer, error or
+   * stopped), then for Stop to go and Send to come back, all within `timeout`.
+   */
+  async waitAnswered(timeout = 240_000): Promise<void> {
+    const last = this.messages.last;
+    const ended = last
+      .getByTestId("message-copy")
+      .or(last.getByTestId("message-error"))
+      .or(last.getByTestId("message-stopped"));
+    await expect(this.composer.stopButton.or(ended).first()).toBeVisible({ timeout: 60_000 });
+    await expect(this.composer.stopButton).toBeHidden({ timeout });
+    await expect(this.composer.sendButton).toBeVisible({ timeout: 30_000 });
+  }
+
   async openConversation(title: string): Promise<void> {
     const item = this.conversations.filter({
       has: this.page.getByTestId("conversation-title").getByText(title, { exact: true }),

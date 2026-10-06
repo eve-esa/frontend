@@ -27,6 +27,8 @@ test.describe("private collections @dev", () => {
     myCollections,
     api,
   }) => {
+    // Upload, a retrieval turn that can be slow on dev, then two deletes.
+    test.setTimeout(420_000);
     test.skip(
       !flagOn(await chat.servedConfig(), "FEATURE_PRIVATE_COLLECTIONS", false),
       "FEATURE_PRIVATE_COLLECTIONS is off in the served config",
@@ -73,33 +75,47 @@ test.describe("private collections @dev", () => {
       await settings.setYearRange(2015, 2020);
       await settings.save();
 
-      await chat.newChat();
-      await chat.composer.send(FACT_QUESTION);
-      const conversationId = await chat.waitForConversationId();
-      await chat.composer.waitIdle();
+      // The answer half runs in its own try: a slow, failed or sourceless
+      // turn is reported, but the delete steps below still run and prove
+      // the document and collection deletes (B7).
+      let answerFailure: unknown = null;
+      try {
+        await chat.newChat();
+        await chat.composer.send(FACT_QUESTION);
+        const conversationId = await chat.waitForConversationId();
+        // Retrieval on dev can take tens of seconds: wait for the turn itself.
+        await chat.waitAnswered();
 
-      // 5. The answer quotes the fact or its sources list the upload, and the
-      // persisted turn holds a document from the private collection.
-      const answer = await chat.messages.lastAnswerText();
-      const quoted = /4\.2\s*(k\b|kelvin)/i.test(answer);
-      let listed = false;
-      if ((await chat.messages.sourcesCount()) > 0) {
-        await chat.messages.openSources();
-        const titles = await chat.page.getByTestId("source-title").allInnerTexts();
-        listed = titles.some((title) => title.includes("private-fact"));
+        // 5. The answer quotes the fact or its sources list the upload, and the
+        // persisted turn holds a document from the private collection. Soft
+        // checks: they fail the test without skipping the deletes.
+        const answer = await chat.messages.lastAnswerText();
+        const quoted = /4\.2\s*(k\b|kelvin)/i.test(answer);
+        let listed = false;
+        if ((await chat.messages.sourcesCount()) > 0) {
+          await chat.messages.openSources();
+          const titles = await chat.page.getByTestId("source-title").allInnerTexts();
+          listed = titles.some((title) => title.includes("private-fact"));
+        }
+        expect
+          .soft(quoted || listed, `answer neither quotes the fact nor lists ${FILE_NAME}`)
+          .toBe(true);
+
+        await expect
+          .poll(async () => (await lastPersistedTurn(api, conversationId)).documents, {
+            timeout: 30_000,
+          })
+          .toBeGreaterThan(0);
+        const persisted = JSON.stringify(await lastPersistedDocuments(api, conversationId));
+        expect
+          .soft(
+            [collectionId, documentId, FILE_NAME].some((marker) => persisted.includes(marker)),
+            "no persisted document comes from the private collection",
+          )
+          .toBe(true);
+      } catch (error) {
+        answerFailure = error;
       }
-      expect(quoted || listed, `answer neither quotes the fact nor lists ${FILE_NAME}`).toBe(true);
-
-      await expect
-        .poll(async () => (await lastPersistedTurn(api, conversationId)).documents, {
-          timeout: 30_000,
-        })
-        .toBeGreaterThan(0);
-      const persisted = JSON.stringify(await lastPersistedDocuments(api, conversationId));
-      expect(
-        [collectionId, documentId, FILE_NAME].some((marker) => persisted.includes(marker)),
-        "no persisted document comes from the private collection",
-      ).toBe(true);
 
       // 6. Delete the document from the UI; the API row goes (the Qdrant
       // points follow once the document_id index is on dev).
@@ -118,6 +134,8 @@ test.describe("private collections @dev", () => {
         .poll(async () => (await collections()).map((c) => c.id), { timeout: 30_000 })
         .not.toContain(collectionId);
       collectionId = null;
+
+      if (answerFailure) throw answerFailure;
     } finally {
       if (collectionId) await api.delete(`/collections/${collectionId}`);
     }
