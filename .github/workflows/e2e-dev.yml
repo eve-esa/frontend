@@ -5,14 +5,8 @@
 # Staging runs from the release tag that was promoted, in the esa-eve-staging environment, whose
 # branch policy accepts v* tags only:
 #   gh workflow run "e2e: dev" -R eve-esa/frontend --ref vX.Y.Z -f target=staging
-#
-# eve-esa/backend calls this file through workflow_call after every successful backend dev
-# deploy, so a backend-only merge also gets a dev run. A called workflow runs in the caller's
-# repository and reads the caller's github context and esa-eve-dev environment, so the checkout
-# below names this repository and takes main whenever the caller is not this repository, and
-# the target is always dev there, whatever the caller passes.
 name: "e2e: dev"
-run-name: "e2e ${{ (github.repository != 'eve-esa/frontend' && 'dev') || inputs.target || 'dev' }}"
+run-name: "e2e ${{ inputs.target || 'dev' }}"
 
 on:
   workflow_run:
@@ -26,16 +20,9 @@ on:
         default: dev
         type: choice
         options: [dev, staging]
-  workflow_call:
-    inputs:
-      target:
-        description: "Project to run (dev)"
-        required: false
-        default: dev
-        type: string
 
 concurrency:
-  group: "e2e-${{ (github.repository != 'eve-esa/frontend' && 'dev') || inputs.target || 'dev' }}"
+  group: "e2e-${{ inputs.target || 'dev' }}"
   cancel-in-progress: false
 
 permissions:
@@ -46,7 +33,7 @@ jobs:
   # of the environment's bare branch policy refusal.
   staging-ref:
     name: Staging ref is a release tag
-    if: github.repository == 'eve-esa/frontend' && inputs.target == 'staging'
+    if: inputs.target == 'staging'
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
@@ -71,7 +58,7 @@ jobs:
       && (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    environment: "${{ github.repository == 'eve-esa/frontend' && inputs.target == 'staging' && 'esa-eve-staging' || 'esa-eve-dev' }}"
+    environment: "${{ inputs.target == 'staging' && 'esa-eve-staging' || 'esa-eve-dev' }}"
     container:
       # Same Playwright version as the devDependency: the browsers ship in the image.
       image: mcr.microsoft.com/playwright:v1.63.0-noble
@@ -79,7 +66,7 @@ jobs:
       CI: "true"
       E2E_EMAIL: ${{ secrets.E2E_EMAIL }}
       E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
-      E2E_PROJECT: "${{ (github.repository != 'eve-esa/frontend' && 'dev') || inputs.target || 'dev' }}"
+      E2E_PROJECT: ${{ inputs.target || 'dev' }}
     steps:
       - name: Check the test account secrets
         run: |
@@ -91,10 +78,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          repository: eve-esa/frontend
           # The commit dev just deployed, or the dispatched ref (the release tag for staging).
-          # Called from another repository, that commit is not a frontend commit: dev serves main.
-          ref: ${{ github.repository == 'eve-esa/frontend' && (github.event.workflow_run.head_sha || github.sha) || 'main' }}
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Install dependencies
         run: |
