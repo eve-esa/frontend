@@ -43,7 +43,10 @@ export const ConversationMenubar: React.FC<ConversationMenubarProps> = ({
     >
       <Menubar>
         <MenubarMenu>
-          <MenubarTrigger className="cursor-pointer ">
+          <MenubarTrigger
+            data-testid="conversation-menu-trigger"
+            className="cursor-pointer "
+          >
             <FontAwesomeIcon
               icon={faEllipsisVertical}
               onClick={(e) => {
@@ -61,6 +64,7 @@ export const ConversationMenubar: React.FC<ConversationMenubarProps> = ({
           </MenubarTrigger>
           <MenubarContent side={isMobile ? "right" : "bottom"}>
             <MenubarItem
+              data-testid="conversation-menu-rename"
               onClick={(e) => {
                 e.stopPropagation();
                 onRename(conversation);
@@ -70,6 +74,7 @@ export const ConversationMenubar: React.FC<ConversationMenubarProps> = ({
               Rename
             </MenubarItem>
             <MenubarItem
+              data-testid="conversation-menu-delete"
               className="text-danger-300"
               onClick={(e) => {
                 e.stopPropagation();
