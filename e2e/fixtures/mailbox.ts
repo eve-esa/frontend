@@ -1,18 +1,13 @@
 import type { APIRequestContext, PlaywrightWorkerArgs } from "@playwright/test";
 
 /**
- * Support for the first-time user journey (specs/signup.spec.ts) on the local compose
- * stack: the Mailpit API that catches every mail (Keycloak and the backend mailer) and the
- * Keycloak admin API that removes the account afterwards. Defaults are the compose ones.
+ * Mail catcher client: the Mailpit API of the local compose stack, which catches every mail
+ * (Keycloak and the backend mailer). Used by specs/signup.spec.ts.
  */
 
 type RequestFactory = PlaywrightWorkerArgs["playwright"]["request"];
 
 export const MAILPIT_URL = process.env.E2E_MAILPIT_URL ?? "http://localhost:6080";
-export const KEYCLOAK_URL = process.env.E2E_KEYCLOAK_URL ?? "http://localhost:8080";
-const KEYCLOAK_REALM = process.env.E2E_KEYCLOAK_REALM ?? "eve";
-const KEYCLOAK_ADMIN_USER = process.env.E2E_KEYCLOAK_ADMIN_USER ?? "admin";
-const KEYCLOAK_ADMIN_PASSWORD = process.env.E2E_KEYCLOAK_ADMIN_PASSWORD ?? "admin";
 
 export type Mail = { id: string; subject: string; to: string[]; text: string };
 
@@ -53,6 +48,19 @@ export class Mailbox {
     return (await this.to(address)).find((mail) => subject.test(mail.subject)) ?? null;
   }
 
+  /** Waits for a mail to `address` whose subject matches; throws after `timeoutMs`. */
+  async waitFor(address: string, subject: RegExp, timeoutMs = 30_000): Promise<Mail> {
+    const deadline = Date.now() + timeoutMs;
+    for (;;) {
+      const mail = await this.find(address, subject);
+      if (mail) return mail;
+      if (Date.now() > deadline) {
+        throw new Error(`no mail matching ${subject} to ${address} within ${timeoutMs} ms`);
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1_000));
+    }
+  }
+
   async dispose(): Promise<void> {
     await this.context.dispose();
   }
@@ -61,42 +69,4 @@ export class Mailbox {
 /** The Keycloak e-mail verification link in a mail body. */
 export function verificationLink(text: string): string | null {
   return /(https?:\/\/\S+\/login-actions\/action-token\?\S+)/.exec(text)?.[1] ?? null;
-}
-
-/**
- * Deletes the Keycloak user with this e-mail through the admin API (master realm,
- * admin-cli). Returns whether a user was found and deleted.
- */
-export async function deleteKeycloakUser(factory: RequestFactory, email: string): Promise<boolean> {
-  const context = await factory.newContext({ baseURL: KEYCLOAK_URL });
-  try {
-    const token = await context.post("/realms/master/protocol/openid-connect/token", {
-      form: {
-        grant_type: "password",
-        client_id: "admin-cli",
-        username: KEYCLOAK_ADMIN_USER,
-        password: KEYCLOAK_ADMIN_PASSWORD,
-      },
-    });
-    if (!token.ok()) throw new Error(`Keycloak admin token answered ${token.status()}`);
-    const { access_token: accessToken } = (await token.json()) as { access_token: string };
-    const headers = { Authorization: `Bearer ${accessToken}` };
-    const found = await context.get(`/admin/realms/${KEYCLOAK_REALM}/users`, {
-      headers,
-      params: { email, exact: "true" },
-    });
-    if (!found.ok()) throw new Error(`Keycloak user search answered ${found.status()}`);
-    const users = (await found.json()) as { id: string }[];
-    for (const user of users) {
-      const deleted = await context.delete(`/admin/realms/${KEYCLOAK_REALM}/users/${user.id}`, {
-        headers,
-      });
-      if (deleted.status() !== 204) {
-        throw new Error(`Keycloak user delete answered ${deleted.status()}`);
-      }
-    }
-    return users.length > 0;
-  } finally {
-    await context.dispose();
-  }
 }

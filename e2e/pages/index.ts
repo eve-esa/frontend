@@ -5,6 +5,8 @@ export { LoginPage } from "./LoginPage";
 export { LogoutDialog } from "./LogoutDialog";
 export { MessagePanel } from "./MessagePanel";
 export { MyCollectionsPanel } from "./MyCollectionsPanel";
+export { PendingApprovalPage } from "./PendingApprovalPage";
 export { ProfileDialog } from "./ProfileDialog";
 export { ProfileRequiredDialog } from "./ProfileRequiredDialog";
 export { SettingsPanel } from "./SettingsPanel";
+export { SignupPage, type NewAccount } from "./SignupPage";

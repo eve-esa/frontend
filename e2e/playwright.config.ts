@@ -11,6 +11,9 @@ import { defineConfig, devices } from "@playwright/test";
  * Every project runs the browser specs (`specs/`) and the API specs (`api/`,
  * no browser), so one command covers an environment; `yarn e2e --project=dev
  * api/` runs the API specs alone.
+ *
+ * Specs tagged @signup create a new account on every run, so they are opt-in: skipped
+ * unless `E2E_SIGNUP=1` (docs/features/e2e.md, "First-time user"). CI never sets it.
  */
 const TARGETS = {
   dev: "https://dev.eve-chat.chat",
@@ -20,6 +23,7 @@ const TARGETS = {
 } as const;
 
 const target = (fallback: string): string => process.env.E2E_TARGET || fallback;
+const optIn = process.env.E2E_SIGNUP === "1" ? {} : { grepInvert: /@signup/ };
 const desktop = { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 } };
 
 export default defineConfig({
@@ -44,14 +48,14 @@ export default defineConfig({
     navigationTimeout: 45_000,
   },
   projects: [
-    { name: "dev", use: { ...desktop, baseURL: target(TARGETS.dev) } },
-    { name: "staging", use: { ...desktop, baseURL: target(TARGETS.staging) } },
+    { name: "dev", ...optIn, use: { ...desktop, baseURL: target(TARGETS.dev) } },
+    { name: "staging", ...optIn, use: { ...desktop, baseURL: target(TARGETS.staging) } },
     {
       // Read-only checks only: nothing tagged @prod writes a conversation.
       name: "prod-readonly",
       grep: /@prod/,
       use: { ...desktop, baseURL: target(TARGETS.prod) },
     },
-    { name: "local", use: { ...desktop, baseURL: target(TARGETS.local) } },
+    { name: "local", ...optIn, use: { ...desktop, baseURL: target(TARGETS.local) } },
   ],
 });
