@@ -16,6 +16,7 @@ import {
   postStream,
   consumeSuppressToastFlag,
   consumeWatchdogTimeoutFlag,
+  peekSuppressToastFlag,
   peekWatchdogTimeoutFlag,
 } from "./streaming";
 import { handleApiError } from "@/utilities/helpers";
@@ -299,9 +300,16 @@ export const useSendRequest = (conversationId?: string) => {
           // DOMException, whose Error lineage varies by browser.
           (e as { streamedOutput?: string }).streamedOutput = streamedOutput;
         }
-        // A user Stop is not an error. The watchdog aborts with the same
-        // CanceledError, and a hung stream is one, so it is still logged.
-        if (isCancellation(e) && !peekWatchdogTimeoutFlag()) throw e;
+        // A user Stop is not an error. Skip the log only on that positive
+        // signal: the watchdog aborts with the same CanceledError, and a hung
+        // stream or any other abort source is still logged.
+        if (
+          isCancellation(e) &&
+          peekSuppressToastFlag() &&
+          !peekWatchdogTimeoutFlag()
+        ) {
+          throw e;
+        }
         console.error("streaming error", e);
         logError({
           error_message: String(e || "Unknown error"),
