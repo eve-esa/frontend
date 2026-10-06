@@ -17,7 +17,10 @@ export const PendingApprovalPage = () => {
   const email = auth.user?.profile?.email;
 
   return (
-    <div className="flex h-screen w-screen flex-col items-center justify-center gap-6 bg-gradient-to-b from-primary-500 to-primary-600 px-4">
+    <div
+      data-testid="pending-approval-page"
+      className="flex h-screen w-screen flex-col items-center justify-center gap-6 bg-gradient-to-b from-primary-500 to-primary-600 px-4"
+    >
       <img src={logo} alt="logo" className="h-[48px]" />
       <div className="flex max-w-[480px] flex-col items-center gap-2 text-center">
         <h1 className="text-xl font-bold">

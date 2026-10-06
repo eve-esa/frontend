@@ -25,6 +25,39 @@ export class LoginPage {
     ).toBeVisible({ timeout: 45_000 });
   }
 
+  /**
+   * Keycloak self-registration (local compose stack, realm eve: e-mail as user name, e-mail
+   * verification on). The realm's form may not ask for a password: then Keycloak asks for one
+   * after the e-mail is verified (`setPasswordIfAsked`). Leaves the browser on the "verify
+   * your e-mail" page.
+   */
+  async register(account: {
+    email: string;
+    password: string;
+    firstName: string;
+    lastName: string;
+  }): Promise<void> {
+    await this.page.locator("#kc-registration a").click();
+    await this.page.locator("#email").fill(account.email);
+    await this.page.locator("#firstName").fill(account.firstName);
+    await this.page.locator("#lastName").fill(account.lastName);
+    if (await this.page.locator("#password").isVisible()) {
+      await this.page.locator("#password").fill(account.password);
+      await this.page.locator("#password-confirm").fill(account.password);
+    }
+    await this.page.locator('#kc-register-form [type="submit"]').click();
+  }
+
+  /** Keycloak "update password" required action, shown when registration asked for none. */
+  async setPasswordIfAsked(password: string): Promise<boolean> {
+    const fresh = this.page.locator("#password-new");
+    if (!(await fresh.isVisible())) return false;
+    await fresh.fill(password);
+    await this.page.locator("#password-confirm").fill(password);
+    await this.page.locator('#kc-passwd-update-form [type="submit"]').click();
+    return true;
+  }
+
   async signIn(email: string, password: string): Promise<void> {
     // The managed login page is a Remix app: filling before hydration loses the values.
     await this.page.waitForLoadState("networkidle");
