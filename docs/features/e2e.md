@@ -24,11 +24,45 @@ docker run --rm -it -v "$PWD":/work -w /work \
 
 - `E2E_EMAIL`, `E2E_PASSWORD`: the test account of the target environment. In CI they are secrets of the `esa-eve-dev` environment for dev and of `esa-eve-staging` for staging (which accepts `v*` tags only, hence the tag ref). A run without them stops before sign-in with an error naming both.
 - `E2E_TARGET`: overrides the base URL of the chosen project, for example a preview host.
+- `E2E_API_URL`: where `api` sends its calls. Default `<base URL>/api`; for the `local` project `http://localhost:8000`, because the Vite dev server answers every path with `index.html` and the compose backend serves its routes without the `/api` prefix.
 - `corepack yarn e2e --list` lists the tests without a browser or credentials.
 - `corepack yarn e2e:report` opens the last HTML report (`e2e/report`). Failures keep a trace and a screenshot.
 - `corepack yarn e2e:type-check` type-checks the suite.
 
 The suite signs in once per worker through the hosted login and keeps the identity provider cookies in `e2e/.auth/` (gitignored). Every test then opens the app, which comes back from the provider already signed in.
+
+## First-time user
+
+`e2e/specs/signup.spec.ts` (`@local`) follows a brand-new account from sign-up to its first answer: registration, e-mail verification, first sign-in, the required profile dialog (`FEATURE_PROFILE_FIELDS`), `GET /users/me` (country, institution, `approval_status`), the account mail (welcome under `SIGNUP_AUTO_APPROVE_LIMIT`, on hold past it, with the on hold page instead of the chat), and one classic question read back from `GET /conversations/{id}` with no `metadata.error`. It does not use `E2E_EMAIL`.
+
+### Local
+
+The compose stack registers the account through Keycloak self-registration (realm `eve`, e-mail verification on) and reads every mail from Mailpit. Start the frontend the way prod runs it, then run the spec with host networking (Docker Desktop, "Enable host networking"):
+
+```sh
+VITE_FEATURE_PROFILE_FIELDS=true VITE_FEATURE_AGENTIC_CHAT=false docker compose up -d --no-deps frontend
+docker run --rm --network host -v "$PWD":/work -w /work -e E2E_PROFILE_FIELDS=true \
+  mcr.microsoft.com/playwright:v1.63.0-noble \
+  sh -c "corepack enable && corepack yarn install --frozen-lockfile && corepack yarn e2e --project=local specs/signup.spec.ts"
+```
+
+- `E2E_PROFILE_FIELDS=true` tells the spec the dialog must appear: the dev server serves no `window.__EVE_CONFIG__` to read the flag from.
+- Each run creates `e2e-signup-<timestamp>@eve-e2e.dev`. The cleanup deletes the conversation and the Keycloak user (admin API, `admin` / `admin`). The app user row and its `external_identities` row stay: no API deletes a user. Remove them with `docker compose exec mongo sh -c 'mongosh -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin eve-backend --eval "ids = db.users.find({email: /^e2e-signup-/}).toArray().map(u => u._id.toHexString()); db.external_identities.deleteMany({user_id: {\$in: ids}}); db.users.deleteMany({email: /^e2e-signup-/})"'`.
+- Variables: `E2E_MAILPIT_URL` (default `http://localhost:6080`), `E2E_KEYCLOAK_URL` (default `http://localhost:8080`), `E2E_KEYCLOAK_REALM`, `E2E_KEYCLOAK_ADMIN_USER`, `E2E_KEYCLOAK_ADMIN_PASSWORD`, `E2E_SIGNUP_QUESTION`.
+
+### Dev, staging and prod
+
+Cognito sign-up needs a mailbox the suite cannot read, so the account is provisioned outside the suite, one per run:
+
+1. Create a confirmed user on an SES simulator address (an AWS write, run by the orchestrator with the owner's go):
+   `aws cognito-idp admin-create-user --user-pool-id <pool> --username success+eve-<env>-signup-<timestamp>@simulator.amazonses.com --user-attributes Name=email,Value=<same address> Name=email_verified,Value=true --message-action SUPPRESS`, then `aws cognito-idp admin-set-user-password --user-pool-id <pool> --username <address> --password <generated> --permanent`. The password is generated for the run and passed only as an environment variable.
+2. Run the spec with `E2E_SIGNUP_EMAIL` and `E2E_SIGNUP_PASSWORD` on `--project=dev` or `--project=staging`: it signs in through the managed login, meets the profile dialog, reads `/users/me`, asks the question and deletes the conversation. The mail steps run only when `E2E_MAILPIT_URL` is set.
+3. Prove the welcome mail from the backend log in ClickHouse (`ops/scripts/o11y-sql.sh logs` or the `clickstack` MCP): `account_mail_sent kind=approved user_id=<id from /users/me>` and `mail sent via ses subject='Your EVE account is ready' recipient_domain=simulator.amazonses.com` (`kind=pending` and the on hold subject past the approval limit).
+4. Delete the user: `aws cognito-idp admin-delete-user --user-pool-id <pool> --username <address>` (same go). The app user row stays, as locally.
+
+Prod: the suite never writes to a production host, so the spec skips there. The same four steps run on prod with the Playwright MCP driving step 2 by hand, each AWS write and the run itself under the owner's go.
+
+The mail content (subject, recipient, body) is verifiable only locally. On AWS the log lines prove that the backend sent a mail with that subject to that domain, not what arrived: reading the mail would need an SES receiving mailbox (a receipt rule on a subdomain storing to S3), an infra option that is not built.
 
 ## Layout
 

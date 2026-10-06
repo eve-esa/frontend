@@ -111,6 +111,77 @@ export type Api = {
   bearer(): Promise<string>;
 };
 
+/**
+ * Where the API answers: `E2E_API_URL` when set; the compose backend for the `local` project
+ * (the Vite dev server answers every path with index.html, and the backend serves its routes
+ * without the `/api` prefix there); `<baseURL>/api` everywhere else (CloudFront strips it).
+ */
+export function apiBaseURL(baseURL: string, projectName: string): string {
+  if (process.env.E2E_API_URL) return process.env.E2E_API_URL.replace(/\/$/, "");
+  if (projectName === "local") return "http://localhost:8000";
+  return `${baseURL}/api`;
+}
+
+/**
+ * `Api` on a signed-in page: the bearer is read from the page's OIDC session storage on
+ * every call, so a token renewal is picked up. Writes are refused on a production target.
+ */
+export function pageApi(page: Page, baseURL: string, projectName: string): Api {
+  const apiBase = apiBaseURL(baseURL, projectName);
+  const bearer = async (): Promise<string> => {
+    const token = await page.evaluate(() => {
+      for (let i = 0; i < sessionStorage.length; i += 1) {
+        const key = sessionStorage.key(i);
+        if (!key?.startsWith("oidc.user:")) continue;
+        const raw = sessionStorage.getItem(key);
+        return raw ? (JSON.parse(raw) as { access_token?: string }).access_token ?? null : null;
+      }
+      return null;
+    });
+    if (!token) throw new Error("no oidc.user: entry in session storage");
+    return token;
+  };
+  const toApiResponse = async <T>(response: APIResponse): Promise<ApiResponse<T>> => {
+    const text = await response.text();
+    let body: unknown = text;
+    try {
+      body = JSON.parse(text);
+    } catch {
+      // Non-JSON body: the raw text is returned so the assertion shows it.
+    }
+    return { status: response.status(), body: body as T };
+  };
+  const get = async <T>(apiPath: string): Promise<ApiResponse<T>> =>
+    toApiResponse<T>(
+      await page.request.get(`${apiBase}${apiPath}`, {
+        headers: { Authorization: `Bearer ${await bearer()}` },
+      }),
+    );
+  const refuseOnProd = (method: string, apiPath: string) => {
+    if (!canWrite(new URL(baseURL).origin, projectName)) {
+      throw new Error(`refusing ${method} ${apiPath}: ${baseURL} is a production target`);
+    }
+  };
+  const patch = async <T>(apiPath: string, data: unknown): Promise<ApiResponse<T>> => {
+    refuseOnProd("PATCH", apiPath);
+    return toApiResponse<T>(
+      await page.request.patch(`${apiBase}${apiPath}`, {
+        headers: { Authorization: `Bearer ${await bearer()}` },
+        data,
+      }),
+    );
+  };
+  const del = async <T>(apiPath: string): Promise<ApiResponse<T>> => {
+    refuseOnProd("DELETE", apiPath);
+    return toApiResponse<T>(
+      await page.request.delete(`${apiBase}${apiPath}`, {
+        headers: { Authorization: `Bearer ${await bearer()}` },
+      }),
+    );
+  };
+  return { get, patch, delete: del, bearer };
+}
+
 type TestFixtures = {
   authedPage: Page;
   chat: ChatPage;
@@ -179,58 +250,7 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
   },
 
   api: async ({ authedPage, baseURL }, use, testInfo) => {
-    const bearer = async (): Promise<string> => {
-      const token = await authedPage.evaluate(() => {
-        for (let i = 0; i < sessionStorage.length; i += 1) {
-          const key = sessionStorage.key(i);
-          if (!key?.startsWith("oidc.user:")) continue;
-          const raw = sessionStorage.getItem(key);
-          return raw ? (JSON.parse(raw) as { access_token?: string }).access_token ?? null : null;
-        }
-        return null;
-      });
-      if (!token) throw new Error("no oidc.user: entry in session storage");
-      return token;
-    };
-    const toApiResponse = async <T>(response: APIResponse): Promise<ApiResponse<T>> => {
-      const text = await response.text();
-      let body: unknown = text;
-      try {
-        body = JSON.parse(text);
-      } catch {
-        // Non-JSON body: the raw text is returned so the assertion shows it.
-      }
-      return { status: response.status(), body: body as T };
-    };
-    const get = async <T>(apiPath: string): Promise<ApiResponse<T>> =>
-      toApiResponse<T>(
-        await authedPage.request.get(`${baseURL}/api${apiPath}`, {
-          headers: { Authorization: `Bearer ${await bearer()}` },
-        }),
-      );
-    const refuseOnProd = (method: string, apiPath: string) => {
-      if (!canWrite(new URL(baseURL as string).origin, testInfo.project.name)) {
-        throw new Error(`refusing ${method} ${apiPath}: ${baseURL} is a production target`);
-      }
-    };
-    const patch = async <T>(apiPath: string, data: unknown): Promise<ApiResponse<T>> => {
-      refuseOnProd("PATCH", apiPath);
-      return toApiResponse<T>(
-        await authedPage.request.patch(`${baseURL}/api${apiPath}`, {
-          headers: { Authorization: `Bearer ${await bearer()}` },
-          data,
-        }),
-      );
-    };
-    const del = async <T>(apiPath: string): Promise<ApiResponse<T>> => {
-      refuseOnProd("DELETE", apiPath);
-      return toApiResponse<T>(
-        await authedPage.request.delete(`${baseURL}/api${apiPath}`, {
-          headers: { Authorization: `Bearer ${await bearer()}` },
-        }),
-      );
-    };
-    await use({ get, patch, delete: del, bearer });
+    await use(pageApi(authedPage, baseURL as string, testInfo.project.name));
   },
 });
 
