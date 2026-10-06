@@ -1,6 +1,8 @@
 # End-to-end tests
 
-The browser suite lives in `e2e/` and runs with Playwright against a deployed environment or the local compose stack. CI (`.github/workflows/e2e-dev.yml`) runs it against dev after every successful `deploy: dev` of this repository or of the backend (the backend calls this workflow, so that run shows in the backend Actions tab), and on demand with a `target` input. Staging runs from the promoted release tag, dispatched after the promote: `gh workflow run "e2e: dev" -R eve-esa/frontend --ref vX.Y.Z -f target=staging`; from any other ref the run stops with an error.
+The browser suite lives in `e2e/` and runs with Playwright against a deployed environment or the local compose stack. CI (`.github/workflows/e2e-dev.yml`) runs it against dev after every successful `deploy: dev`, and on demand with a `target` input. Staging runs from the promoted release tag, dispatched after the promote: `gh workflow run "e2e: dev" -R eve-esa/frontend --ref vX.Y.Z -f target=staging`; from any other ref the run stops with an error.
+
+After a backend-only merge, dispatch the dev run by hand: `gh workflow run "e2e: dev" -R eve-esa/frontend --ref main -f target=dev`.
 
 ## Run it
 
