@@ -1,11 +1,18 @@
-# Browser end-to-end suite (e2e/) against dev after every successful dev deploy.
-# Read-only for the repository: it only signs in to dev with a test account and
-# reports. The prod-readonly project is never run from here.
+# Browser end-to-end suite (e2e/) against dev after every successful dev deploy, and against
+# staging after every successful staging promote. Read-only for the repository: it only signs in
+# with a test account of the target environment and reports. The prod-readonly project is never
+# run from here.
+#
+# The target is computed once per expression below: the dispatch input, else staging when the
+# triggering run is "promote: staging", else dev. Each target reads its own GitHub environment:
+# dev from esa-eve-dev; staging from esa-eve-staging-e2e, which holds only the test account,
+# because esa-eve-staging accepts v* tags only and this workflow runs on main.
 name: "e2e: dev"
+run-name: "e2e ${{ inputs.target || (github.event.workflow_run.name == 'promote: staging' && 'staging') || 'dev' }}"
 
 on:
   workflow_run:
-    workflows: ["deploy: dev"]
+    workflows: ["deploy: dev", "promote: staging"]
     types: [completed]
   workflow_dispatch:
     inputs:
@@ -17,7 +24,7 @@ on:
         options: [dev, staging]
 
 concurrency:
-  group: e2e-dev
+  group: "e2e-${{ inputs.target || (github.event.workflow_run.name == 'promote: staging' && 'staging') || 'dev' }}"
   cancel-in-progress: false
 
 permissions:
@@ -29,7 +36,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    environment: esa-eve-dev
+    environment: "${{ (inputs.target || (github.event.workflow_run.name == 'promote: staging' && 'staging') || 'dev') == 'staging' && 'esa-eve-staging-e2e' || 'esa-eve-dev' }}"
     container:
       # Same Playwright version as the devDependency: the browsers ship in the image.
       image: mcr.microsoft.com/playwright:v1.63.0-noble
@@ -37,12 +44,19 @@ jobs:
       CI: "true"
       E2E_EMAIL: ${{ secrets.E2E_EMAIL }}
       E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
-      E2E_PROJECT: ${{ inputs.target || 'dev' }}
+      E2E_PROJECT: "${{ inputs.target || (github.event.workflow_run.name == 'promote: staging' && 'staging') || 'dev' }}"
     steps:
+      - name: Check the test account secrets
+        run: |
+          if [ -z "$E2E_EMAIL" ] || [ -z "$E2E_PASSWORD" ]; then
+            echo "::error::E2E_EMAIL and E2E_PASSWORD are not set in the GitHub environment of the $E2E_PROJECT target. Create both secrets for a test user of that environment."
+            exit 1
+          fi
+
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # The commit dev just deployed, not the head of main at run time.
+          # The commit the triggering run deployed or promoted, not the head of main at run time.
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Install dependencies
