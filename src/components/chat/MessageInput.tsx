@@ -71,6 +71,7 @@ import {
   stashSentAttachments,
 } from "@/utilities/busyAttachments";
 import { stopConversation as stopConversationApi } from "@/services/stopConversation";
+import { rememberStoppedMessageId } from "@/utilities/stoppedPartials";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { useQueryClient } from "@tanstack/react-query";
 import { QUERY_KEYS } from "@/services/keys";
@@ -483,6 +484,7 @@ export const MessageInput = ({
           | string
           | undefined;
         if (stoppedId) {
+          rememberStoppedMessageId(conversationId, stoppedId);
           queryClient.setQueryData<ChaMessageType>(
             [QUERY_KEYS.conversation, conversationId],
             (old) => {

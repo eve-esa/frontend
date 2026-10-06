@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { installMemoryLocalStorage } from "@/test-utils/memoryLocalStorage";
 import { stubRuntimeConfig } from "@/test-utils/runtimeConfigStub";
+import type { QueryClient } from "@tanstack/react-query";
 import type { ModelListResponse } from "@/types";
+import { QUERY_KEYS } from "./keys";
 import {
   LOCAL_STORAGE_MCP_SERVERS,
   LOCAL_STORAGE_MODEL_SELECTION,
@@ -18,6 +20,8 @@ const mocks = vi.hoisted(() => ({
   // One client per test, so a test can read what the mutation left in the
   // conversation cache.
   queryClient: null as unknown,
+  // What consumeSuppressToastFlag reports: true when the abort was a user Stop.
+  userStop: false,
   postStream: vi.fn(),
   toastError: vi.fn(),
   logError: vi.fn(),
@@ -30,7 +34,7 @@ vi.mock("@/services/axios", () => ({
 }));
 vi.mock("./streaming", () => ({
   postStream: mocks.postStream,
-  consumeSuppressToastFlag: () => false,
+  consumeSuppressToastFlag: () => mocks.userStop,
   consumeWatchdogTimeoutFlag: () => false,
 }));
 vi.mock("./errorLogging", () => ({ logError: mocks.logError }));
@@ -101,6 +105,7 @@ const streamOnce = async (agenticChat: "true" | "false") => {
 
 beforeEach(() => {
   mocks.queryClient = null;
+  mocks.userStop = false;
   mocks.get.mockReset();
   mocks.post.mockReset();
   mocks.postStream.mockReset();
@@ -472,15 +477,25 @@ const endTurnAndRefetch = async (
   return refetched.messages[0];
 };
 
+const canceled = () =>
+  Object.assign(new Error("canceled"), {
+    name: "CanceledError",
+    code: "ERR_CANCELED",
+  });
+
+const serverError = (onEvent: (evt: unknown) => void) => {
+  onEvent({ type: "error", code: "upstream_error", message: "boom" });
+  return Promise.resolve();
+};
+
 describe("turn that ends before the first token", () => {
   it("shows a stop pressed before any token as stopped after the refetch", async () => {
-    const canceled = Object.assign(new Error("canceled"), {
-      name: "CanceledError",
-      code: "ERR_CANCELED",
-    });
+    mocks.userStop = true;
 
+    // The refetch the settle fires right after the stop, before the backend
+    // has persisted it: the row is still the mid-generation one.
     const message = await endTurnAndRefetch("conv-stop", () =>
-      Promise.reject(canceled),
+      Promise.reject(canceled()),
     );
 
     expect(message.stopped).toBe(true);
@@ -489,20 +504,78 @@ describe("turn that ends before the first token", () => {
   });
 
   it("leaves a server error as an error, not a stop", async () => {
-    const message = await endTurnAndRefetch(
-      "conv-error",
-      (onEvent) => {
-        onEvent({ type: "error", code: "upstream_error", message: "boom" });
-        return Promise.resolve();
-      },
-      { metadata: { error: { code: "upstream_error" } } },
-    );
+    const message = await endTurnAndRefetch("conv-error", serverError, {
+      metadata: { error: { code: "upstream_error" } },
+    });
 
     expect(message.stopped).toBeUndefined();
     expect(message.metadata?.error?.code).toBe("upstream_error");
     expect(mocks.toastError).toHaveBeenCalledWith(
       "Generation failed. Retry in a moment.",
     );
+  });
+
+  it("shows the error when the backend ended a stopped turn with a failure", async () => {
+    mocks.userStop = true;
+
+    const message = await endTurnAndRefetch(
+      "conv-stop-failed",
+      () => Promise.reject(canceled()),
+      { metadata: { error: { code: "upstream_error" } } },
+    );
+
+    expect(message.stopped).toBeUndefined();
+    expect(message.metadata?.error?.code).toBe("upstream_error");
+  });
+
+  it("does not file a dropped connection with nothing painted as a stop", async () => {
+    const dropped = Object.assign(new Error("Request aborted"), {
+      code: "ECONNABORTED",
+    });
+
+    const message = await endTurnAndRefetch("conv-dropped", () =>
+      Promise.reject(dropped),
+    );
+
+    expect(message.stopped).toBeUndefined();
+  });
+
+  it("does not carry a stop whose turn never came back onto the next turn", async () => {
+    const conversationId = "conv-mask";
+    const { options } = await loadBusy(conversationId);
+    const turn = options as StopMutationOptions;
+    const variables = { ...VARIABLES, conversationId };
+    const queryClient = mocks.queryClient as QueryClient;
+    const { getConversation } = await import("./useGetConversation");
+
+    // Turn N: Stop before the first token, and the refetch does not hold the
+    // turn (the server row is missing).
+    mocks.userStop = true;
+    mocks.postStream.mockImplementationOnce(() => Promise.reject(canceled()));
+    await turn.onMutate(variables);
+    turn.onError(await turn.mutationFn(variables).catch((e: unknown) => e), variables);
+    mocks.get.mockResolvedValueOnce({ data: { id: conversationId, messages: [] } });
+    queryClient.setQueryData(
+      [QUERY_KEYS.conversation, conversationId],
+      await getConversation(conversationId),
+    );
+
+    // Turn N+1 takes that position and fails.
+    mocks.userStop = false;
+    mocks.postStream.mockImplementationOnce(serverError);
+    await turn.onMutate(variables);
+    turn.onError(await turn.mutationFn(variables).catch((e: unknown) => e), variables);
+    mocks.get.mockResolvedValueOnce({
+      data: {
+        id: conversationId,
+        messages: [{ id: "m2", conversation_id: conversationId, input: "hello", output: "" }],
+      },
+    });
+    const [failed] = (await getConversation(conversationId)).messages;
+
+    // Not stopped: the bubble shows the error and Chat offers Retry.
+    expect(failed.id).toBe("m2");
+    expect(failed.stopped).toBeUndefined();
   });
 });
 

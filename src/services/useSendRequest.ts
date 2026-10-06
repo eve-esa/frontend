@@ -31,7 +31,10 @@ import { getSelectedMcpServerNames } from "@/utilities/mcpServers";
 import { applyToolCall, applyToolResult } from "@/utilities/toolActivity";
 import type { MessagePipeline } from "@/utilities/messageEndpoint";
 import { shouldToastStreamError } from "@/utilities/streamError";
-import { rememberStoppedPartial } from "@/utilities/stoppedPartials";
+import {
+  forgetStoppedPartialsFrom,
+  rememberStoppedPartial,
+} from "@/utilities/stoppedPartials";
 import {
   AGENTIC_CHAT_ENABLED,
   STREAMING_ENABLED,
@@ -320,6 +323,15 @@ export const useSendRequest = (conversationId?: string) => {
         conversationId,
       ]);
 
+      // The new turn takes the position a stopped turn that never came back
+      // would have been repaired at.
+      if (conversationId) {
+        forgetStoppedPartialsFrom(
+          conversationId,
+          previousData?.messages?.length ?? 0,
+        );
+      }
+
       const optimisticMessage = {
         id: `temp-${Date.now()}`,
         timestamp: new Date().toISOString(),
@@ -426,7 +438,13 @@ export const useSendRequest = (conversationId?: string) => {
           // Same guard updateLastTempMessage uses: only the optimistic row
           // marks the turn that was streaming, and its position is the one the
           // persisted row will take.
-          if (cached?.messages?.[lastIndex]?.id?.startsWith("temp-")) {
+          // An empty stop is remembered only for a user Stop: a dropped
+          // connection (ECONNABORTED, "aborted") with nothing painted is a
+          // failure, and the persisted error must reach the bubble.
+          if (
+            cached?.messages?.[lastIndex]?.id?.startsWith("temp-") &&
+            (userSuppressed || streamedOutput.trim())
+          ) {
             rememberStoppedPartial(conversationId, lastIndex, streamedOutput);
           }
         }

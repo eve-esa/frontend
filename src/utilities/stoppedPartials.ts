@@ -18,9 +18,13 @@ import type { ChaMessageType } from "@/types";
 export type StoppedPartial = {
   // Position of the stopped turn in the conversation's message list. The
   // optimistic row is always the last one, and the backend appends the
-  // persisted row in that same position.
+  // persisted row in that same position. Used only until messageId is known.
   index: number;
   output: string;
+  // Persisted id of the stopped turn, from the Stop response. Once set it is
+  // the only key: a position can be taken by a later turn when this one is
+  // missing from a response, and that turn must not inherit the stop.
+  messageId?: string;
 };
 
 // One list per conversation, not one entry: until the backend has persisted
@@ -71,7 +75,10 @@ export const mergeStoppedPartial = (
   let merged = messages;
 
   for (const partial of remembered) {
-    const row = merged?.[partial.index];
+    const at = partial.messageId
+      ? (merged ?? []).findIndex((row) => row?.id === partial.messageId)
+      : partial.index;
+    const row = at >= 0 ? merged?.[at] : undefined;
     // The turn is not in the response yet: the backend creates the row when
     // it persists the answer, and until then there is nothing to merge into.
     // Keep the memory, a later refetch is where it belongs.
@@ -85,11 +92,13 @@ export const mergeStoppedPartial = (
     // the cooperative and the hard cancel path), so the memory is spent.
     if (persisted) continue;
     // A stop before the first token has no text to restore: once the server
-    // row carries the stop itself, there is nothing left to repair.
-    if (!partial.output && row.stopped) continue;
+    // row carries the stop itself, or the failure that ended the turn instead
+    // (the Stop raced the cancel mapping), there is nothing left to repair, and
+    // keeping it would hide that failure and its Retry.
+    if (!partial.output && (row.stopped || row.metadata?.error)) continue;
 
     merged = merged === messages ? [...messages] : merged;
-    merged[partial.index] = {
+    merged[at] = {
       ...row,
       output: partial.output,
       stopped: true,
@@ -127,6 +136,47 @@ export const rememberStoppedPartial = (
       { index, output: output.trim() ? output : "" },
     ],
   };
+};
+
+/**
+ * Binds the persisted id the Stop response returned to the stop remembered
+ * last for that conversation, so later merges find the turn by id. A stop the
+ * response arrives for before (or without) a remembered entry is ignored: the
+ * entry keeps its position key.
+ */
+export const rememberStoppedMessageId = (
+  conversationId: string,
+  messageId: string,
+) => {
+  const entries = store[conversationId];
+  if (!entries?.length) return;
+  const unbound = entries.filter((partial) => !partial.messageId);
+  if (!unbound.length) return;
+  const latest = unbound.reduce((a, b) => (b.index > a.index ? b : a));
+  store = {
+    ...store,
+    [conversationId]: entries.map((partial) =>
+      partial === latest ? { ...partial, messageId } : partial,
+    ),
+  };
+};
+
+/**
+ * Drops the position-keyed stops at or past `index` when a new turn takes that
+ * position: their turn never came back, and the new one must not inherit the
+ * stop. Entries bound to an id are kept, they cannot move.
+ */
+export const forgetStoppedPartialsFrom = (
+  conversationId: string,
+  index: number,
+) => {
+  const entries = store[conversationId];
+  if (!entries?.length) return;
+  store = withPending(
+    store,
+    conversationId,
+    entries.filter((partial) => partial.messageId || partial.index < index),
+  );
 };
 
 /** Merges the remembered partials, if any, into a conversation response. */
