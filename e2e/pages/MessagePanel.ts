@@ -54,12 +54,12 @@ export class MessagePanel {
   }
 
   /**
-   * Clicks the first source title in the open sources panel and returns the
-   * tab it opens, once that tab has left about:blank.
+   * Clicks the source title at `index` in the open sources panel and returns
+   * the tab it opens, once that tab has left about:blank.
    */
-  async openFirstSourceTab(): Promise<Page> {
+  async openSourceTab(index: number): Promise<Page> {
     const opened = this.page.context().waitForEvent("page");
-    await this.page.getByTestId("source-title").first().click();
+    await this.page.getByTestId("source-title").nth(index).click();
     const tab = await opened;
     await expect.poll(() => tab.url(), { timeout: 30_000 }).not.toBe("about:blank");
     return tab;

@@ -1,3 +1,4 @@
+import { getRenderableDocuments, groupSourcesByDocument } from "@/utilities/messageDocuments";
 import { expect, test } from "../fixtures";
 import { QUESTION, persistedMessage } from "./conversation";
 
@@ -22,10 +23,19 @@ test.describe("answer actions @dev", () => {
     const messageId = await chat.messages.waitForPersistedId();
     const read = () => persistedMessage(api, conversationId, messageId);
 
-    await test.step("a source title opens its link and logs the click", async () => {
+    await test.step("a source title opens its link and logs the click", async (step) => {
       expect(await chat.messages.sourcesCount()).toBeGreaterThan(0);
-      expect(await chat.messages.openSources()).toBeGreaterThan(0);
-      const tab = await chat.messages.openFirstSourceTab();
+      const titles = await chat.messages.openSources();
+      // The panel lists one title per document group and opens the link of the
+      // group's first source; the same helpers rebuild that list from the API.
+      const groups = groupSourcesByDocument(getRenderableDocuments((await read())?.documents));
+      expect(groups.length).toBe(titles);
+      const linked = groups.findIndex(({ sources: [first] }) =>
+        Boolean(first?.metadata?.additionalMetadata?.link ?? first?.payload?.url),
+      );
+      step.skip(linked < 0, "no source of this answer has a link, so no title opens a tab");
+
+      const tab = await chat.messages.openSourceTab(linked);
       expect(tab.url()).toMatch(/^https?:\/\//);
       await tab.close();
       // The click is appended to metadata.source_logs on the message.

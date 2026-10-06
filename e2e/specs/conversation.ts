@@ -39,6 +39,7 @@ export type PersistedMessage = {
   id?: string;
   feedback?: string | null;
   was_copied?: boolean;
+  documents?: unknown[];
   metadata?: { source_logs?: { source_url?: string }[] } | null;
 };
 
