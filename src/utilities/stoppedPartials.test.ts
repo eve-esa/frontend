@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   applyStoppedPartial,
+  forgetStoppedPartialsFrom,
   mergeStoppedPartial,
+  rememberStoppedMessageId,
   rememberStoppedPartial,
   type StoppedPartials,
 } from "./stoppedPartials";
@@ -112,6 +114,71 @@ describe("mergeStoppedPartial", () => {
     // The server text wins, and nothing is left to repair on later refetches.
     expect(result.data).toBe(data);
     expect(result.partials).toEqual({});
+  });
+
+  it("marks the row stopped for a stop that landed before the first token", () => {
+    const partials: StoppedPartials = { c1: [{ index: 0, output: "" }] };
+    const data = conversation([message({ output: "" })]);
+
+    const result = mergeStoppedPartial(data, partials, "c1");
+
+    expect(result.data.messages[0].output).toBe("");
+    expect(result.data.messages[0].stopped).toBe(true);
+    // Kept until the backend has persisted the stop.
+    expect(result.partials).toEqual(partials);
+  });
+
+  it("forgets a stop without text once the server row is flagged stopped", () => {
+    const partials: StoppedPartials = { c1: [{ index: 0, output: "" }] };
+    const data = conversation([message({ output: "", stopped: true })]);
+
+    const result = mergeStoppedPartial(data, partials, "c1");
+
+    expect(result.data).toBe(data);
+    expect(result.partials).toEqual({});
+  });
+
+  it("forgets a stop without text when the backend ended the turn with an error", () => {
+    const partials: StoppedPartials = { c1: [{ index: 0, output: "" }] };
+    const data = conversation([
+      message({ output: "", metadata: { error: { code: "upstream_error" } } } as Partial<MessageType>),
+    ]);
+
+    const result = mergeStoppedPartial(data, partials, "c1");
+
+    expect(result.data).toBe(data);
+    expect(result.partials).toEqual({});
+  });
+
+  it("finds a stop bound to an id by id, wherever the row sits", () => {
+    const partials: StoppedPartials = {
+      c1: [{ index: 0, output: "The sky is", messageId: "m1" }],
+    };
+    const data = conversation([
+      message({ id: "m0", output: "an older answer" }),
+      message({ id: "m1", output: "" }),
+    ]);
+
+    const result = mergeStoppedPartial(data, partials, "c1");
+
+    expect(result.data.messages[0]).toBe(data.messages[0]);
+    expect(result.data.messages[1].output).toBe("The sky is");
+    expect(result.data.messages[1].stopped).toBe(true);
+  });
+
+  it("does not paint a stop bound to an id onto the turn that took its position", () => {
+    const partials: StoppedPartials = {
+      c1: [{ index: 1, output: "", messageId: "m1" }],
+    };
+    const data = conversation([
+      message({ id: "m0", output: "an older answer" }),
+      message({ id: "m2", output: "" }),
+    ]);
+
+    const result = mergeStoppedPartial(data, partials, "c1");
+
+    expect(result.data).toBe(data);
+    expect(result.partials).toEqual(partials);
   });
 
   it("keeps the partial while the turn is missing from the response", () => {
@@ -225,14 +292,27 @@ describe("rememberStoppedPartial and applyStoppedPartial", () => {
     expect(afterwards.messages[0].stopped).toBeUndefined();
   });
 
-  it("remembers nothing when the stream painted nothing visible", () => {
+  it("remembers a stop that landed before any visible text", () => {
     rememberStoppedPartial("store-2", 0, "  \n ");
 
+    // The mid-generation row comes back stopped, not as a failed turn.
     const data = applyStoppedPartial(
       conversation([message({ output: "" })]),
       "store-2",
     );
     expect(data.messages[0].output).toBe("");
+    expect(data.messages[0].stopped).toBe(true);
+
+    // The backend persisted the stop: the memory is spent.
+    applyStoppedPartial(
+      conversation([message({ output: "", stopped: true })]),
+      "store-2",
+    );
+    const afterwards = applyStoppedPartial(
+      conversation([message({ output: "" })]),
+      "store-2",
+    );
+    expect(afterwards.messages[0].stopped).toBeUndefined();
   });
 
   it("remembers nothing when there is no optimistic row to point at", () => {
@@ -243,6 +323,76 @@ describe("rememberStoppedPartial and applyStoppedPartial", () => {
       "store-3",
     );
     expect(data.messages[0].output).toBe("");
+  });
+
+  it("keys the stop by the id the Stop response returns", () => {
+    rememberStoppedPartial("store-5", 1, "");
+    rememberStoppedMessageId("store-5", 1, "m1");
+
+    // Turn N is missing, turn N+1 failed in its position: not stopped.
+    const next = applyStoppedPartial(
+      conversation([message({ id: "m0", output: "a" }), message({ id: "m2" })]),
+      "store-5",
+    );
+    expect(next.messages[1].stopped).toBeUndefined();
+
+    // Turn N comes back: stopped.
+    const back = applyStoppedPartial(
+      conversation([
+        message({ id: "m0", output: "a" }),
+        message({ id: "m1" }),
+        message({ id: "m2" }),
+      ]),
+      "store-5",
+    );
+    expect(back.messages[1].stopped).toBe(true);
+    expect(back.messages[2].stopped).toBeUndefined();
+  });
+
+  it("binds a Stop response that beat the abort to its own turn, not an older pending stop", () => {
+    // Turn 0 was stopped earlier and its row has not come back yet.
+    rememberStoppedPartial("store-7", 0, "older");
+    // Turn 1: the Stop response lands before the abort is filed.
+    rememberStoppedMessageId("store-7", 1, "m1");
+    rememberStoppedPartial("store-7", 1, "");
+
+    const data = applyStoppedPartial(
+      conversation([message({ id: "m0" }), message({ id: "m1" })]),
+      "store-7",
+    );
+    expect(data.messages[0].output).toBe("older");
+    expect(data.messages[1].output).toBe("");
+    expect(data.messages[1].stopped).toBe(true);
+  });
+
+  it("binds a slow Stop response to its turn after a later turn was stopped", () => {
+    rememberStoppedPartial("store-8", 1, "turn N");
+    // Turn N+1 is sent and stopped before turn N's Stop response lands.
+    rememberStoppedPartial("store-8", 2, "turn N+1");
+    rememberStoppedMessageId("store-8", 1, "mN");
+    rememberStoppedMessageId("store-8", 2, "mN1");
+
+    const data = applyStoppedPartial(
+      conversation([
+        message({ id: "m0", output: "a" }),
+        message({ id: "mN" }),
+        message({ id: "mN1" }),
+      ]),
+      "store-8",
+    );
+    expect(data.messages[1].output).toBe("turn N");
+    expect(data.messages[2].output).toBe("turn N+1");
+  });
+
+  it("drops position-keyed stops a new turn takes the place of", () => {
+    rememberStoppedPartial("store-6", 1, "");
+    forgetStoppedPartialsFrom("store-6", 1);
+
+    const data = applyStoppedPartial(
+      conversation([message({ id: "m0", output: "a" }), message({ id: "m2" })]),
+      "store-6",
+    );
+    expect(data.messages[1].stopped).toBeUndefined();
   });
 
   it("replaces the memory for a turn instead of stacking two of them", () => {

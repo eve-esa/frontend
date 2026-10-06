@@ -71,6 +71,7 @@ import {
   stashSentAttachments,
 } from "@/utilities/busyAttachments";
 import { stopConversation as stopConversationApi } from "@/services/stopConversation";
+import { rememberStoppedMessageId } from "@/utilities/stoppedPartials";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { useQueryClient } from "@tanstack/react-query";
 import { QUERY_KEYS } from "@/services/keys";
@@ -466,6 +467,19 @@ export const MessageInput = ({
       cancelBusyWait(conversationId);
       return;
     }
+    // Position of the turn this Stop is for, read before anything awaits: the
+    // Stop response binds its message id to this turn, not to whichever stop
+    // is pending when the response lands.
+    const cached = conversationId
+      ? queryClient.getQueryData<ChaMessageType>([
+          QUERY_KEYS.conversation,
+          conversationId,
+        ])
+      : undefined;
+    const lastIndex = (cached?.messages?.length ?? 0) - 1;
+    const stoppedIndex = cached?.messages?.[lastIndex]?.id?.startsWith("temp-")
+      ? lastIndex
+      : -1;
     try {
       abortCurrentStream();
       // Immediately mark the in-flight optimistic message as stopped to halt
@@ -483,6 +497,7 @@ export const MessageInput = ({
           | string
           | undefined;
         if (stoppedId) {
+          rememberStoppedMessageId(conversationId, stoppedIndex, stoppedId);
           queryClient.setQueryData<ChaMessageType>(
             [QUERY_KEYS.conversation, conversationId],
             (old) => {

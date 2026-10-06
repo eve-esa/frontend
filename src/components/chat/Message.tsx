@@ -289,7 +289,10 @@ export const Message = ({
               )}
             </>
           ) : showLoading ? (
-            <div className="flex flex-col gap-2 text-natural-600">
+            <div
+              data-testid="message-loading"
+              className="flex flex-col gap-2 text-natural-600"
+            >
               {message.pre_answer_notices?.length ? (
                 <div className="mb-2 space-y-1">
                   {message.pre_answer_notices.map((notice, idx) => (
@@ -327,7 +330,7 @@ export const Message = ({
               : // A failed turn the user moved past would otherwise render as
                 // a blank bubble with no trace of what happened.
                 Boolean(message.metadata?.error)) ? (
-            <p className="text-danger-400">
+            <p data-testid="message-error" className="text-danger-400">
               {message.metadata?.error?.code === "timeout"
                 ? "The model did not answer in time. It may be warming up: retry in a moment."
                 : message.metadata?.error?.code === "empty_answer"

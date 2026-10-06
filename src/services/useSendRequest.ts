@@ -31,7 +31,10 @@ import { getSelectedMcpServerNames } from "@/utilities/mcpServers";
 import { applyToolCall, applyToolResult } from "@/utilities/toolActivity";
 import type { MessagePipeline } from "@/utilities/messageEndpoint";
 import { shouldToastStreamError } from "@/utilities/streamError";
-import { rememberStoppedPartial } from "@/utilities/stoppedPartials";
+import {
+  forgetStoppedPartialsFrom,
+  rememberStoppedPartial,
+} from "@/utilities/stoppedPartials";
 import {
   AGENTIC_CHAT_ENABLED,
   STREAMING_ENABLED,
@@ -320,6 +323,19 @@ export const useSendRequest = (conversationId?: string) => {
         conversationId,
       ]);
 
+      // The new turn takes the position a stopped turn that never came back
+      // would have been repaired at. Saved rows only: a stopped temp row can
+      // still sit in the cache when the user sends again before the settle
+      // refetch lands, and it is not a turn the server returned.
+      if (conversationId) {
+        forgetStoppedPartialsFrom(
+          conversationId,
+          (previousData?.messages ?? []).filter(
+            (msg: MessageType) => !msg.id?.startsWith("temp-"),
+          ).length,
+        );
+      }
+
       const optimisticMessage = {
         id: `temp-${Date.now()}`,
         timestamp: new Date().toISOString(),
@@ -411,10 +427,12 @@ export const useSendRequest = (conversationId?: string) => {
       if (isCanceled) {
         canceledRef.current = true;
         // Remember what the aborted stream had painted, keyed by the position
-        // the turn occupies. The refetch that follows this handler brings back
-        // the mid-generation row (output ""), which would replace the visible
-        // partial with nothing; the conversation queryFn puts it back until
-        // the backend has persisted its own copy.
+        // the turn occupies, even when that is nothing yet (a stop before the
+        // first token). The refetch that follows this handler brings back the
+        // mid-generation row (output "", stopped unset), which would replace
+        // the visible partial with nothing and paint the turn as failed; the
+        // conversation queryFn puts the stop back until the backend has
+        // persisted its own copy.
         if (conversationId) {
           const cached = queryClient.getQueryData<ChaMessageType>([
             QUERY_KEYS.conversation,
@@ -424,7 +442,13 @@ export const useSendRequest = (conversationId?: string) => {
           // Same guard updateLastTempMessage uses: only the optimistic row
           // marks the turn that was streaming, and its position is the one the
           // persisted row will take.
-          if (cached?.messages?.[lastIndex]?.id?.startsWith("temp-")) {
+          // An empty stop is remembered only for a user Stop: a dropped
+          // connection (ECONNABORTED, "aborted") with nothing painted is a
+          // failure, and the persisted error must reach the bubble.
+          if (
+            cached?.messages?.[lastIndex]?.id?.startsWith("temp-") &&
+            (userSuppressed || streamedOutput.trim())
+          ) {
             rememberStoppedPartial(conversationId, lastIndex, streamedOutput);
           }
         }
