@@ -6,6 +6,7 @@ import { faFileLines } from "@fortawesome/free-solid-svg-icons";
 import { useUploadDocument } from "@/services/useUploadDocument";
 import type { CollectionType } from "@/services/useGetMyCollections";
 import { Spinner } from "@/components/ui/Spinner";
+import { isTourCollection } from "@/components/onboarding/tourCollection";
 
 type DocumentUploaderProps = {
   selectedCollection: CollectionType | null;
@@ -22,7 +23,11 @@ export const DocumentUploader = ({
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
       // Upload the file to backend
-      if (acceptedFiles.length > 0 && selectedCollection) {
+      if (
+        acceptedFiles.length > 0 &&
+        selectedCollection &&
+        !isTourCollection(selectedCollection.id)
+      ) {
         uploadDocument({
           file: acceptedFiles,
           collectionId: selectedCollection.id,
