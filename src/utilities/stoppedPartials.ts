@@ -113,6 +113,19 @@ export const mergeStoppedPartial = (
 };
 
 let store: StoppedPartials = {};
+// Stop response ids that arrived before the abort was filed, by conversation
+// and position: rememberStoppedPartial binds them when it files that turn.
+let pendingIds: Readonly<Record<string, Readonly<Record<number, string>>>> = {};
+
+const takePendingId = (conversationId: string, index: number) => {
+  const ids = pendingIds[conversationId];
+  const messageId = ids?.[index];
+  if (messageId === undefined) return undefined;
+  const rest = { ...ids };
+  delete rest[index];
+  pendingIds = { ...pendingIds, [conversationId]: rest };
+  return messageId;
+};
 
 /**
  * Records what the aborted stream had painted, so the next conversation
@@ -129,34 +142,47 @@ export const rememberStoppedPartial = (
   const others = (store[conversationId] ?? []).filter(
     (partial) => partial.index !== index,
   );
+  const messageId = takePendingId(conversationId, index);
   store = {
     ...store,
     [conversationId]: [
       ...others,
-      { index, output: output.trim() ? output : "" },
+      {
+        index,
+        output: output.trim() ? output : "",
+        ...(messageId ? { messageId } : {}),
+      },
     ],
   };
 };
 
 /**
- * Binds the persisted id the Stop response returned to the stop remembered
- * last for that conversation, so later merges find the turn by id. A stop the
- * response arrives for before (or without) a remembered entry is ignored: the
- * entry keeps its position key.
+ * Binds the persisted id the Stop response returned to the turn the Stop was
+ * clicked for, by the position that turn had when the Stop was clicked, so
+ * later merges find it by id. Neither a slow response nor another pending stop
+ * can move the id onto a different turn. When the response wins the race with
+ * the abort, the id waits for rememberStoppedPartial to file that position.
  */
 export const rememberStoppedMessageId = (
   conversationId: string,
+  index: number,
   messageId: string,
 ) => {
-  const entries = store[conversationId];
-  if (!entries?.length) return;
-  const unbound = entries.filter((partial) => !partial.messageId);
-  if (!unbound.length) return;
-  const latest = unbound.reduce((a, b) => (b.index > a.index ? b : a));
+  if (index < 0) return;
+  const entries = store[conversationId] ?? [];
+  const entry = entries.find((partial) => partial.index === index);
+  if (!entry) {
+    pendingIds = {
+      ...pendingIds,
+      [conversationId]: { ...pendingIds[conversationId], [index]: messageId },
+    };
+    return;
+  }
+  if (entry.messageId) return;
   store = {
     ...store,
     [conversationId]: entries.map((partial) =>
-      partial === latest ? { ...partial, messageId } : partial,
+      partial === entry ? { ...partial, messageId } : partial,
     ),
   };
 };
@@ -170,6 +196,13 @@ export const forgetStoppedPartialsFrom = (
   conversationId: string,
   index: number,
 ) => {
+  const ids = pendingIds[conversationId];
+  if (ids) {
+    const kept = Object.fromEntries(
+      Object.entries(ids).filter(([at]) => Number(at) < index),
+    );
+    pendingIds = { ...pendingIds, [conversationId]: kept };
+  }
   const entries = store[conversationId];
   if (!entries?.length) return;
   store = withPending(

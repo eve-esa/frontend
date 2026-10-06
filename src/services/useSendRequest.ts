@@ -324,11 +324,15 @@ export const useSendRequest = (conversationId?: string) => {
       ]);
 
       // The new turn takes the position a stopped turn that never came back
-      // would have been repaired at.
+      // would have been repaired at. Saved rows only: a stopped temp row can
+      // still sit in the cache when the user sends again before the settle
+      // refetch lands, and it is not a turn the server returned.
       if (conversationId) {
         forgetStoppedPartialsFrom(
           conversationId,
-          previousData?.messages?.length ?? 0,
+          (previousData?.messages ?? []).filter(
+            (msg: MessageType) => !msg.id?.startsWith("temp-"),
+          ).length,
         );
       }
 

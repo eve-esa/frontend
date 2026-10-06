@@ -327,7 +327,7 @@ describe("rememberStoppedPartial and applyStoppedPartial", () => {
 
   it("keys the stop by the id the Stop response returns", () => {
     rememberStoppedPartial("store-5", 1, "");
-    rememberStoppedMessageId("store-5", "m1");
+    rememberStoppedMessageId("store-5", 1, "m1");
 
     // Turn N is missing, turn N+1 failed in its position: not stopped.
     const next = applyStoppedPartial(
@@ -347,6 +347,41 @@ describe("rememberStoppedPartial and applyStoppedPartial", () => {
     );
     expect(back.messages[1].stopped).toBe(true);
     expect(back.messages[2].stopped).toBeUndefined();
+  });
+
+  it("binds a Stop response that beat the abort to its own turn, not an older pending stop", () => {
+    // Turn 0 was stopped earlier and its row has not come back yet.
+    rememberStoppedPartial("store-7", 0, "older");
+    // Turn 1: the Stop response lands before the abort is filed.
+    rememberStoppedMessageId("store-7", 1, "m1");
+    rememberStoppedPartial("store-7", 1, "");
+
+    const data = applyStoppedPartial(
+      conversation([message({ id: "m0" }), message({ id: "m1" })]),
+      "store-7",
+    );
+    expect(data.messages[0].output).toBe("older");
+    expect(data.messages[1].output).toBe("");
+    expect(data.messages[1].stopped).toBe(true);
+  });
+
+  it("binds a slow Stop response to its turn after a later turn was stopped", () => {
+    rememberStoppedPartial("store-8", 1, "turn N");
+    // Turn N+1 is sent and stopped before turn N's Stop response lands.
+    rememberStoppedPartial("store-8", 2, "turn N+1");
+    rememberStoppedMessageId("store-8", 1, "mN");
+    rememberStoppedMessageId("store-8", 2, "mN1");
+
+    const data = applyStoppedPartial(
+      conversation([
+        message({ id: "m0", output: "a" }),
+        message({ id: "mN" }),
+        message({ id: "mN1" }),
+      ]),
+      "store-8",
+    );
+    expect(data.messages[1].output).toBe("turn N");
+    expect(data.messages[2].output).toBe("turn N+1");
   });
 
   it("drops position-keyed stops a new turn takes the place of", () => {
