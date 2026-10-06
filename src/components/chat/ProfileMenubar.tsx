@@ -92,13 +92,13 @@ export const ProfileMenubar = ({
           <MenubarItem onClick={onCO2eqClick}>
             <span>CO2eq</span>
           </MenubarItem>
-          <MenubarItem onClick={onAboutUsClick}>
+          <MenubarItem data-testid="user-menu-about" onClick={onAboutUsClick}>
             <span>About Us</span>
           </MenubarItem>
-          <MenubarItem onClick={onContactClick}>
+          <MenubarItem data-testid="user-menu-contact" onClick={onContactClick}>
             <span>Contact Us</span>
           </MenubarItem>
-          <MenubarItem onClick={onPrivacyPolicyClick}>
+          <MenubarItem data-testid="user-menu-privacy" onClick={onPrivacyPolicyClick}>
             <span>Privacy Policy</span>
           </MenubarItem>
           <MenubarItem data-testid="user-menu-logout" onClick={onLogoutClick}>
