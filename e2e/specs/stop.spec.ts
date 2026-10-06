@@ -39,8 +39,11 @@ test.describe("stop @dev", () => {
     );
     await chat.composer.stop();
     await firstRefetch;
-    await expect(chat.messages.last.getByTestId("message-stopped")).toBeVisible();
+    // No auto-waiting assertion before this one: waiting for the stopped
+    // state first would wait through the error flash until the reconcile
+    // repaints the turn.
     await chat.messages.expectNoErrorFor(1_500);
+    await expect(chat.messages.last.getByTestId("message-stopped")).toBeVisible();
     await chat.composer.waitIdle(60_000);
 
     await expect
