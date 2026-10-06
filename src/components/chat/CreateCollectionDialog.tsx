@@ -64,6 +64,7 @@ export const CreateCollectionDialog = ({
           <div className="flex flex-col gap-2">
             <Input
               {...register("name")}
+              data-testid="create-collection-name"
               placeholder="Enter collection name"
               className="w-full"
               onKeyDown={(e) => {
@@ -92,6 +93,7 @@ export const CreateCollectionDialog = ({
               variant="primary"
               size="md"
               type="submit"
+              data-testid="create-collection-submit"
               className="min-w-[100px]"
             >
               {isPending ? <Spinner size="xs" /> : "Create"}

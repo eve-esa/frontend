@@ -34,6 +34,20 @@ export async function lastPersistedTurn(api: Api, conversationId: string): Promi
   };
 }
 
+/** The raw documents persisted on the last message, wherever the pipeline put them. */
+export async function lastPersistedDocuments(
+  api: Api,
+  conversationId: string,
+): Promise<unknown[]> {
+  const { status, body } = await api.get<{ messages?: RawMessage[] }>(
+    `/conversations/${conversationId}`,
+  );
+  const messages = status === 200 && body && typeof body === "object" ? body.messages ?? [] : [];
+  const last = messages[messages.length - 1] ?? {};
+  const docs = last.documents ?? last.metadata?.documents ?? last.metadata?.retrieved_docs ?? [];
+  return Array.isArray(docs) ? docs : [];
+}
+
 /** One persisted message with the fields the answer actions write. */
 export type PersistedMessage = {
   id?: string;

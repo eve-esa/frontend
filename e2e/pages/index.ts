@@ -4,6 +4,7 @@ export { Composer } from "./Composer";
 export { LoginPage } from "./LoginPage";
 export { LogoutDialog } from "./LogoutDialog";
 export { MessagePanel } from "./MessagePanel";
+export { MyCollectionsPanel } from "./MyCollectionsPanel";
 export { ProfileDialog } from "./ProfileDialog";
 export { ProfileRequiredDialog } from "./ProfileRequiredDialog";
 export { SettingsPanel } from "./SettingsPanel";

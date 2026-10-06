@@ -52,6 +52,7 @@ export const DeleteDocumentDialog = ({
             size="md"
             className="min-w-[100px]"
             onClick={() => deleteDocument({ collectionId, documentId })}
+            data-testid="delete-document-confirm"
           >
             {isPending ? <Spinner size="xs" /> : "Delete"}
           </Button>

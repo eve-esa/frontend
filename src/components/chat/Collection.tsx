@@ -65,6 +65,7 @@ export const Collection = ({
         <FontAwesomeIcon
           icon={faChevronLeft}
           onClick={goBack}
+          data-testid="collection-back"
           className="cursor-pointer h-6 w-6"
         />
         <div className="flex w-full flex-col">
@@ -76,6 +77,7 @@ export const Collection = ({
             {isMine && (
               <FontAwesomeIcon
                 onClick={() => isMine && setIsDeleteCollectionDialogOpen(true)}
+                data-testid="collection-delete"
                 icon={faTrashCan}
                 className="text-danger-300 cursor-pointer"
               />

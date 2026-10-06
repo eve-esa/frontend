@@ -49,6 +49,7 @@ export const DeleteCollectionDialog = ({
             variant="destructive"
             size="md"
             onClick={() => deleteCollection(collectionId)}
+            data-testid="delete-collection-confirm"
             className="min-w-[100px]"
           >
             {isPending ? <Spinner size="sm" /> : "Delete"}
