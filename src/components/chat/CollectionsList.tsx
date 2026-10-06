@@ -46,9 +46,12 @@ export const CollectionsList = ({
             <div
               className="flex items-center justify-between gap-2 p-2 group"
               key={collection.id}
+              data-testid="collection-item"
+              data-collection-id={collection.id}
             >
               <div className="flex min-w-0 flex-1 items-center gap-2">
                 <Switch
+                  data-testid="collection-enable-toggle"
                   checked={isSelected(collection.id)}
                   onCheckedChange={(checked) =>
                     setSelected(collection.id, checked)
@@ -56,6 +59,7 @@ export const CollectionsList = ({
                 />
                 <span
                   className="relative cursor-pointer group-hover:text-primary-300"
+                  data-testid="collection-name"
                   onClick={() => onSelectCollection(collection)}
                 >
                   {collection.name}

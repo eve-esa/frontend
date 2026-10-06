@@ -63,7 +63,7 @@ export const DocumentUploader = ({
           }
         )}
       >
-        <input {...getInputProps()} />
+        <input {...getInputProps()} data-testid="document-upload-input" />
         <div className="flex w-full flex-col items-center gap-2">
           <FontAwesomeIcon icon={faFileLines} className="h-[30px] w-[25px]" />
           {isPending ? (

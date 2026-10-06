@@ -107,6 +107,7 @@ export const MyCollections = ({ onToggle }: MyCollectionsProps) => {
                 variant="outline"
                 size="md"
                 onClick={() => setIsCreateCollectionDialogOpen(true)}
+                data-testid="my-collections-new"
               >
                 <FontAwesomeIcon icon={faPlus} className="w-4 h-4" />
                 <span className="whitespace-nowrap mt-[2px] overflow-hidden text-ellipsis font-['NotesESA']">

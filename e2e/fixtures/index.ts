@@ -11,6 +11,7 @@ import {
   ApiKeysDialog,
   ChatPage,
   LoginPage,
+  MyCollectionsPanel,
   ProfileDialog,
   ProfileRequiredDialog,
   SettingsPanel,
@@ -117,6 +118,7 @@ type TestFixtures = {
   profile: ProfileDialog;
   profileRequired: ProfileRequiredDialog;
   apiKeys: ApiKeysDialog;
+  myCollections: MyCollectionsPanel;
   api: Api;
 };
 
@@ -170,6 +172,10 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
 
   apiKeys: async ({ authedPage, chat }, use) => {
     await use(new ApiKeysDialog(authedPage, chat));
+  },
+
+  myCollections: async ({ authedPage }, use) => {
+    await use(new MyCollectionsPanel(authedPage));
   },
 
   api: async ({ authedPage, baseURL }, use, testInfo) => {

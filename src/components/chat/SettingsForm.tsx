@@ -439,6 +439,7 @@ export const SettingsForm = ({ onToggle }: SettingsFormProps) => {
             variant="outline"
             size="md"
             disabled={!isValid}
+            data-testid="settings-save"
             className="w-full 3xl:text-xl"
           >
             SAVE VALUES

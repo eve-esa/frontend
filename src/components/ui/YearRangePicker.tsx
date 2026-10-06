@@ -67,12 +67,19 @@ export const YearRangePicker: React.FC<YearRangePickerProps> = ({
               value={yearRange?.startYear?.toString() || ""}
               onValueChange={handleStartYearChange}
             >
-              <SelectTrigger className="bg-natural-900 placeholder:text-primary-50">
+              <SelectTrigger
+                className="bg-natural-900 placeholder:text-primary-50"
+                data-testid="year-range-start"
+              >
                 <SelectValue placeholder="Start year" />
               </SelectTrigger>
               <SelectContent>
                 {years.map((year) => (
-                  <SelectItem key={year} value={year.toString()}>
+                  <SelectItem
+                    key={year}
+                    value={year.toString()}
+                    data-testid={`year-range-option-${year}`}
+                  >
                     {year}
                   </SelectItem>
                 ))}
@@ -89,12 +96,19 @@ export const YearRangePicker: React.FC<YearRangePickerProps> = ({
               value={yearRange?.endYear?.toString() || ""}
               onValueChange={handleEndYearChange}
             >
-              <SelectTrigger className="bg-natural-900 placeholder:text-primary-50">
+              <SelectTrigger
+                className="bg-natural-900 placeholder:text-primary-50"
+                data-testid="year-range-end"
+              >
                 <SelectValue placeholder="End year" />
               </SelectTrigger>
               <SelectContent>
                 {years.map((year) => (
-                  <SelectItem key={year} value={year.toString()}>
+                  <SelectItem
+                    key={year}
+                    value={year.toString()}
+                    data-testid={`year-range-option-${year}`}
+                  >
                     {year}
                   </SelectItem>
                 ))}

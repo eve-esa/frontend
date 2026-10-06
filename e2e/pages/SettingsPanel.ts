@@ -8,7 +8,10 @@ export class SettingsPanel {
   readonly minCitations: Locator;
   readonly classificationFilters: Locator;
 
-  constructor(page: Page, private readonly composer: Composer) {
+  constructor(
+    private readonly page: Page,
+    private readonly composer: Composer,
+  ) {
     this.root = page.getByTestId("settings-panel");
     this.yearRange = page.getByTestId("settings-year-range");
     this.minCitations = page.getByTestId("settings-min-citations");
@@ -21,6 +24,23 @@ export class SettingsPanel {
   async open(): Promise<void> {
     await this.composer.settingsButton.click();
     await expect(this.root).toBeVisible();
+  }
+
+  /** Picks both ends of the document year range from their dropdowns. */
+  async setYearRange(startYear: number, endYear: number): Promise<void> {
+    await this.page.getByTestId("year-range-start").click();
+    await this.page.getByTestId(`year-range-option-${startYear}`).click();
+    await this.page.getByTestId("year-range-end").click();
+    await this.page.getByTestId(`year-range-option-${endYear}`).click();
+    await expect(this.page.getByTestId("year-range-start")).toHaveText(String(startYear));
+    await expect(this.page.getByTestId("year-range-end")).toHaveText(String(endYear));
+  }
+
+  /** Saves the panel values; the next message carries them. */
+  async save(): Promise<void> {
+    const save = this.page.getByTestId("settings-save");
+    await expect(save).toBeEnabled();
+    await save.click();
   }
 
   async minCitationsValue(): Promise<number> {

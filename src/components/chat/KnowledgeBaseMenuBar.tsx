@@ -33,6 +33,7 @@ export const KnowledgeBaseMenuBar = ({
 
   const triggerContent = (
     <MenubarTrigger
+      data-testid="knowledge-base-menu"
       className={`flex items-center gap-2 rounded-lg p-2 text-natural-50 cursor-pointer ${
         isCollectionsSidebarOpen
           ? "bg-primary-600/60 text-white"
@@ -93,6 +94,7 @@ export const KnowledgeBaseMenuBar = ({
               <MenubarItem
                 onClick={() => openDynamicSidebar({ type: "my-collections" })}
                 data-tour="my-collections-button"
+                data-testid="knowledge-base-my-collections"
                 className={cn(
                   "my-collections-button-tour ",
                   content?.type === "my-collections"

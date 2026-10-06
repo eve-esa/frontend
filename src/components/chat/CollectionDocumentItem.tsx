@@ -22,12 +22,19 @@ export const CollectionDocumentItem = ({
   const isMine = profile?.id === document.user_id;
 
   return (
-    <div className="flex flex-col gap-2">
+    <div
+      className="flex flex-col gap-2"
+      data-testid="collection-document"
+      data-document-id={document.id}
+    >
       <div className="flex w-full items-center justify-between gap-2 group">
         <div className="flex w-full items-start flex-col justify-between gap-2 py-2 ">
           <div className="flex items-center justify-between w-full">
             <span className="relative group">
-              <span className="group-hover:text-primary-300">
+              <span
+                className="group-hover:text-primary-300"
+                data-testid="collection-document-name"
+              >
                 {document.name}
               </span>
               <span className="absolute -bottom-1 right-0 w-0 h-0.5 bg-primary-300"></span>
@@ -35,6 +42,7 @@ export const CollectionDocumentItem = ({
             {isMine && (
               <FontAwesomeIcon
                 onClick={() => isMine && setIsOpenDeleteDocumentDialog(true)}
+                data-testid="collection-document-delete"
                 icon={faTrashCan}
                 className="text-danger-300 cursor-pointer opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity"
               />
