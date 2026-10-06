@@ -16,6 +16,22 @@ Release and promotes staging. Production is promoted from there by an explicit d
 The "Pilot history" section at the bottom predates this repository's version series: no tag was ever
 cut for it. The released tags start at `v0.0.1`.
 
+## [1.2.0](https://github.com/eve-esa/frontend/compare/v1.1.1...v1.2.0) (2026-10-06)
+
+
+### Added
+
+* **profile:** pick the country from a list ([#142](https://github.com/eve-esa/frontend/issues/142)) ([ef60c23](https://github.com/eve-esa/frontend/commit/ef60c238a83415d2f653844475c96e01db6334a1))
+
+
+### Fixed
+
+* **chat:** show the stopped state when Stop lands before the first token ([#145](https://github.com/eve-esa/frontend/issues/145)) ([f9a1e4c](https://github.com/eve-esa/frontend/commit/f9a1e4c0f8bf10ec94ba17ea2836cdea648e6039))
+* **chat:** stop reporting a user Stop as an error ([#149](https://github.com/eve-esa/frontend/issues/149)) ([6b6af6a](https://github.com/eve-esa/frontend/commit/6b6af6aab8f120a4edbb308c7ccda01180164514))
+* **copy:** drop the em-dash and middle dot separators ([#144](https://github.com/eve-esa/frontend/issues/144)) ([edef28c](https://github.com/eve-esa/frontend/commit/edef28c3da1d9bab4a957d5d2a60424b1770a6a1))
+* **onboarding:** keep the tour collection away from the API ([#143](https://github.com/eve-esa/frontend/issues/143)) ([6df4484](https://github.com/eve-esa/frontend/commit/6df448453115ad6bd6b95684068c6c6ab5c23d83))
+* **profile:** allow saving when the stored name is empty ([#140](https://github.com/eve-esa/frontend/issues/140)) ([b528281](https://github.com/eve-esa/frontend/commit/b5282815d36c43924788aae4a6b948f6f52339f1))
+
 ## [1.1.1](https://github.com/eve-esa/frontend/compare/v1.1.0...v1.1.1) (2026-10-05)
 
 
