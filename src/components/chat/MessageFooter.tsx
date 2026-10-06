@@ -648,7 +648,7 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
                   <>
                     <span>
                       {hallucinationLabel === 1 || hallucinationLabel === 0
-                        ? " — "
+                        ? ": "
                         : ""}
                     </span>
                     <SmartText text={hallucinationDisplay} />
