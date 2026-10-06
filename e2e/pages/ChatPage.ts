@@ -55,6 +55,41 @@ export class ChatPage {
     return this.page.getByTestId("conversation-title").allInnerTexts();
   }
 
+  /** The newest sidebar item with this title (the list is sorted newest first). */
+  private conversationItem(title: string): Locator {
+    return this.conversations
+      .filter({
+        has: this.page.getByTestId("conversation-title").getByText(title, { exact: true }),
+      })
+      .first();
+  }
+
+  /** Opens the item menu; the trigger shows on hover only, on desktop. */
+  private async openConversationMenu(title: string): Promise<void> {
+    const item = this.conversationItem(title);
+    await item.hover();
+    await item.getByTestId("conversation-menu-trigger").click();
+  }
+
+  /** Renames from the item menu and waits for the inline field to close on save. */
+  async renameConversation(title: string, newTitle: string): Promise<void> {
+    await this.openConversationMenu(title);
+    await this.page.getByTestId("conversation-menu-rename").click();
+    const input = this.page.getByTestId("conversation-rename-input");
+    await input.fill(newTitle);
+    await input.press("Enter");
+    await expect(input).toBeHidden({ timeout: 15_000 });
+  }
+
+  /** Deletes from the item menu through the confirm dialog. */
+  async deleteConversation(title: string): Promise<void> {
+    await this.openConversationMenu(title);
+    await this.page.getByTestId("conversation-menu-delete").click();
+    const confirm = this.page.getByTestId("conversation-delete-confirm");
+    await confirm.click();
+    await expect(confirm).toBeHidden({ timeout: 15_000 });
+  }
+
   async signedInEmail(): Promise<string> {
     await expect(this.userMenuEmail).toBeVisible();
     return (await this.userMenuEmail.innerText()).trim();

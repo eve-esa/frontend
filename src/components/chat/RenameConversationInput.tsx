@@ -54,6 +54,7 @@ export const RenameConversationInput: React.FC<
     <div onClick={(e) => e.stopPropagation()} className="w-full">
       <Input
         ref={inputRef}
+        data-testid="conversation-rename-input"
         value={editingName}
         onChange={(e) => setEditingName(e.target.value)}
         onKeyDown={handleKeyDown}

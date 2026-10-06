@@ -53,6 +53,7 @@ export const DeleteConversationDialog = ({
             Cancel
           </Button>
           <Button
+            data-testid="conversation-delete-confirm"
             disabled={isPending}
             tabIndex={-1}
             variant="destructive"
