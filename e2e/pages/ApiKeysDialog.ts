@@ -1,4 +1,4 @@
-import { expect, type Locator, type Page } from "@playwright/test";
+import { expect, type Locator, type Page, type Response } from "@playwright/test";
 import type { ChatPage } from "./ChatPage";
 
 export type ApiKeyExpiry = "30" | "90" | "365" | "never";
@@ -78,12 +78,26 @@ export class ApiKeysDialog {
     await expect(this.createSubmit).toBeVisible();
   }
 
-  /** Fills and submits the open create form, then waits for the reveal view. */
+  /** The next response to `method` on the API keys route, armed before the click that sends it. */
+  private apiKeysResponse(method: "POST" | "DELETE"): Promise<Response> {
+    return this.page.waitForResponse(
+      (response) =>
+        response.request().method() === method &&
+        /\/users\/api-keys(\/[^/]+)?$/.test(new URL(response.url()).pathname),
+    );
+  }
+
+  /**
+   * Fills and submits the open create form, waits for the POST to answer 201,
+   * then for the reveal view.
+   */
   async create({ name, expiry }: { name: string; expiry: ApiKeyExpiry }): Promise<void> {
     await this.nameInput.fill(name);
     await this.expiryOption(expiry).click();
     await expect(this.expiryInput(expiry)).toBeChecked();
+    const created = this.apiKeysResponse("POST");
     await this.createSubmit.click();
+    expect((await created).status()).toBe(201);
     await expect(this.reveal).toBeVisible();
   }
 
@@ -92,8 +106,14 @@ export class ApiKeysDialog {
     await expect(this.deleteConfirm).toBeVisible();
   }
 
+  /**
+   * Confirms the delete and waits for the DELETE to answer 204: the row leaves
+   * the list before the request ends, so the row alone proves nothing server side.
+   */
   async confirmDelete(name: string): Promise<void> {
+    const deleted = this.apiKeysResponse("DELETE");
     await this.deleteSubmit.click();
+    expect((await deleted).status()).toBe(204);
     await expect(this.row(name)).toHaveCount(0);
   }
 

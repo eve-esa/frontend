@@ -9,6 +9,7 @@ export class Composer {
   readonly settingsButton: Locator;
   readonly modelPicker: Locator;
   readonly manageModelsButton: Locator;
+  readonly lastTurnEnded: Locator;
 
   constructor(page: Page) {
     this.input = page.getByTestId("composer-input");
@@ -18,6 +19,11 @@ export class Composer {
     this.settingsButton = page.getByTestId("composer-settings");
     this.modelPicker = page.getByTestId("composer-model-picker");
     this.manageModelsButton = page.getByTestId("composer-manage-models");
+    const last = page.getByTestId("message").last();
+    this.lastTurnEnded = last
+      .getByTestId("message-copy")
+      .or(last.getByTestId("message-error"))
+      .or(last.getByTestId("message-stopped"));
   }
 
   async waitReady(): Promise<void> {
@@ -40,10 +46,16 @@ export class Composer {
     return this.stopButton.isVisible();
   }
 
-  /** Waits until no answer is in flight (Stop gone, Send back). */
-  async waitIdle(timeout = 150_000): Promise<void> {
+  /**
+   * Waits until the turn just sent has ended. Stop hidden alone passes before
+   * the stream starts (Stop not rendered yet, Send already gone), so this first
+   * waits for Stop or for an ended last turn (answer footer, error or stopped),
+   * then for Stop to go within `timeout`, then for Send to come back.
+   */
+  async waitIdle(timeout = 240_000): Promise<void> {
+    await expect(this.stopButton.or(this.lastTurnEnded).first()).toBeVisible({ timeout: 60_000 });
     await expect(this.stopButton).toBeHidden({ timeout });
-    await expect(this.sendButton).toBeVisible({ timeout: 15_000 });
+    await expect(this.sendButton).toBeVisible({ timeout: 30_000 });
   }
 
   async busyNoticeText(): Promise<string | null> {

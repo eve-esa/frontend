@@ -86,7 +86,7 @@ test.describe("private collections @dev", () => {
         await chat.composer.send(FACT_QUESTION);
         const conversationId = await chat.waitForConversationId();
         // Retrieval on dev can take tens of seconds: wait for the turn itself.
-        await chat.waitAnswered();
+        await chat.composer.waitIdle();
 
         // 5. The turn completed with an answer.
         const answer = await chat.messages.lastAnswerText();

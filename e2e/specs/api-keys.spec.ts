@@ -43,8 +43,11 @@ test.describe("api keys @dev", () => {
       await expect(apiKeys.usageSnippet).toHaveCount(0);
       await expect(apiKeys.reveal).not.toContainText("Quickstart");
 
-      const created = await findKey();
-      expect(created?.status).toBe("active");
+      // The POST answered 201; a replica may still lag behind the primary.
+      let created: ApiKeyRow | undefined;
+      await expect
+        .poll(async () => (created = await findKey())?.status, { timeout: 5_000 })
+        .toBe("active");
       const lifetime =
         new Date(created?.expires_at ?? 0).getTime() - new Date(created?.created_at ?? 0).getTime();
       expect(Math.abs(lifetime - 30 * DAY_MS)).toBeLessThan(3_600_000);
@@ -63,7 +66,10 @@ test.describe("api keys @dev", () => {
       await expect(apiKeys.deleteConfirm).not.toContainText(";");
       await apiKeys.confirmDelete(name);
 
-      expect((await findKey())?.status ?? "deleted").not.toBe("active");
+      // The DELETE answered 204; a replica may still lag behind the primary.
+      await expect
+        .poll(async () => (await findKey())?.status ?? "deleted", { timeout: 5_000 })
+        .not.toBe("active");
     } finally {
       // A failed run leaves no active key behind.
       const leftover = await findKey().catch(() => undefined);
