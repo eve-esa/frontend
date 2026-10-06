@@ -1,9 +1,10 @@
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { infiniteQueryOptions, useInfiniteQuery } from "@tanstack/react-query";
 import { QUERY_KEYS } from "./keys";
 import z from "zod";
 import api from "./axios";
 import type { Meta } from "@/types";
 import { nextPageParam } from "@/utilities/pagination";
+import { isTourCollection } from "@/components/onboarding/tourCollection";
 
 export const DocumentSchema = z.object({
   id: z.string(),
@@ -46,7 +47,7 @@ export const getDocuments = async ({
   return data;
 };
 
-export const useGetDocuments = ({
+export const documentsQueryOptions = ({
   limit = 20,
   collectionId,
   enabled,
@@ -54,8 +55,8 @@ export const useGetDocuments = ({
   limit?: number;
   collectionId: string;
   enabled?: boolean;
-}) => {
-  return useInfiniteQuery({
+}) =>
+  infiniteQueryOptions({
     queryKey: [QUERY_KEYS.documents, limit, collectionId],
     queryFn: ({ pageParam }) =>
       getDocuments({
@@ -65,6 +66,11 @@ export const useGetDocuments = ({
       }),
     initialPageParam: 1,
     getNextPageParam: nextPageParam,
-    enabled,
+    // The tour placeholder lives only in the browser: it outlives the tour
+    // when the user leaves on the collection view, so guard it here.
+    enabled: enabled !== false && !isTourCollection(collectionId),
   });
-};
+
+export const useGetDocuments = (
+  params: Parameters<typeof documentsQueryOptions>[0]
+) => useInfiniteQuery(documentsQueryOptions(params));

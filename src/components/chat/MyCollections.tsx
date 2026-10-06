@@ -12,6 +12,7 @@ import {
   type CollectionType,
 } from "@/services/useGetMyCollections";
 import { useTour } from "@/components/onboarding/TourContext";
+import { tourCollection } from "@/components/onboarding/tourCollection";
 
 type MyCollectionsProps = {
   onToggle: () => void;
@@ -48,23 +49,11 @@ export const MyCollections = ({ onToggle }: MyCollectionsProps) => {
 
   const collectionsList = !isRunning
     ? collections?.pages.flatMap((page) => page.data)
-    : [
-        {
-          id: "tour_collection",
-          name: "Your own collection",
-          timestamp: Date.now().toString(),
-          user_id: "tour_user",
-        },
-      ];
+    : [tourCollection()];
 
   useEffect(() => {
     if (currentStep === 8) {
-      setSelectedCollection({
-        id: "tour_collection",
-        name: "Your own collection",
-        timestamp: Date.now().toString(),
-        user_id: "tour_user",
-      });
+      setSelectedCollection(tourCollection());
       setShowUploadArea(true);
     } else if (currentStep === 7) {
       setSelectedCollection(null);
