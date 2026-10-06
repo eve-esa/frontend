@@ -7,6 +7,10 @@ import { defineConfig, devices } from "@playwright/test";
  * any project (a preview host, a tunnel). Credentials come from `E2E_EMAIL`
  * and `E2E_PASSWORD` and are never written to disk except as the browser
  * storage state under `e2e/.auth/` (gitignored).
+ *
+ * Every project runs the browser specs (`specs/`) and the API specs (`api/`,
+ * no browser), so one command covers an environment; `yarn e2e --project=dev
+ * api/` runs the API specs alone.
  */
 const TARGETS = {
   dev: "https://dev.eve-chat.chat",
@@ -19,7 +23,8 @@ const target = (fallback: string): string => process.env.E2E_TARGET || fallback;
 const desktop = { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 } };
 
 export default defineConfig({
-  testDir: "./specs",
+  testDir: ".",
+  testMatch: ["specs/**/*.spec.ts", "api/**/*.spec.ts"],
   outputDir: "./.results",
   fullyParallel: false,
   workers: 1,

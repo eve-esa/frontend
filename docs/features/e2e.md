@@ -20,7 +20,7 @@ docker run --rm -it -v "$PWD":/work -w /work \
 | `dev` (default in CI) | every spec |
 | `staging` | every spec, from the promoted release tag |
 | `prod-readonly` | specs tagged `@prod` only; none of them writes data |
-| `local` | every spec, against the compose stack (Keycloak login) |
+| `local` | every browser spec, against the compose stack (Keycloak login); the API specs skip |
 
 - `E2E_EMAIL`, `E2E_PASSWORD`: the test account of the target environment. In CI they are secrets of the `esa-eve-dev` environment for dev and of `esa-eve-staging` for staging (which accepts `v*` tags only, hence the tag ref). A run without them stops before sign-in with an error naming both.
 - `E2E_TARGET`: overrides the base URL of the chosen project, for example a preview host.
@@ -35,6 +35,21 @@ The suite signs in once per worker through the hosted login and keeps the identi
 - `e2e/pages/`: one page object per screen or dialog. Methods return typed values (`sourcesCount(): Promise<number>`), never raw locators for a test to poke at.
 - `e2e/fixtures/index.ts`: the `test` to import. It provides `authedPage`, the page objects, and `api`, `GET` and `PATCH /api/...` helpers that send the bearer the signed-in app holds. When the required profile dialog covers the chat after sign-in (`FEATURE_PROFILE_FIELDS` on, the test account lacking country or institution), the sign-in fills it with fixed values. Nothing writes to a production host (`eve-chat.chat`, `app.eve-chat.chat`, whatever the project or `E2E_TARGET`) or in the `prod-readonly` project: the sign-in and `api.patch` fail there instead.
 - `e2e/specs/`: one file per behaviour. Each test checks the UI and then reads the persisted state through `api`.
+- `e2e/api/`: API specs with no browser (below).
+
+## API suites
+
+`e2e/api/` holds Playwright API tests (`APIRequestContext`, no browser) for API keys, the OpenAI-compatible `/v1` gateway, the token budget and the request rate limiter. Every project runs them next to the browser specs, so `corepack yarn e2e --project=dev` covers both; `corepack yarn e2e --project=dev api/` runs them alone.
+
+- `session.ts` signs in without a browser: it reads `AUTH_ISSUER` and `AUTH_CLIENT_ID` from the `window.__EVE_CONFIG__` the target serves, then calls Cognito `InitiateAuth` with `USER_PASSWORD_AUTH` and `E2E_EMAIL`, `E2E_PASSWORD`. Those tokens carry no `openid` scope, so the account must have signed in once through the hosted page (the browser specs do). A target that signs in through Keycloak (`local`) skips the API specs.
+- Each spec signs in on its own, creates its own 1 day key and revokes it in a `finally`. All three write, so they are `@dev` and never run on a production host or in `prod-readonly`.
+- Traces are off in these files: a trace would hold the bearer, the plaintext key and the Cognito password.
+
+| Spec | Proves |
+|---|---|
+| `api-keys.spec.ts` | a new key lists the `jsc/` model on `/v1/models`, answers a completion with `usage` and a stream ending in `data: [DONE]`, is listed active with its suffix and no plaintext, and gets 401 `Invalid or revoked API key` after the delete; malformed keys get 401 `Invalid API key format`. The `eve/` (RunPod) test is `@slow` and runs only with `E2E_SLOW=1` (cold start up to 4 minutes). |
+| `budget.spec.ts` | one completion raises `used_tokens` of `GET /api/users/me/token-usage` by exactly `usage.total_tokens` (reserve, then settle the difference). Skipped for an unlimited group. The exhaustion test (429, `error.code` `token_budget_exceeded`, `x-should-retry: false`) runs only with `E2E_BUDGET_EXHAUSTED_EMAIL` and `E2E_BUDGET_EXHAUSTED_PASSWORD`: an account with a few hundred tokens left, which the operator prepares (the back office cannot lower a cap). |
+| `rate-limit-shadow.spec.ts` | 40 concurrent `POST /api/log-error` (errlog burst 30) all answer 200 and none says `rate_limited`. The backend does not expose its limiter mode: under `REQUEST_RATE_LIMIT_MODE=enforce` this spec fails by design. A pass cannot tell shadow from the limiter being off; the run window's `rate_limit.limited ... mode=shadow` log line and the `eve.rate_limit.decisions` metric prove the refusals were counted. Each run leaves 40 `error_log` rows of type `RateLimitShadowTest`. |
 
 ## Add a page object
 
