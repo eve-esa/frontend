@@ -1,7 +1,8 @@
 # Workflows
 
-What runs, when it runs, and who starts it. Six workflows, all of them entry points: unlike the
-backend, the frontend has no reusable `deploy-ecs.yml`, so there is nothing here marked internal.
+What runs, when it runs, and who starts it. Seven workflows, all of them entry points: unlike the
+backend, the frontend has no reusable `deploy-ecs.yml`. `e2e-dev.yml` is also callable, from the
+backend after its dev deploy.
 
 ## The files
 
@@ -13,6 +14,7 @@ backend, the frontend has no reusable `deploy-ecs.yml`, so there is nothing here
 | `promote-staging.yml` | `promote: staging` | `workflow_dispatch` at a `v*` tag, normally raised by `release.yml` | entry point |
 | `promote-prod.yml` | `promote: prod` | `workflow_dispatch` at a `v*` tag, plus one approval | entry point |
 | `release.yml` | `release: draft or cut` | `push` to `main` | entry point |
+| `e2e-dev.yml` | `e2e: dev` | `workflow_run` of `deploy: dev` and `promote: staging`, `workflow_dispatch`, `workflow_call` from `eve-esa/backend` `e2e-dev.yml` | entry point, also callable |
 
 ## The graph
 
