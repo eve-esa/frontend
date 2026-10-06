@@ -1,28 +1,27 @@
 # Browser end-to-end suite (e2e/) against dev after every successful dev deploy, and against
-# staging after every successful staging promote. Read-only for the repository: it only signs in
-# with a test account of the target environment and reports. The prod-readonly project is never
-# run from here.
+# staging on demand. Read-only for the repository: it only signs in with a test account of the
+# target environment and reports. The prod-readonly project is never run from here.
 #
-# The target is computed once per expression below: the dispatch input, else staging when the
-# triggering run is "promote: staging", else dev. Each target reads its own GitHub environment:
-# dev from esa-eve-dev; staging from esa-eve-staging-e2e, which holds only the test account,
-# because esa-eve-staging accepts v* tags only and this workflow runs on main.
+# Staging runs from the release tag that was promoted, in the esa-eve-staging environment, whose
+# branch policy accepts v* tags only:
+#   gh workflow run "e2e: dev" -R eve-esa/frontend --ref vX.Y.Z -f target=staging
 #
 # eve-esa/backend calls this file through workflow_call after every successful backend dev
 # deploy, so a backend-only merge also gets a dev run. A called workflow runs in the caller's
 # repository and reads the caller's github context and esa-eve-dev environment, so the checkout
-# below names this repository and takes main whenever the caller is not this repository.
+# below names this repository and takes main whenever the caller is not this repository, and
+# the target is always dev there, whatever the caller passes.
 name: "e2e: dev"
-run-name: "e2e ${{ inputs.target || (github.event.workflow_run.name == 'promote: staging' && 'staging') || 'dev' }}"
+run-name: "e2e ${{ (github.repository != 'eve-esa/frontend' && 'dev') || inputs.target || 'dev' }}"
 
 on:
   workflow_run:
-    workflows: ["deploy: dev", "promote: staging"]
+    workflows: ["deploy: dev"]
     types: [completed]
   workflow_dispatch:
     inputs:
       target:
-        description: "Project to run (dev, staging, local needs a reachable host)"
+        description: "Project to run (dev, staging, local needs a reachable host); staging needs a v* tag as the ref"
         required: false
         default: dev
         type: choice
@@ -36,19 +35,43 @@ on:
         type: string
 
 concurrency:
-  group: "e2e-${{ inputs.target || (github.event.workflow_run.name == 'promote: staging' && 'staging') || 'dev' }}"
+  group: "e2e-${{ (github.repository != 'eve-esa/frontend' && 'dev') || inputs.target || 'dev' }}"
   cancel-in-progress: false
 
 permissions:
   contents: read
 
 jobs:
+  # A job outside any environment, so a staging dispatch from a branch gets this message instead
+  # of the environment's bare branch policy refusal.
+  staging-ref:
+    name: Staging ref is a release tag
+    if: github.repository == 'eve-esa/frontend' && inputs.target == 'staging'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Check the ref
+        env:
+          REF: ${{ github.ref }}
+        run: |
+          case "$REF" in
+            refs/tags/v*) echo "Running staging from $REF" ;;
+            *)
+              echo "::error::Staging runs from the promoted release tag, not $REF. Dispatch with: gh workflow run \"e2e: dev\" -R eve-esa/frontend --ref vX.Y.Z -f target=staging"
+              exit 1
+              ;;
+          esac
+
   e2e:
     name: Playwright
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    needs: staging-ref
+    # staging-ref is skipped for dev, which must not skip this job.
+    if: >-
+      !cancelled() && needs.staging-ref.result != 'failure'
+      && (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    environment: "${{ (inputs.target || (github.event.workflow_run.name == 'promote: staging' && 'staging') || 'dev') == 'staging' && 'esa-eve-staging-e2e' || 'esa-eve-dev' }}"
+    environment: "${{ github.repository == 'eve-esa/frontend' && inputs.target == 'staging' && 'esa-eve-staging' || 'esa-eve-dev' }}"
     container:
       # Same Playwright version as the devDependency: the browsers ship in the image.
       image: mcr.microsoft.com/playwright:v1.63.0-noble
@@ -56,12 +79,12 @@ jobs:
       CI: "true"
       E2E_EMAIL: ${{ secrets.E2E_EMAIL }}
       E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
-      E2E_PROJECT: "${{ inputs.target || (github.event.workflow_run.name == 'promote: staging' && 'staging') || 'dev' }}"
+      E2E_PROJECT: "${{ (github.repository != 'eve-esa/frontend' && 'dev') || inputs.target || 'dev' }}"
     steps:
       - name: Check the test account secrets
         run: |
           if [ -z "$E2E_EMAIL" ] || [ -z "$E2E_PASSWORD" ]; then
-            echo "::error::E2E_EMAIL and E2E_PASSWORD are not set in the GitHub environment of the $E2E_PROJECT target. Create both secrets for a test user of that environment."
+            echo "::error::E2E_EMAIL and E2E_PASSWORD are not set in the GitHub environment esa-eve-$E2E_PROJECT. Create both secrets for a test user of that environment."
             exit 1
           fi
 
@@ -69,7 +92,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: eve-esa/frontend
-          # The commit the triggering run deployed or promoted, not the head of main at run time.
+          # The commit dev just deployed, or the dispatched ref (the release tag for staging).
           # Called from another repository, that commit is not a frontend commit: dev serves main.
           ref: ${{ github.repository == 'eve-esa/frontend' && (github.event.workflow_run.head_sha || github.sha) || 'main' }}
 

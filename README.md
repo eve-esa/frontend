@@ -57,7 +57,7 @@ yarn dev
 E2E_EMAIL=... E2E_PASSWORD=... yarn e2e --project=dev
 ```
 
-`.github/workflows/e2e-dev.yml` runs the `dev` project after every successful `deploy: dev` (frontend, or backend through `workflow_call`) with the secrets of the `esa-eve-dev` environment, and the `staging` project after every successful `promote: staging` with those of `esa-eve-staging-e2e`, and uploads the HTML report per target. A spec tagged `@prod` is read-only and may run against production; `@dev` specs write conversations or the profile.
+`.github/workflows/e2e-dev.yml` runs the `dev` project after every successful `deploy: dev` (frontend, or backend through `workflow_call`) with the secrets of the `esa-eve-dev` environment, and the `staging` project when dispatched at the promoted `v*` tag with those of `esa-eve-staging`, and uploads the HTML report per target. A spec tagged `@prod` is read-only and may run against production; `@dev` specs write conversations or the profile.
 
 ## Project Structure
 
