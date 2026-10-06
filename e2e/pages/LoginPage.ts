@@ -15,6 +15,16 @@ export class LoginPage {
     return url.origin !== appOrigin;
   }
 
+  /** Waits for the identity provider's sign-in form, the first field it asks for. */
+  async expectForm(appOrigin: string): Promise<void> {
+    await expect.poll(() => this.isOnIdentityProvider(appOrigin), { timeout: 45_000 }).toBe(true);
+    await expect(
+      this.page
+        .locator('#username:visible, input[name="username"]:visible, input[type="email"]:visible')
+        .first(),
+    ).toBeVisible({ timeout: 45_000 });
+  }
+
   async signIn(email: string, password: string): Promise<void> {
     // The managed login page is a Remix app: filling before hydration loses the values.
     await this.page.waitForLoadState("networkidle");

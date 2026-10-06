@@ -22,7 +22,10 @@ export const LogoutDialog = ({ isOpen, onOpenChange }: LogoutDialogProps) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="md:!max-w-[400px]">
+      <DialogContent
+        data-testid="logout-dialog"
+        className="md:!max-w-[400px]"
+      >
         <DialogHeader>
           <DialogTitle>Logout</DialogTitle>
         </DialogHeader>
@@ -42,6 +45,7 @@ export const LogoutDialog = ({ isOpen, onOpenChange }: LogoutDialogProps) => {
             Cancel
           </Button>
           <Button
+            data-testid="logout-confirm"
             variant="destructive"
             size="md"
             onClick={() => logout()}

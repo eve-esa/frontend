@@ -2,6 +2,11 @@ import { expect, type Locator, type Page } from "@playwright/test";
 import { Composer } from "./Composer";
 import { MessagePanel } from "./MessagePanel";
 
+/** User menu entries that open an external page in a new tab. */
+export type UserMenuLink = "user-menu-about" | "user-menu-contact" | "user-menu-privacy";
+
+type UserMenuItem = "user-menu-profile" | "user-menu-logout" | UserMenuLink;
+
 /** The chat layout: conversations sidebar, user menu, composer and messages. */
 export class ChatPage {
   readonly composer: Composer;
@@ -95,9 +100,28 @@ export class ChatPage {
     return (await this.userMenuEmail.innerText()).trim();
   }
 
-  async openUserMenuItem(testId: "user-menu-profile" | "user-menu-logout"): Promise<void> {
+  async openUserMenuItem(testId: UserMenuItem): Promise<void> {
     await this.userMenu.click();
     await this.page.getByTestId(testId).click();
+  }
+
+  /**
+   * Clicks a user menu link and returns the URL the new tab was asked to load, closing the
+   * tab. Read from the tab's first navigation request rather than its final URL, so a
+   * redirect on the external site does not change the answer and the page never has to
+   * finish loading.
+   */
+  async openedLinkUrl(testId: UserMenuLink): Promise<string> {
+    const context = this.page.context();
+    const navigation = context.waitForEvent("request", {
+      predicate: (request) =>
+        request.isNavigationRequest() && request.frame().page() !== this.page,
+    });
+    const tab = context.waitForEvent("page");
+    await this.openUserMenuItem(testId);
+    const [request, opened] = await Promise.all([navigation, tab]);
+    await opened.close();
+    return request.url();
   }
 
   /** The runtime config the release injected, as the app reads it. */
