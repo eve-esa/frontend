@@ -1,6 +1,6 @@
 # End-to-end tests
 
-The browser suite lives in `e2e/` and runs with Playwright against a deployed environment or the local compose stack. CI runs it against dev after every successful `deploy: dev` (`.github/workflows/e2e-dev.yml`), and on demand from the Actions tab.
+The browser suite lives in `e2e/` and runs with Playwright against a deployed environment or the local compose stack. CI (`.github/workflows/e2e-dev.yml`) runs it against dev after every successful `deploy: dev`, against staging after every successful `promote: staging` (on the promoted commit), and on demand from the Actions tab with a `target` input.
 
 ## Run it
 
@@ -13,14 +13,14 @@ docker run --rm -it -v "$PWD":/work -w /work \
   sh -c "corepack enable && corepack yarn install --frozen-lockfile && corepack yarn e2e --project=dev"
 ```
 
-| Project | Target | What runs |
-|---|---|---|
-| `dev` (default in CI) | https://dev.eve-chat.chat | every spec |
-| `staging` | https://staging.eve-chat.chat | every spec |
-| `prod-readonly` | https://eve-chat.chat | specs tagged `@prod` only; none of them writes data |
-| `local` | http://localhost:5173 | every spec, against the compose stack (Keycloak login) |
+| Project | What runs |
+|---|---|
+| `dev` (default in CI) | every spec |
+| `staging` | every spec, after a staging promote |
+| `prod-readonly` | specs tagged `@prod` only; none of them writes data |
+| `local` | every spec, against the compose stack (Keycloak login) |
 
-- `E2E_EMAIL`, `E2E_PASSWORD`: the test account. In CI they are secrets of the `esa-eve-dev` environment.
+- `E2E_EMAIL`, `E2E_PASSWORD`: the test account of the target environment. In CI they are secrets of the `esa-eve-dev` environment for dev and of `esa-eve-staging-e2e` for staging (`esa-eve-staging` accepts `v*` tags only, and this workflow runs on `main`). A run without them stops before sign-in with an error naming both.
 - `E2E_TARGET`: overrides the base URL of the chosen project, for example a preview host.
 - `corepack yarn e2e --list` lists the tests without a browser or credentials.
 - `corepack yarn e2e:report` opens the last HTML report (`e2e/report`). Failures keep a trace and a screenshot.
