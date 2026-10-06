@@ -8,6 +8,15 @@ const LINKS: { label: string; testId: UserMenuLink; key: string }[] = [
   { label: "Privacy Policy", testId: "user-menu-privacy", key: "PRIVACY_POLICY_URL" },
 ];
 
+/**
+ * Host, path and query of a link. The trailing slash is dropped: the external site answers
+ * `/about` with a 301 to `/about/`, and the tab reports the URL after that redirect.
+ */
+const linkTarget = (url: string): string => {
+  const parsed = new URL(url);
+  return `${parsed.host}${parsed.pathname.replace(/\/+$/, "")}${parsed.search}`;
+};
+
 /** Session storage keys holding the signed-in OIDC user, on the page's current origin. */
 const oidcUserKeys = (page: Page): Promise<string[]> =>
   page.evaluate(() => Object.keys(sessionStorage).filter((key) => key.startsWith("oidc.user:")));
@@ -20,7 +29,7 @@ test.describe("account links @prod", () => {
 
       const opened = await chat.openedLinkUrl(link.testId);
       expect(new URL(opened).protocol).toMatch(/^https?:$/);
-      expect(new URL(opened).href).toBe(new URL(configured).href);
+      expect(linkTarget(opened)).toBe(linkTarget(configured));
     });
   }
 
@@ -38,38 +47,20 @@ test.describe("account links @prod", () => {
       await signIn(page, origin, canWrite(origin, testInfo.project.name));
       expect(await oidcUserKeys(page)).not.toHaveLength(0);
 
-      // The app tab's session storage is unreadable once the provider's page has replaced
-      // it, so the first navigation away from the app is held until it has been read.
-      let keysAtLeave: string[] | undefined;
-      let readError: unknown;
-      await page.route(
-        (url) => url.origin !== origin,
-        async (route) => {
-          const request = route.request();
-          if (
-            keysAtLeave === undefined &&
-            readError === undefined &&
-            request.isNavigationRequest() &&
-            request.frame() === page.mainFrame()
-          ) {
-            try {
-              keysAtLeave = await oidcUserKeys(page);
-            } catch (error) {
-              readError = error;
-            }
-          }
-          await route.continue();
-        },
-      );
-
       const chat = new ChatPage(page);
       const logout = new LogoutDialog(page, chat);
       await logout.open();
       await logout.confirm();
-
       await new LoginPage(page).expectForm(origin);
-      expect(readError).toBeUndefined();
-      expect(keysAtLeave).toEqual([]);
+
+      // Session storage belongs to the tab and the origin, so the app's entries outlive the
+      // trip to the provider. Back on the app with the provider unreachable, the app cannot
+      // redirect again (it needs the provider's metadata first), so its storage stays
+      // readable.
+      await page.route((url) => url.origin !== origin, (route) => route.abort());
+      await page.goto("/");
+      expect(new URL(page.url()).origin).toBe(origin);
+      expect(await oidcUserKeys(page)).toEqual([]);
     } finally {
       await context.close();
     }

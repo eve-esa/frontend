@@ -106,22 +106,22 @@ export class ChatPage {
   }
 
   /**
-   * Clicks a user menu link and returns the URL the new tab was asked to load, closing the
-   * tab. Read from the tab's first navigation request rather than its final URL, so a
-   * redirect on the external site does not change the answer and the page never has to
-   * finish loading.
+   * Clicks a user menu link and returns the first http(s) URL the new tab commits, closing
+   * the tab. The tab is caught as a page of the context: the link opens with noopener, and
+   * its first navigation request has no frame yet when Playwright reports it. The URL is
+   * read at commit, so the external page never has to finish loading; a server redirect on
+   * the external site is already applied.
    */
   async openedLinkUrl(testId: UserMenuLink): Promise<string> {
-    const context = this.page.context();
-    const navigation = context.waitForEvent("request", {
-      predicate: (request) =>
-        request.isNavigationRequest() && request.frame().page() !== this.page,
-    });
-    const tab = context.waitForEvent("page");
+    const tab = this.page.context().waitForEvent("page");
     await this.openUserMenuItem(testId);
-    const [request, opened] = await Promise.all([navigation, tab]);
-    await opened.close();
-    return request.url();
+    const opened = await tab;
+    try {
+      await opened.waitForURL(/^https?:/, { waitUntil: "commit" });
+      return opened.url();
+    } finally {
+      await opened.close();
+    }
   }
 
   /** The runtime config the release injected, as the app reads it. */
