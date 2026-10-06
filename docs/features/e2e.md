@@ -1,6 +1,6 @@
 # End-to-end tests
 
-The browser suite lives in `e2e/` and runs with Playwright against a deployed environment or the local compose stack. CI (`.github/workflows/e2e-dev.yml`) runs it against dev after every successful `deploy: dev`, against staging after every successful `promote: staging` (on the promoted commit), and on demand from the Actions tab with a `target` input.
+The browser suite lives in `e2e/` and runs with Playwright against a deployed environment or the local compose stack. CI (`.github/workflows/e2e-dev.yml`) runs it against dev after every successful `deploy: dev` of this repository or of the backend (the backend calls this workflow, so that run shows in the backend Actions tab), against staging after every successful `promote: staging` (on the promoted commit), and on demand from the Actions tab with a `target` input.
 
 ## Run it
 

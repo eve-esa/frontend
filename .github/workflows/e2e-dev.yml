@@ -7,6 +7,11 @@
 # triggering run is "promote: staging", else dev. Each target reads its own GitHub environment:
 # dev from esa-eve-dev; staging from esa-eve-staging-e2e, which holds only the test account,
 # because esa-eve-staging accepts v* tags only and this workflow runs on main.
+#
+# eve-esa/backend calls this file through workflow_call after every successful backend dev
+# deploy, so a backend-only merge also gets a dev run. A called workflow runs in the caller's
+# repository and reads the caller's github context and esa-eve-dev environment, so the checkout
+# below names this repository and takes main whenever the caller is not this repository.
 name: "e2e: dev"
 run-name: "e2e ${{ inputs.target || (github.event.workflow_run.name == 'promote: staging' && 'staging') || 'dev' }}"
 
@@ -22,6 +27,13 @@ on:
         default: dev
         type: choice
         options: [dev, staging]
+  workflow_call:
+    inputs:
+      target:
+        description: "Project to run (dev)"
+        required: false
+        default: dev
+        type: string
 
 concurrency:
   group: "e2e-${{ inputs.target || (github.event.workflow_run.name == 'promote: staging' && 'staging') || 'dev' }}"
@@ -56,8 +68,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          repository: eve-esa/frontend
           # The commit the triggering run deployed or promoted, not the head of main at run time.
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          # Called from another repository, that commit is not a frontend commit: dev serves main.
+          ref: ${{ github.repository == 'eve-esa/frontend' && (github.event.workflow_run.head_sha || github.sha) || 'main' }}
 
       - name: Install dependencies
         run: |
