@@ -26,7 +26,21 @@ test.describe("stop @dev", () => {
     const conversationId = await chat.waitForConversationId();
     // Skeleton phase: the turn is in flight and no answer text is painted yet.
     await expect(chat.messages.lastLoading).toBeVisible({ timeout: 60_000 });
+
+    // The refetch the client fires right after the stop brings back the row
+    // the backend wrote when generation started (empty, not yet stopped). That
+    // is the moment the old client painted the error copy, so it is checked
+    // there, not after the backend has caught up.
+    const firstRefetch = chat.page.waitForResponse(
+      (response) =>
+        response.request().method() === "GET" &&
+        new URL(response.url()).pathname.endsWith(`/conversations/${conversationId}`),
+      { timeout: 60_000 },
+    );
     await chat.composer.stop();
+    await firstRefetch;
+    await expect(chat.messages.last.getByTestId("message-stopped")).toBeVisible();
+    await chat.messages.expectNoErrorFor(1_500);
     await chat.composer.waitIdle(60_000);
 
     await expect
@@ -35,6 +49,8 @@ test.describe("stop @dev", () => {
         intervals: [2_000],
       })
       .toBe(true);
+    // Nothing was generated: the stop landed before the first token.
+    expect((await lastPersistedTurn(api, conversationId)).outputChars).toBe(0);
     await expect(chat.messages.last.getByTestId("message-stopped")).toBeVisible();
     await expect(chat.messages.lastError).toBeHidden();
   });

@@ -66,6 +66,17 @@ export class MessagePanel {
     return this.last.getByTestId("message-error");
   }
 
+  /** Fails as soon as the last turn shows the failure text within `ms`; resolves otherwise. */
+  async expectNoErrorFor(ms: number): Promise<void> {
+    const appeared = await this.lastError
+      .waitFor({ state: "visible", timeout: ms })
+      .then(
+        () => true,
+        () => false,
+      );
+    expect(appeared, "the last turn showed the error copy").toBe(false);
+  }
+
   /** The skeleton or notices shown before the first token of the last turn. */
   get lastLoading(): Locator {
     return this.last.getByTestId("message-loading");
