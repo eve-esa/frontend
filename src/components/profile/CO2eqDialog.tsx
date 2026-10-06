@@ -46,7 +46,7 @@ export const CO2eqDialog = ({ isOpen, onOpenChange }: CO2eqDialogProps) => {
                 ? isFetching
                   ? "Calculating..."
                   : `${totalCO2eqKg} Kg`
-                : "—"}
+                : "-"}
             </div>
             {shouldFetch && !isFetching && data && (
               <div className="text-lg font-semibold text-natural-50">
