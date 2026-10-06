@@ -1,3 +1,4 @@
+import { isCancel } from "axios";
 import api from "./axios";
 import { recordException } from "@/observability/telemetry";
 
@@ -12,7 +13,27 @@ export interface ErrorLogPayload {
   metadata?: Record<string, unknown>;
 }
 
+// Names a cancellation carries: axios raises CanceledError when a request's
+// signal aborts, fetch and a bare AbortController raise a DOMException named
+// AbortError. A user Stop ends that way and is not an error.
+const CANCELLATION_NAMES = new Set(["CanceledError", "AbortError"]);
+
+export const isCancellation = (error: unknown): boolean => {
+  if (isCancel(error)) return true;
+  if (!error || typeof error !== "object") return false;
+  // Structural check: a DOMException's Error lineage varies by browser.
+  const { name, code } = error as { name?: unknown; code?: unknown };
+  return (
+    (typeof name === "string" && CANCELLATION_NAMES.has(name)) ||
+    code === "ERR_CANCELED"
+  );
+};
+
 export const logError = async (payload: ErrorLogPayload): Promise<void> => {
+  // A cancellation reaches here as error_type from the global handler, which
+  // copies error.name: drop it before it reaches either error feed.
+  if (CANCELLATION_NAMES.has(payload.error_type)) return;
+
   // Same payload to the telemetry backend. A no-op when telemetry is off, and
   // it never throws, so the POST below runs exactly as before.
   recordException(

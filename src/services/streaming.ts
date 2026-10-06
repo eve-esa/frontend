@@ -66,6 +66,16 @@ export function consumeWatchdogTimeoutFlag(): boolean {
   return wasTimeout;
 }
 
+// Read the flags without clearing them, for code that runs before the
+// mutation's onError consumes them.
+export function peekSuppressToastFlag(): boolean {
+  return nextErrorShouldSuppressToast;
+}
+
+export function peekWatchdogTimeoutFlag(): boolean {
+  return lastAbortWasWatchdogTimeout;
+}
+
 export function abortCurrentStream() {
   if (currentStreamAbortController) {
     // Mark that the next error is a deliberate user cancellation

@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { CanceledError } from "axios";
 import { installMemoryLocalStorage } from "@/test-utils/memoryLocalStorage";
 import { stubRuntimeConfig } from "@/test-utils/runtimeConfigStub";
 import type { QueryClient } from "@tanstack/react-query";
@@ -25,6 +26,7 @@ const mocks = vi.hoisted(() => ({
   postStream: vi.fn(),
   toastError: vi.fn(),
   logError: vi.fn(),
+  watchdogTimedOut: false,
 }));
 
 vi.mock("sonner", () => ({ toast: { error: mocks.toastError } }));
@@ -36,8 +38,14 @@ vi.mock("./streaming", () => ({
   postStream: mocks.postStream,
   consumeSuppressToastFlag: () => mocks.userStop,
   consumeWatchdogTimeoutFlag: () => false,
+  peekSuppressToastFlag: () => mocks.userStop,
+  peekWatchdogTimeoutFlag: () => mocks.watchdogTimedOut,
 }));
-vi.mock("./errorLogging", () => ({ logError: mocks.logError }));
+vi.mock("./errorLogging", async (importOriginal) => ({
+  isCancellation: (await importOriginal<typeof import("./errorLogging")>())
+    .isCancellation,
+  logError: mocks.logError,
+}));
 vi.mock("react", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react")>()),
   useRef: (initial: unknown) => ({ current: initial }),
@@ -111,6 +119,7 @@ beforeEach(() => {
   mocks.postStream.mockReset();
   mocks.toastError.mockReset();
   mocks.logError.mockReset();
+  mocks.watchdogTimedOut = false;
   mocks.post.mockResolvedValue({
     data: {
       id: "m1",
@@ -593,5 +602,56 @@ describe("blocking send (FEATURE_STREAMING=false)", () => {
     await expect(options.mutationFn(VARIABLES)).rejects.toBe(failure);
     expect(mocks.post).toHaveBeenCalledTimes(1);
     expect(mocks.logError).not.toHaveBeenCalled();
+  });
+});
+
+describe("stream ended by a cancellation", () => {
+  it("does not log a user Stop and hands the streamed text to onError", async () => {
+    const { options } = await loadBusy();
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    mocks.userStop = true;
+    const stop = new CanceledError();
+    mocks.postStream.mockImplementationOnce(
+      ({ onEvent }: { onEvent: (evt: unknown) => void }) => {
+        onEvent({ type: "token", content: "Partial" });
+        return Promise.reject(stop);
+      },
+    );
+
+    const error = await options.mutationFn(VARIABLES).catch((e: unknown) => e);
+    expect(error).toBe(stop);
+    expect((error as { streamedOutput?: string }).streamedOutput).toBe("Partial");
+    options.onError(error, VARIABLES);
+
+    expect(mocks.logError).not.toHaveBeenCalled();
+    expect(errorSpy).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+
+  it("still logs a watchdog abort, which raises the same CanceledError", async () => {
+    const { options } = await loadBusy();
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    mocks.watchdogTimedOut = true;
+    mocks.postStream.mockRejectedValueOnce(new CanceledError());
+
+    await expect(options.mutationFn(VARIABLES)).rejects.toBeInstanceOf(
+      CanceledError,
+    );
+    expect(mocks.logError).toHaveBeenCalledTimes(1);
+    expect(mocks.logError.mock.calls[0][0].error_type).toBe("StreamError");
+    errorSpy.mockRestore();
+  });
+
+  it("still logs an abort that is neither a Stop nor the watchdog", async () => {
+    const { options } = await loadBusy();
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    mocks.postStream.mockRejectedValueOnce(new CanceledError());
+
+    await expect(options.mutationFn(VARIABLES)).rejects.toBeInstanceOf(
+      CanceledError,
+    );
+    expect(mocks.logError).toHaveBeenCalledTimes(1);
+    expect(errorSpy).toHaveBeenCalled();
+    errorSpy.mockRestore();
   });
 });

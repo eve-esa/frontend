@@ -10,7 +10,8 @@ vi.mock("@/observability/telemetry", () => ({
   recordException: mocks.recordException,
 }));
 
-import { logError } from "./errorLogging";
+import { CanceledError } from "axios";
+import { isCancellation, logError } from "./errorLogging";
 
 const payload = {
   error_message: "boom",
@@ -59,5 +60,40 @@ describe("logError", () => {
     mocks.post.mockRejectedValue(new Error("network"));
     await expect(logError(payload)).resolves.toBeUndefined();
     expect(mocks.recordException).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("cancellations", () => {
+  it.each(["CanceledError", "AbortError"])(
+    "drops a %s without posting or recording it",
+    async (name) => {
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+      await logError({ ...payload, error_type: name, error_message: "canceled" });
+
+      expect(mocks.post).not.toHaveBeenCalled();
+      expect(mocks.recordException).not.toHaveBeenCalled();
+      expect(errorSpy).not.toHaveBeenCalled();
+      errorSpy.mockRestore();
+    },
+  );
+
+  it("still posts a real error", async () => {
+    mocks.post.mockResolvedValue({});
+    await logError({ ...payload, error_type: "StreamError" });
+    expect(mocks.post).toHaveBeenCalledTimes(1);
+    expect(mocks.recordException).toHaveBeenCalledTimes(1);
+  });
+
+  it("recognises axios, fetch and DOMException cancellations", () => {
+    expect(isCancellation(new CanceledError())).toBe(true);
+    expect(isCancellation({ code: "ERR_CANCELED" })).toBe(true);
+    expect(isCancellation(new DOMException("aborted", "AbortError"))).toBe(true);
+  });
+
+  it("does not treat other errors as cancellations", () => {
+    expect(isCancellation(new Error("canceled"))).toBe(false);
+    expect(isCancellation(new TypeError("Failed to fetch"))).toBe(false);
+    expect(isCancellation(undefined)).toBe(false);
+    expect(isCancellation("CanceledError: canceled")).toBe(false);
   });
 });
