@@ -53,6 +53,34 @@ export class MessagePanel {
     return titles.count();
   }
 
+  /**
+   * Clicks the source title at `index` in the open sources panel and returns
+   * the tab it opens, once that tab has left about:blank.
+   */
+  async openSourceTab(index: number): Promise<Page> {
+    const opened = this.page.context().waitForEvent("page");
+    await this.page.getByTestId("source-title").nth(index).click();
+    const tab = await opened;
+    await expect.poll(() => tab.url(), { timeout: 30_000 }).not.toBe("about:blank");
+    return tab;
+  }
+
+  /** Waits until the last turn carries its server id instead of the optimistic one. */
+  async waitForPersistedId(timeout = 30_000): Promise<string> {
+    await expect
+      .poll(async () => (await this.lastMessageId()) ?? "", { timeout })
+      .toMatch(/^[0-9a-f]{24}$/);
+    return (await this.lastMessageId()) as string;
+  }
+
+  async thumbUp(): Promise<void> {
+    await this.last.getByTestId("message-thumb-up").click();
+  }
+
+  async thumbDown(): Promise<void> {
+    await this.last.getByTestId("message-thumb-down").click();
+  }
+
   hasTraceButton(): Promise<boolean> {
     return this.last.getByTestId("message-trace-button").isVisible();
   }

@@ -546,14 +546,22 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
           </div>
         </div>
         <div className="self-end cursor-pointer flex items-center">
-          <Button variant="icon" onClick={handleLike}>
+          <Button
+            variant="icon"
+            data-testid="message-thumb-up"
+            onClick={handleLike}
+          >
             <FontAwesomeIcon
               icon={isThumbsUp ? faThumbsUpSolid : faThumbsUp}
               className="size-4 hover:text-natural-200 transition-colors duration-200 cursor-pointer"
             />
           </Button>
 
-          <Button variant="icon" onClick={handleDislike}>
+          <Button
+            variant="icon"
+            data-testid="message-thumb-down"
+            onClick={handleDislike}
+          >
             <FontAwesomeIcon
               onClick={handleDislike}
               icon={isThumbsDown ? faThumbsDownSolid : faThumbsDown}
