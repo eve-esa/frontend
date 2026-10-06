@@ -34,6 +34,27 @@ export async function lastPersistedTurn(api: Api, conversationId: string): Promi
   };
 }
 
+/** One persisted message with the fields the answer actions write. */
+export type PersistedMessage = {
+  id?: string;
+  feedback?: string | null;
+  was_copied?: boolean;
+  metadata?: { source_logs?: { source_url?: string }[] } | null;
+};
+
+/** The message with this id in the conversation, or null when it is not there (yet). */
+export async function persistedMessage(
+  api: Api,
+  conversationId: string,
+  messageId: string,
+): Promise<PersistedMessage | null> {
+  const { status, body } = await api.get<{ messages?: PersistedMessage[] }>(
+    `/conversations/${conversationId}`,
+  );
+  if (status !== 200 || !body || typeof body !== "object") return null;
+  return (body.messages ?? []).find((m) => m.id === messageId) ?? null;
+}
+
 export const QUESTION =
   process.env.E2E_QUESTION ??
   "Search the knowledge base for Sentinel-2 and quote one passage, then answer in one line.";
