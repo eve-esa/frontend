@@ -66,6 +66,12 @@ export function consumeWatchdogTimeoutFlag(): boolean {
   return wasTimeout;
 }
 
+// Reads the watchdog flag without clearing it, for code that runs before the
+// mutation's onError consumes it.
+export function peekWatchdogTimeoutFlag(): boolean {
+  return lastAbortWasWatchdogTimeout;
+}
+
 export function abortCurrentStream() {
   if (currentStreamAbortController) {
     // Mark that the next error is a deliberate user cancellation

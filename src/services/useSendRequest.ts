@@ -16,9 +16,10 @@ import {
   postStream,
   consumeSuppressToastFlag,
   consumeWatchdogTimeoutFlag,
+  peekWatchdogTimeoutFlag,
 } from "./streaming";
 import { handleApiError } from "@/utilities/helpers";
-import { logError } from "./errorLogging";
+import { isCancellation, logError } from "./errorLogging";
 import { invalidateTokenUsage } from "./useTokenUsage";
 import {
   buildMessageRequest,
@@ -293,12 +294,15 @@ export const useSendRequest = (conversationId?: string) => {
       } catch (e) {
         // Expected overload outcome, handled in onError: not an error to log.
         if (isServiceBusyError(e)) throw e;
-        console.error("streaming error", e);
         if (e && typeof e === "object") {
           // Structural check instead of instanceof: a cancellation can be a
           // DOMException, whose Error lineage varies by browser.
           (e as { streamedOutput?: string }).streamedOutput = streamedOutput;
         }
+        // A user Stop is not an error. The watchdog aborts with the same
+        // CanceledError, and a hung stream is one, so it is still logged.
+        if (isCancellation(e) && !peekWatchdogTimeoutFlag()) throw e;
+        console.error("streaming error", e);
         logError({
           error_message: String(e || "Unknown error"),
           error_stack: new Error().stack,
