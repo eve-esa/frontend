@@ -84,6 +84,9 @@ export const mergeStoppedPartial = (
     // The server row carries the partial now (the backend persists it on both
     // the cooperative and the hard cancel path), so the memory is spent.
     if (persisted) continue;
+    // A stop before the first token has no text to restore: once the server
+    // row carries the stop itself, there is nothing left to repair.
+    if (!partial.output && row.stopped) continue;
 
     merged = merged === messages ? [...messages] : merged;
     merged[partial.index] = {
@@ -104,19 +107,26 @@ let store: StoppedPartials = {};
 
 /**
  * Records what the aborted stream had painted, so the next conversation
- * response can be repaired. Whitespace-only output is not worth remembering:
- * there is nothing on screen to lose.
+ * response can be repaired. A stop before the first token is remembered too,
+ * with no text: the mid-generation row the refetch brings back (output "",
+ * stopped unset) would otherwise render as a failed turn.
  */
 export const rememberStoppedPartial = (
   conversationId: string,
   index: number,
   output: string,
 ) => {
-  if (index < 0 || !output.trim()) return;
+  if (index < 0) return;
   const others = (store[conversationId] ?? []).filter(
     (partial) => partial.index !== index,
   );
-  store = { ...store, [conversationId]: [...others, { index, output }] };
+  store = {
+    ...store,
+    [conversationId]: [
+      ...others,
+      { index, output: output.trim() ? output : "" },
+    ],
+  };
 };
 
 /** Merges the remembered partials, if any, into a conversation response. */

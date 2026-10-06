@@ -114,6 +114,28 @@ describe("mergeStoppedPartial", () => {
     expect(result.partials).toEqual({});
   });
 
+  it("marks the row stopped for a stop that landed before the first token", () => {
+    const partials: StoppedPartials = { c1: [{ index: 0, output: "" }] };
+    const data = conversation([message({ output: "" })]);
+
+    const result = mergeStoppedPartial(data, partials, "c1");
+
+    expect(result.data.messages[0].output).toBe("");
+    expect(result.data.messages[0].stopped).toBe(true);
+    // Kept until the backend has persisted the stop.
+    expect(result.partials).toEqual(partials);
+  });
+
+  it("forgets a stop without text once the server row is flagged stopped", () => {
+    const partials: StoppedPartials = { c1: [{ index: 0, output: "" }] };
+    const data = conversation([message({ output: "", stopped: true })]);
+
+    const result = mergeStoppedPartial(data, partials, "c1");
+
+    expect(result.data).toBe(data);
+    expect(result.partials).toEqual({});
+  });
+
   it("keeps the partial while the turn is missing from the response", () => {
     const partials: StoppedPartials = {
       c1: [{ index: 3, output: "The sky is" }],
@@ -225,14 +247,27 @@ describe("rememberStoppedPartial and applyStoppedPartial", () => {
     expect(afterwards.messages[0].stopped).toBeUndefined();
   });
 
-  it("remembers nothing when the stream painted nothing visible", () => {
+  it("remembers a stop that landed before any visible text", () => {
     rememberStoppedPartial("store-2", 0, "  \n ");
 
+    // The mid-generation row comes back stopped, not as a failed turn.
     const data = applyStoppedPartial(
       conversation([message({ output: "" })]),
       "store-2",
     );
     expect(data.messages[0].output).toBe("");
+    expect(data.messages[0].stopped).toBe(true);
+
+    // The backend persisted the stop: the memory is spent.
+    applyStoppedPartial(
+      conversation([message({ output: "", stopped: true })]),
+      "store-2",
+    );
+    const afterwards = applyStoppedPartial(
+      conversation([message({ output: "" })]),
+      "store-2",
+    );
+    expect(afterwards.messages[0].stopped).toBeUndefined();
   });
 
   it("remembers nothing when there is no optimistic row to point at", () => {

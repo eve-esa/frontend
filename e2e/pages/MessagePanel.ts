@@ -61,6 +61,16 @@ export class MessagePanel {
     return this.last.getByTestId("message-stopped").isVisible();
   }
 
+  /** The inline failure text of the last turn ("Something went wrong!" and its variants). */
+  get lastError(): Locator {
+    return this.last.getByTestId("message-error");
+  }
+
+  /** The skeleton or notices shown before the first token of the last turn. */
+  get lastLoading(): Locator {
+    return this.last.getByTestId("message-loading");
+  }
+
   async copyAnswer(): Promise<void> {
     await this.last.getByTestId("message-copy").click();
   }

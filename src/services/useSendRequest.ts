@@ -411,10 +411,12 @@ export const useSendRequest = (conversationId?: string) => {
       if (isCanceled) {
         canceledRef.current = true;
         // Remember what the aborted stream had painted, keyed by the position
-        // the turn occupies. The refetch that follows this handler brings back
-        // the mid-generation row (output ""), which would replace the visible
-        // partial with nothing; the conversation queryFn puts it back until
-        // the backend has persisted its own copy.
+        // the turn occupies, even when that is nothing yet (a stop before the
+        // first token). The refetch that follows this handler brings back the
+        // mid-generation row (output "", stopped unset), which would replace
+        // the visible partial with nothing and paint the turn as failed; the
+        // conversation queryFn puts the stop back until the backend has
+        // persisted its own copy.
         if (conversationId) {
           const cached = queryClient.getQueryData<ChaMessageType>([
             QUERY_KEYS.conversation,

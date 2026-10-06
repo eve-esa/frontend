@@ -14,6 +14,10 @@ import {
 // TanStack calls are replaced and the mutation options are used directly.
 const mocks = vi.hoisted(() => ({
   post: vi.fn(),
+  get: vi.fn(),
+  // One client per test, so a test can read what the mutation left in the
+  // conversation cache.
+  queryClient: null as unknown,
   postStream: vi.fn(),
   toastError: vi.fn(),
   logError: vi.fn(),
@@ -21,7 +25,9 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("sonner", () => ({ toast: { error: mocks.toastError } }));
 
-vi.mock("@/services/axios", () => ({ default: { post: mocks.post } }));
+vi.mock("@/services/axios", () => ({
+  default: { post: mocks.post, get: mocks.get },
+}));
 vi.mock("./streaming", () => ({
   postStream: mocks.postStream,
   consumeSuppressToastFlag: () => false,
@@ -36,7 +42,7 @@ vi.mock("@tanstack/react-query", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@tanstack/react-query")>();
   return {
     ...actual,
-    useQueryClient: () => new actual.QueryClient(),
+    useQueryClient: () => (mocks.queryClient ??= new actual.QueryClient()),
     useMutation: (options: unknown) => options,
   };
 });
@@ -94,6 +100,8 @@ const streamOnce = async (agenticChat: "true" | "false") => {
 };
 
 beforeEach(() => {
+  mocks.queryClient = null;
+  mocks.get.mockReset();
   mocks.post.mockReset();
   mocks.postStream.mockReset();
   mocks.toastError.mockReset();
@@ -424,6 +432,77 @@ describe("send refused by an overloaded backend", () => {
     await vi.advanceTimersByTimeAsync(5000);
     await runA;
     expect(mocks.postStream).toHaveBeenCalledTimes(3);
+  });
+});
+
+type StopMutationOptions = BusyMutationOptions & {
+  onMutate: (variables: Record<string, unknown>) => Promise<unknown>;
+};
+
+// Sends on a fresh conversation, lets the stream end the way `outcome` says,
+// runs onError, then reads the conversation back through the queryFn the
+// refetch uses, with the server still holding the row it wrote at the start
+// of generation (output "", stopped unset) plus whatever `row` adds.
+const endTurnAndRefetch = async (
+  conversationId: string,
+  outcome: (onEvent: (evt: unknown) => void) => Promise<void>,
+  row: Record<string, unknown> = {},
+) => {
+  const { options } = await loadBusy(conversationId);
+  const stopOptions = options as StopMutationOptions;
+  const variables = { ...VARIABLES, conversationId };
+  mocks.postStream.mockImplementationOnce(
+    ({ onEvent }: { onEvent: (evt: unknown) => void }) => outcome(onEvent),
+  );
+
+  await stopOptions.onMutate(variables);
+  const error = await options.mutationFn(variables).catch((e: unknown) => e);
+  options.onError(error, variables);
+
+  mocks.get.mockResolvedValueOnce({
+    data: {
+      id: conversationId,
+      messages: [
+        { id: "m1", conversation_id: conversationId, input: "hello", output: "", ...row },
+      ],
+    },
+  });
+  const { getConversation } = await import("./useGetConversation");
+  const refetched = await getConversation(conversationId);
+  return refetched.messages[0];
+};
+
+describe("turn that ends before the first token", () => {
+  it("shows a stop pressed before any token as stopped after the refetch", async () => {
+    const canceled = Object.assign(new Error("canceled"), {
+      name: "CanceledError",
+      code: "ERR_CANCELED",
+    });
+
+    const message = await endTurnAndRefetch("conv-stop", () =>
+      Promise.reject(canceled),
+    );
+
+    expect(message.stopped).toBe(true);
+    expect(message.output).toBe("");
+    expect(mocks.toastError).not.toHaveBeenCalled();
+  });
+
+  it("leaves a server error as an error, not a stop", async () => {
+    const message = await endTurnAndRefetch(
+      "conv-error",
+      (onEvent) => {
+        onEvent({ type: "error", code: "upstream_error", message: "boom" });
+        return Promise.resolve();
+      },
+      { metadata: { error: { code: "upstream_error" } } },
+    );
+
+    expect(message.stopped).toBeUndefined();
+    expect(message.metadata?.error?.code).toBe("upstream_error");
+    expect(mocks.toastError).toHaveBeenCalledWith(
+      "Generation failed. Retry in a moment.",
+    );
   });
 });
 
