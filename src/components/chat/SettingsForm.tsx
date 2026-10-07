@@ -90,7 +90,9 @@ export const SettingsForm = ({ onToggle }: SettingsFormProps) => {
             These settings control how the assistant searches and uses documents
             during RAG (Retrieval-Augmented Generation). You can adjust how many
             documents are retrieved, how relevant they must be, and other
-            filters.
+            filters. EVE Open Access supports all filters. Wiley supports only
+            the year filter. Other collections do not support any and will not be queried when a filter is set. Support for more collections will be added
+            soon.
           </p>
         </div>
         <div className="absolute bottom-[-26px] left-0 right-0 h-4 bg-gradient-to-b from-primary-900 to-transparent pointer-events-none" />
