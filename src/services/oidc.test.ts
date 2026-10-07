@@ -77,6 +77,7 @@ describe("userManager settings", () => {
       post_logout_redirect_uri: ORIGIN,
       scope: "openid email",
       automaticSilentRenew: false,
+      requestTimeoutInSeconds: 10,
     });
   });
 
@@ -199,28 +200,60 @@ describe("renew across tabs", () => {
     expect(manager.signinSilent).toHaveBeenCalledTimes(1);
   });
 
-  it("re-reads the stored user in the lock and takes another tab's renew", async () => {
+  it("re-reads the stored user in the lock and adopts one another tab renewed", async () => {
     stubLocks();
     const { renewToken, manager } = await loadOidc({});
-    const renewedElsewhere = { access_token: "from-tab-b", expired: false };
-    manager.getUser
-      .mockResolvedValueOnce({ access_token: "old", expired: true })
-      .mockResolvedValueOnce(renewedElsewhere);
+    const renewedElsewhere = {
+      access_token: "from-tab-b",
+      expired: false,
+      expires_in: 3500,
+    };
+    manager.getUser.mockResolvedValue(renewedElsewhere);
 
     await expect(renewToken()).resolves.toBe(renewedElsewhere);
     expect(manager.signinSilent).not.toHaveBeenCalled();
     expect(manager.events.load).toHaveBeenCalledWith(renewedElsewhere);
   });
 
-  it("refreshes when the stored user is still the one it started from", async () => {
+  it("refreshes a stored token inside the expiring margin, with the request timeout", async () => {
     stubLocks();
     const { renewToken, manager } = await loadOidc({});
-    const expiring = { access_token: "old", expired: false };
-    manager.getUser.mockResolvedValue(expiring);
+    manager.getUser.mockResolvedValue({
+      access_token: "old",
+      expired: false,
+      expires_in: 60,
+    });
     manager.signinSilent.mockResolvedValue({ access_token: "new" });
 
     await renewToken();
+    expect(manager.signinSilent).toHaveBeenCalledWith({
+      silentRequestTimeoutInSeconds: 10,
+    });
+  });
+
+  it("never adopts the access token the API just refused", async () => {
+    stubLocks();
+    const { renewToken, manager } = await loadOidc({});
+    manager.getUser.mockResolvedValue({
+      access_token: "refused",
+      expired: false,
+      expires_in: 3500,
+    });
+    manager.signinSilent.mockResolvedValue({ access_token: "new" });
+
+    await expect(renewToken("refused")).resolves.toEqual({
+      access_token: "new",
+    });
     expect(manager.signinSilent).toHaveBeenCalledTimes(1);
+  });
+
+  it("drops a renew that got the lock after a sign-out started", async () => {
+    stubLocks();
+    const { renewToken, beginSignout, manager } = await loadOidc({});
+    void beginSignout();
+
+    await expect(renewToken()).resolves.toBeNull();
+    expect(manager.signinSilent).not.toHaveBeenCalled();
   });
 });
 
@@ -263,7 +296,7 @@ describe("cross-tab sign-out", () => {
   it("drops this tab's user when another tab removes the stored one", async () => {
     const listeners: Record<string, (event: unknown) => void> = {};
     const localStorage = { getItem: vi.fn() };
-    const { manager } = await loadOidc(
+    const { manager, isSignedOutElsewhere, isSignoutInProgress } = await loadOidc(
       {
         AUTH_ISSUER: "https://idp.example.com/realms/eve",
         AUTH_CLIENT_ID: "eve-frontend",
@@ -289,10 +322,80 @@ describe("cross-tab sign-out", () => {
       newValue: null,
     });
     expect(manager.removeUser).toHaveBeenCalledTimes(1);
+    // No redirect from this tab: PrivateRoute and axios read the latch.
+    expect(isSignedOutElsewhere()).toBe(true);
+    expect(isSignoutInProgress()).toBe(true);
+  });
+
+  it("comes back when a user is stored again after a sign-out elsewhere", async () => {
+    const listeners: Record<string, (event: unknown) => void> = {};
+    const localStorage = { getItem: vi.fn() };
+    const { manager, isSignedOutElsewhere } = await loadOidc(
+      { AUTH_ISSUER: "https://idp.example.com/realms/eve", AUTH_CLIENT_ID: "c" },
+      {
+        localStorage,
+        addEventListener: (type: string, fn: (event: unknown) => void) => {
+          listeners[type] = fn;
+        },
+      }
+    );
+    const key = "oidc.user:https://idp.example.com/realms/eve:c";
+    listeners.storage({ storageArea: localStorage, key, newValue: null });
+    const user = { access_token: "again", expired: false };
+    manager.getUser.mockResolvedValue(user);
+
+    listeners.storage({ storageArea: localStorage, key, newValue: "{}" });
+    await vi.waitFor(() => {
+      expect(manager.events.load).toHaveBeenCalledWith(user);
+    });
+    expect(isSignedOutElsewhere()).toBe(false);
   });
 });
 
 describe("beginSignout", () => {
+  it("revokes and removes inside the renew lock, after the renew in flight", async () => {
+    const order: string[] = [];
+    let release!: (value: unknown) => void;
+    const request = vi.fn(
+      (_name: string, callback: () => Promise<unknown>) => {
+        order.push("lock");
+        return callback();
+      }
+    );
+    vi.stubGlobal("navigator", { locks: { request } });
+    const { beginSignout, renewToken, manager } = await loadOidc({
+      AUTH_ISSUER:
+        "https://cognito-idp.eu-west-1.amazonaws.com/eu-west-1_AbCdEf123",
+      AUTH_CLIENT_ID: "cognito-client",
+    });
+    manager.signinSilent.mockReturnValue(
+      new Promise((res) => {
+        release = res;
+      })
+    );
+    manager.revokeTokens.mockImplementation(() => {
+      order.push("revoke");
+      return Promise.resolve();
+    });
+    manager.removeUser.mockImplementation(() => {
+      order.push("remove");
+      return Promise.resolve();
+    });
+
+    const renew = renewToken();
+    await vi.waitFor(() => {
+      expect(manager.signinSilent).toHaveBeenCalledTimes(1);
+    });
+    const signout = beginSignout();
+    await Promise.resolve();
+    expect(manager.revokeTokens).not.toHaveBeenCalled();
+
+    release({ access_token: "new" });
+    await renew;
+    await signout;
+    expect(order).toEqual(["lock", "lock", "revoke", "remove"]);
+  });
+
   it("revokes the refresh token before removing the stored user", async () => {
     const { beginSignout, manager } = await loadOidc({
       AUTH_ISSUER:

@@ -5,10 +5,15 @@ import { routes } from "@/utilities/routes.tsx";
 import { LOCAL_STORAGE_TOUR_COMPLETED } from "@/utilities/localStorage";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { Spinner } from "@/components/ui/Spinner";
-import { isSignoutInProgress, resumeStoredSession } from "@/services/oidc";
+import {
+  isSignedOutElsewhere,
+  isSignoutInProgress,
+  resumeStoredSession,
+} from "@/services/oidc";
 import { useGetProfile } from "@/services/useMe";
 import { isPendingApproval } from "@/services/approval";
 import { PendingApprovalPage } from "@/pages/pending-approval/PendingApprovalPage";
+import { SignedOutPage } from "@/pages/signed-out/SignedOutPage";
 import { setTelemetryUser } from "@/observability/telemetry";
 
 /**
@@ -43,14 +48,30 @@ export const shouldAttemptSignin = (p: {
  */
 export const signinAfterStoredSession = async (
   redirect: () => Promise<unknown>
-): Promise<void> => {
+): Promise<boolean> => {
   if (await resumeStoredSession()) {
-    return;
+    return true;
   }
-  if (isSignoutInProgress()) {
-    return;
+  if (!isSignoutInProgress()) {
+    await redirect();
   }
-  await redirect();
+  return false;
+};
+
+/**
+ * The sign-in attempt of one PrivateRoute mount. `tried` blocks a second
+ * redirect; a resume that brought the session back without a navigation
+ * clears it again, so a later signed-out state in this tab can still
+ * redirect instead of leaving the spinner up for good.
+ */
+export const attemptSignin = async (
+  tried: { current: boolean },
+  redirect: () => Promise<unknown>
+): Promise<void> => {
+  tried.current = true;
+  if (await signinAfterStoredSession(redirect)) {
+    tried.current = false;
+  }
 };
 
 /**
@@ -61,18 +82,23 @@ export const signinAfterStoredSession = async (
  * of the chat tree, even briefly.
  */
 export type PrivateRouteView =
+  | "signed-out"
   | "spinner"
   | "pending-approval"
   | "onboarding"
   | "outlet";
 
 export const resolvePrivateRouteState = (p: {
+  signedOutElsewhere: boolean;
   authLoading: boolean;
   isAuthenticated: boolean;
   isProfileLoading: boolean;
   isPending: boolean;
   needsOnboarding: boolean;
 }): PrivateRouteView => {
+  if (p.signedOutElsewhere && !p.isAuthenticated) {
+    return "signed-out";
+  }
   if (p.authLoading || !p.isAuthenticated) {
     return "spinner";
   }
@@ -124,8 +150,7 @@ export const PrivateRoute = () => {
         hasTriedSignin: hasTriedSignin.current,
       })
     ) {
-      hasTriedSignin.current = true;
-      void signinAfterStoredSession(() =>
+      void attemptSignin(hasTriedSignin, () =>
         // The deep link travels in OIDC state and comes back to onSigninCallback.
         auth.signinRedirect({
           state: { returnTo: location.pathname + location.search },
@@ -135,6 +160,7 @@ export const PrivateRoute = () => {
   }, [auth, location]);
 
   const view = resolvePrivateRouteState({
+    signedOutElsewhere: isSignedOutElsewhere(),
     authLoading: auth.isLoading,
     isAuthenticated: auth.isAuthenticated,
     isProfileLoading,
@@ -146,6 +172,8 @@ export const PrivateRoute = () => {
   });
 
   switch (view) {
+    case "signed-out":
+      return <SignedOutPage />;
     case "spinner":
       return (
         <div className="flex h-screen w-screen items-center justify-center">

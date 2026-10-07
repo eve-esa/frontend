@@ -1,4 +1,4 @@
-import { ChatPage, LoginPage, LogoutDialog, OidcStorage } from "../pages";
+import { ChatPage, LoginPage, LogoutDialog, OidcStorage, SignedOutPage } from "../pages";
 import { canWrite, expect, signIn, skipOnboarding, test } from "../fixtures";
 
 /**
@@ -70,6 +70,46 @@ test.describe("session persistence", () => {
       expect(await storage.userKeys()).toEqual([]);
     } finally {
       await second.close();
+    }
+  });
+
+  test("a sign-out in one tab signs the other tab out without a redirect", async ({
+    browser,
+    baseURL,
+  }, testInfo) => {
+    const origin = new URL(baseURL as string).origin;
+    const context = await browser.newContext({ baseURL });
+    try {
+      await skipOnboarding(context, origin);
+      const first = await context.newPage();
+      await signIn(first, origin, canWrite(origin, testInfo.project.name));
+      const second = await context.newPage();
+      await second.goto("/");
+      await new ChatPage(second).composer.waitReady();
+      const foreignNavigations: string[] = [];
+      second.on("framenavigated", (frame) => {
+        if (frame === second.mainFrame() && new URL(frame.url()).origin !== origin) {
+          foreignNavigations.push(frame.url());
+        }
+      });
+
+      const chat = new ChatPage(first);
+      const logout = new LogoutDialog(first, chat);
+      await logout.open();
+      await logout.confirm();
+      await new LoginPage(first).expectForm(origin);
+
+      // The other tab shows the signed-out view and never starts its own sign-in.
+      await expect(new SignedOutPage(second).root).toBeVisible();
+      expect(foreignNavigations).toEqual([]);
+      expect(await new OidcStorage(second).userKeys()).toEqual([]);
+
+      // A reload of the tab that signed out asks for the password again.
+      await first.goto("/");
+      await new LoginPage(first).expectForm(origin);
+      expect(foreignNavigations).toEqual([]);
+    } finally {
+      await context.close();
     }
   });
 });

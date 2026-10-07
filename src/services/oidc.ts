@@ -26,12 +26,24 @@ const PAGE_ORIGIN =
 const AUTH_ISSUER = configValue("AUTH_ISSUER") ?? "";
 const AUTH_CLIENT_ID = configValue("AUTH_CLIENT_ID") ?? "";
 
+export const IDP_REQUEST_TIMEOUT_S = 10;
+
+// A stored access token with more than this left is adopted instead of
+// refreshed: the expiring event fires 60 s before expiry and postStream asks
+// for 120 s, so both still refresh, while a tab whose throttled timer fires
+// late takes the token another tab already renewed.
+export const RENEW_MARGIN_S = 120;
+
 // userStore is localStorage, not the library default (sessionStorage): the
 // session must survive a new tab and a browser restart, and the only thing
 // that outlives the 1 hour Cognito login cookie is the refresh token. No
 // silent_redirect_uri is configured, so signinSilent renews only through the
 // refresh token grant. Any XSS could read sessionStorage too; the mitigations
-// are refresh token rotation, revocation on sign-out and the CSP.
+// are revocation on sign-out (this module), refresh token rotation and a CSP
+// in report-only mode (live on dev since infra #126 and #127, not yet on
+// staging and prod).
+// requestTimeoutInSeconds bounds every IdP call the library makes (metadata,
+// token, revoke), so a hung request cannot hold the cross-tab renew lock.
 // automaticSilentRenew stays off: the library's internal timer calls
 // signinSilent directly and would bypass the single-flight wrapper below;
 // the expiring event subscription at the bottom replaces it.
@@ -42,6 +54,7 @@ export const userManager = new UserManager({
   post_logout_redirect_uri: PAGE_ORIGIN,
   scope: configValue("AUTH_SCOPE") ?? "openid profile email",
   automaticSilentRenew: false,
+  requestTimeoutInSeconds: IDP_REQUEST_TIMEOUT_S,
   userStore:
     typeof window !== "undefined" && window.localStorage
       ? new WebStorageStateStore({ store: window.localStorage })
@@ -54,31 +67,46 @@ const USER_STORAGE_KEY = `oidc.user:${AUTH_ISSUER}:${AUTH_CLIENT_ID}`;
 
 export const RENEW_LOCK_NAME = "eve-oidc-renew";
 
+/** Runs `task` holding the cross-tab renew lock, or directly without Web Locks. */
+const withRenewLock = async <T>(task: () => Promise<T>): Promise<T> => {
+  const locks =
+    typeof navigator !== "undefined" ? navigator.locks : undefined;
+  return locks ? await locks.request(RENEW_LOCK_NAME, task) : task();
+};
+
+let signoutInProgress = false;
+let signedOutElsewhere = false;
+
 /**
  * One renew across every tab of this origin. Inside the lock the stored user
- * is read again: when another tab renewed while this one waited, its fresh
- * tokens are taken as they are. With refresh token rotation on, a second
- * refresh with the token the first one rotated away would fail.
+ * is read again: when it still has more than RENEW_MARGIN_S left (another
+ * tab renewed while this one waited, or its timer fired late) it is adopted
+ * as it is. With refresh token rotation on, a second refresh with the token
+ * the first one rotated away would fail. `rejectedToken` is the access token
+ * the API just refused: never adopted, whatever its expiry says.
  */
-const renewAcrossTabs = async (): Promise<User | null> => {
-  const before = await userManager.getUser();
-  const renew = async (): Promise<User | null> => {
+const renewAcrossTabs = (rejectedToken?: string): Promise<User | null> =>
+  withRenewLock(async () => {
+    // A sign-out started while this renew waited: storing a fresh user now
+    // would bring the session back after the revoke.
+    if (signoutInProgress || signedOutElsewhere) {
+      return null;
+    }
     const current = await userManager.getUser();
     if (
       current &&
       !current.expired &&
-      current.access_token !== before?.access_token
+      (current.expires_in ?? 0) > RENEW_MARGIN_S &&
+      current.access_token !== rejectedToken
     ) {
       // Tell this tab's AuthProvider about the user another tab stored.
       await userManager.events.load(current);
       return current;
     }
-    return userManager.signinSilent();
-  };
-  const locks =
-    typeof navigator !== "undefined" ? navigator.locks : undefined;
-  return locks ? locks.request(RENEW_LOCK_NAME, renew) : renew();
-};
+    return userManager.signinSilent({
+      silentRequestTimeoutInSeconds: IDP_REQUEST_TIMEOUT_S,
+    });
+  });
 
 let renewInFlight: Promise<User | null> | null = null;
 
@@ -90,9 +118,9 @@ let renewInFlight: Promise<User | null> | null = null;
  * wants a renew goes through here so at most one is in flight at a time, and
  * the Web Lock in renewAcrossTabs extends that to other tabs.
  */
-export const renewToken = (): Promise<User | null> => {
+export const renewToken = (rejectedToken?: string): Promise<User | null> => {
   if (!renewInFlight) {
-    renewInFlight = renewAcrossTabs().finally(() => {
+    renewInFlight = renewAcrossTabs(rejectedToken).finally(() => {
       renewInFlight = null;
     });
   }
@@ -151,15 +179,27 @@ export const buildSignoutArgs = (
     ? { extraQueryParams: { client_id: clientId, logout_uri: origin } }
     : undefined;
 
-let signoutInProgress = false;
+/**
+ * True once a sign-out has started here or in another tab. PrivateRoute and
+ * the axios 401 handler consult it so neither starts a competing
+ * signinRedirect. The redirect navigator only resolves on pageshow, so in
+ * the success case this stays true for the remaining life of the page.
+ */
+export const isSignoutInProgress = (): boolean =>
+  signoutInProgress || signedOutElsewhere;
 
 /**
- * True once a sign-out has started. PrivateRoute and the axios 401 handler
- * consult it so neither starts a competing signinRedirect. The redirect
- * navigator only resolves on pageshow, so in the success case this stays
- * true for the remaining life of the page.
+ * True once another tab signed out. This tab then shows a signed-out view
+ * with a sign-in button instead of redirecting by itself: an automatic
+ * authorize here would race the other tab's IdP logout, still find the IdP
+ * cookie and store a fresh, unrevoked refresh token.
  */
-export const isSignoutInProgress = (): boolean => signoutInProgress;
+export const isSignedOutElsewhere = (): boolean => signedOutElsewhere;
+
+/** The user chose to sign in again from the signed-out view. */
+export const clearSignedOutElsewhere = (): void => {
+  signedOutElsewhere = false;
+};
 
 /**
  * Only for a redirect that never left the page (metadata fetch failure and
@@ -184,19 +224,25 @@ export const beginSignout = async (): Promise<
   SignoutRedirectArgs | undefined
 > => {
   signoutInProgress = true;
-  // The refresh token outlives the IdP session by up to 30 days, so ending
-  // that session alone would leave it usable from storage. The revocation
-  // endpoint comes from the discovery document.
-  try {
-    await userManager.revokeTokens(["refresh_token"]);
-  } catch (error) {
-    // Never block a sign-out: the stored user is still removed below or by
-    // signoutRedirect.
-    console.error("Refresh token revocation failed:", error);
-  }
-  if (isCognitoIssuer(AUTH_ISSUER)) {
-    await userManager.removeUser();
-  }
+  // A renew already running in this tab or another one finishes first, so
+  // the token revoked below is the one in storage and no renew stores a new
+  // user after it.
+  await renewInFlight?.catch(() => null);
+  await withRenewLock(async () => {
+    // The refresh token outlives the IdP session by up to 30 days, so ending
+    // that session alone would leave it usable from storage. The revocation
+    // endpoint comes from the discovery document.
+    try {
+      await userManager.revokeTokens(["refresh_token"]);
+    } catch (error) {
+      // Never block a sign-out: the stored user is still removed below or
+      // by signoutRedirect.
+      console.error("Refresh token revocation failed:", error);
+    }
+    if (isCognitoIssuer(AUTH_ISSUER)) {
+      await userManager.removeUser();
+    }
+  });
   return buildSignoutArgs(AUTH_ISSUER, AUTH_CLIENT_ID, PAGE_ORIGIN);
 };
 
@@ -212,16 +258,30 @@ userManager.events.addAccessTokenExpiring(() => {
 });
 
 // Sign-out in another tab removes the shared stored user; this tab drops to
-// the signed-out state too instead of keeping tokens it holds in memory.
-// removeUser raises the unloaded event AuthProvider listens to.
+// the signed-out view too instead of keeping tokens it holds in memory. The
+// latch is set before removeUser raises the unloaded event AuthProvider
+// listens to, so PrivateRoute renders the signed-out view, not a redirect.
+// A user stored again later (a sign-in in any tab) brings this tab back.
 if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
   window.addEventListener("storage", (event) => {
     if (
-      event.storageArea === window.localStorage &&
-      (event.key === USER_STORAGE_KEY || event.key === null) &&
-      event.newValue === null
+      event.storageArea !== window.localStorage ||
+      (event.key !== USER_STORAGE_KEY && event.key !== null)
     ) {
+      return;
+    }
+    if (event.newValue === null) {
+      signedOutElsewhere = true;
       void userManager.removeUser();
+      return;
+    }
+    if (signedOutElsewhere && !signoutInProgress) {
+      void userManager.getUser().then((user) => {
+        if (user && !user.expired) {
+          signedOutElsewhere = false;
+          return userManager.events.load(user);
+        }
+      });
     }
   });
 }

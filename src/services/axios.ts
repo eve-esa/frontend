@@ -72,7 +72,10 @@ export const handleResponseError = async (error: unknown) => {
     originalRequest._retry = true;
 
     try {
-      const user = await renewToken();
+      // The refused token is never adopted back from storage, however long
+      // its expiry says it has left.
+      const sent = String(originalRequest.headers?.Authorization ?? "");
+      const user = await renewToken(sent.replace(/^Bearer /, "") || undefined);
       if (user) {
         originalRequest.headers.Authorization = `Bearer ${user.access_token}`;
         return api(originalRequest);

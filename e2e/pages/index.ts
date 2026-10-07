@@ -10,4 +10,5 @@ export { PendingApprovalPage } from "./PendingApprovalPage";
 export { ProfileDialog } from "./ProfileDialog";
 export { ProfileRequiredDialog } from "./ProfileRequiredDialog";
 export { SettingsPanel } from "./SettingsPanel";
+export { SignedOutPage } from "./SignedOutPage";
 export { SignupPage, type NewAccount } from "./SignupPage";
