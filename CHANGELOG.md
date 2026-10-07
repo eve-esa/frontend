@@ -16,6 +16,13 @@ Release and promotes staging. Production is promoted from there by an explicit d
 The "Pilot history" section at the bottom predates this repository's version series: no tag was ever
 cut for it. The released tags start at `v0.0.1`.
 
+## [1.2.2](https://github.com/eve-esa/frontend/compare/v1.2.1...v1.2.2) (2026-10-07)
+
+
+### Fixed
+
+* **collections:** show the upload date of private documents ([#171](https://github.com/eve-esa/frontend/issues/171)) ([acfa909](https://github.com/eve-esa/frontend/commit/acfa90970958fc8cd74fa2f7d9a29b14984fea49))
+
 ## [1.2.1](https://github.com/eve-esa/frontend/compare/v1.2.0...v1.2.1) (2026-10-07)
 
 
