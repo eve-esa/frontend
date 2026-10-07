@@ -2866,10 +2866,10 @@ katex@^0.16.0:
   dependencies:
     commander "^8.3.0"
 
-katex@^0.18.7:
-  version "0.18.7"
-  resolved "https://registry.yarnpkg.com/katex/-/katex-0.18.7.tgz#972327a0c0f83be54423c8cc50d0bc3693523fa7"
-  integrity sha512-h+UCwkZ+4Jz8WQ7MLGfj7UVFrRCizGb912fwF4luGdYsC5paYG1vx+jy+KRcC/XkpjGva/P7nAWuxNnPzRvzHw==
+katex@^0.18.8:
+  version "0.18.8"
+  resolved "https://registry.yarnpkg.com/katex/-/katex-0.18.8.tgz#492049ee041c170a5e31762d3690544c9fd81b7a"
+  integrity sha512-nKBXaVUJpm5+Vm8I4XeJ8FaCAqQ+WwFeHBE/gAzSspFpdPbW1COBZ2roWbivdWIkwMfUrby0yo9SBLfoLZlqRQ==
   dependencies:
     commander "^15.0.0"
 
@@ -4080,9 +4080,9 @@ sonner@^2.0.8:
   integrity sha512-UM/ByIoFra8yzV75n1o0Puu0bw5U/9UNnDacrJNspekBewIfsQ3D6ez1nvlWpt7aTsO6rujQtifBpycwIivqlg==
 
 source-map-js@^1.2.1:
-  version "1.2.1"
-  resolved "https://registry.yarnpkg.com/source-map-js/-/source-map-js-1.2.1.tgz#1ce5650fddd87abc099eda37dcff024c2667ae46"
-  integrity sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==
+  version "1.2.2"
+  resolved "https://registry.yarnpkg.com/source-map-js/-/source-map-js-1.2.2.tgz#79fb88d97535a21cb27162cb05d211b67acea4ab"
+  integrity sha512-KGj/8Y43x35aZVDtt+J4mK1hoLGHULMYfSkODJNQjNDC3oW1PqPoxMwo0pLUsWM/UEGzON/NxeHywEfNXNP3Vw==
 
 space-separated-tokens@^2.0.0:
   version "2.0.2"
