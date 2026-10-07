@@ -67,6 +67,17 @@ const USER_STORAGE_KEY = `oidc.user:${AUTH_ISSUER}:${AUTH_CLIENT_ID}`;
 
 export const RENEW_LOCK_NAME = "eve-oidc-renew";
 
+// Builds before this one kept the user, refresh token included, in
+// sessionStorage. Dropped once on boot so an open tab does not keep a copy
+// that no sign-out reaches.
+if (typeof window !== "undefined") {
+  try {
+    window.sessionStorage?.removeItem(USER_STORAGE_KEY);
+  } catch {
+    // Storage blocked: nothing to clean up.
+  }
+}
+
 /** Runs `task` holding the cross-tab renew lock, or directly without Web Locks. */
 const withRenewLock = async <T>(task: () => Promise<T>): Promise<T> => {
   const locks =
@@ -144,6 +155,12 @@ export const resumeStoredSession = async (): Promise<boolean> => {
     return Boolean(await renewToken());
   } catch (error) {
     console.error("Stored session renew failed:", error);
+    // The refresh token is dead (expired, revoked or rotated away): drop
+    // the user, id token and e-mail included, instead of keeping it on disk
+    // and spending a failing token request on every boot.
+    if ((error as { error?: string } | null)?.error === "invalid_grant") {
+      await userManager.removeUser();
+    }
     return false;
   }
 };
@@ -235,9 +252,10 @@ export const beginSignout = async (): Promise<
     try {
       await userManager.revokeTokens(["refresh_token"]);
     } catch (error) {
-      // Never block a sign-out: the stored user is still removed below or
-      // by signoutRedirect.
-      console.error("Refresh token revocation failed:", error);
+      // A non-200 or a timeout from the revocation endpoint never blocks a
+      // sign-out: the stored user is still removed below or by
+      // signoutRedirect.
+      console.warn("Refresh token revocation failed:", error);
     }
     if (isCognitoIssuer(AUTH_ISSUER)) {
       await userManager.removeUser();
@@ -261,7 +279,9 @@ userManager.events.addAccessTokenExpiring(() => {
 // the signed-out view too instead of keeping tokens it holds in memory. The
 // latch is set before removeUser raises the unloaded event AuthProvider
 // listens to, so PrivateRoute renders the signed-out view, not a redirect.
-// A user stored again later (a sign-in in any tab) brings this tab back.
+// A user stored again later (a sign-in in any tab) brings this tab back
+// through a full reload, so nothing cached for the previous user (the query
+// cache above all) is ever shown under the new user's token.
 if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
   window.addEventListener("storage", (event) => {
     if (
@@ -278,8 +298,7 @@ if (typeof window !== "undefined" && typeof window.addEventListener === "functio
     if (signedOutElsewhere && !signoutInProgress) {
       void userManager.getUser().then((user) => {
         if (user && !user.expired) {
-          signedOutElsewhere = false;
-          return userManager.events.load(user);
+          window.location.reload();
         }
       });
     }

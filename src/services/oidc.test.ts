@@ -279,16 +279,44 @@ describe("resumeStoredSession", () => {
     expect(manager.signinSilent).not.toHaveBeenCalled();
   });
 
-  it("reports false when the IdP refuses the refresh token", async () => {
+  it("reports false and drops the dead user when the IdP answers invalid_grant", async () => {
     const { resumeStoredSession, manager } = await loadOidc({});
     manager.getUser.mockResolvedValue({
       refresh_token: "revoked",
       expired: true,
     });
-    manager.signinSilent.mockRejectedValue(new Error("invalid_grant"));
+    manager.signinSilent.mockRejectedValue(
+      Object.assign(new Error("invalid_grant"), { error: "invalid_grant" })
+    );
     vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     await expect(resumeStoredSession()).resolves.toBe(false);
+    expect(manager.removeUser).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the stored user on a transient failure such as a timeout", async () => {
+    const { resumeStoredSession, manager } = await loadOidc({});
+    manager.getUser.mockResolvedValue({
+      refresh_token: "refresh",
+      expired: true,
+    });
+    manager.signinSilent.mockRejectedValue(new Error("timeout"));
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    await expect(resumeStoredSession()).resolves.toBe(false);
+    expect(manager.removeUser).not.toHaveBeenCalled();
+  });
+
+  it("removes the old sessionStorage user once on boot", async () => {
+    const sessionStorage = { removeItem: vi.fn() };
+    await loadOidc(
+      { AUTH_ISSUER: "https://idp.example.com/realms/eve", AUTH_CLIENT_ID: "c" },
+      { sessionStorage }
+    );
+
+    expect(sessionStorage.removeItem).toHaveBeenCalledWith(
+      "oidc.user:https://idp.example.com/realms/eve:c"
+    );
   });
 });
 
@@ -327,13 +355,15 @@ describe("cross-tab sign-out", () => {
     expect(isSignoutInProgress()).toBe(true);
   });
 
-  it("comes back when a user is stored again after a sign-out elsewhere", async () => {
+  it("reloads when a user is stored again after a sign-out elsewhere", async () => {
     const listeners: Record<string, (event: unknown) => void> = {};
     const localStorage = { getItem: vi.fn() };
-    const { manager, isSignedOutElsewhere } = await loadOidc(
+    const reload = vi.fn();
+    const { manager } = await loadOidc(
       { AUTH_ISSUER: "https://idp.example.com/realms/eve", AUTH_CLIENT_ID: "c" },
       {
         localStorage,
+        location: { origin: ORIGIN, reload },
         addEventListener: (type: string, fn: (event: unknown) => void) => {
           listeners[type] = fn;
         },
@@ -346,9 +376,36 @@ describe("cross-tab sign-out", () => {
 
     listeners.storage({ storageArea: localStorage, key, newValue: "{}" });
     await vi.waitFor(() => {
-      expect(manager.events.load).toHaveBeenCalledWith(user);
+      expect(reload).toHaveBeenCalledTimes(1);
     });
-    expect(isSignedOutElsewhere()).toBe(false);
+    // Never resumed in place under the previous user's query cache.
+    expect(manager.events.load).not.toHaveBeenCalled();
+  });
+
+  it("does not reload on a renew in another tab while signed in", async () => {
+    const listeners: Record<string, (event: unknown) => void> = {};
+    const localStorage = { getItem: vi.fn() };
+    const reload = vi.fn();
+    const { manager } = await loadOidc(
+      { AUTH_ISSUER: "https://idp.example.com/realms/eve", AUTH_CLIENT_ID: "c" },
+      {
+        localStorage,
+        location: { origin: ORIGIN, reload },
+        addEventListener: (type: string, fn: (event: unknown) => void) => {
+          listeners[type] = fn;
+        },
+      }
+    );
+    manager.getUser.mockResolvedValue({ access_token: "a", expired: false });
+
+    listeners.storage({
+      storageArea: localStorage,
+      key: "oidc.user:https://idp.example.com/realms/eve:c",
+      newValue: "{}",
+    });
+    await Promise.resolve();
+    expect(manager.getUser).not.toHaveBeenCalled();
+    expect(reload).not.toHaveBeenCalled();
   });
 });
 
@@ -417,10 +474,17 @@ describe("beginSignout", () => {
         "https://cognito-idp.eu-west-1.amazonaws.com/eu-west-1_AbCdEf123",
       AUTH_CLIENT_ID: "cognito-client",
     });
-    manager.revokeTokens.mockRejectedValue(new Error("network"));
-    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    // What the library throws when the revocation endpoint answers non-200.
+    manager.revokeTokens.mockRejectedValue(
+      Object.assign(new Error("unsupported_token_type"), { status: 400 })
+    );
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
     await expect(beginSignout()).resolves.toBeDefined();
+    expect(warn).toHaveBeenCalledWith(
+      "Refresh token revocation failed:",
+      expect.any(Error)
+    );
     expect(manager.removeUser).toHaveBeenCalledTimes(1);
   });
 

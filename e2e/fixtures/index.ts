@@ -218,10 +218,15 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     await use(authState);
   },
 
-  authedPage: async ({ page, context, baseURL }, use, testInfo) => {
+  authedPage: async ({ page, context, baseURL, authState }, use, testInfo) => {
     const origin = new URL(baseURL as string).origin;
     await skipOnboarding(context, origin);
     await signIn(page, origin, canWrite(origin, testInfo.project.name));
+    // The stored user carries the refresh token, and rotation retires the
+    // one in the file once any test refreshed: write the current one back so
+    // a run longer than the access token does not fall back to the hosted
+    // login.
+    await context.storageState({ path: authState });
     await use(page);
   },
 

@@ -108,6 +108,15 @@ test.describe("session persistence", () => {
       await first.goto("/");
       await new LoginPage(first).expectForm(origin);
       expect(foreignNavigations).toEqual([]);
+
+      // Signing in again there reloads the signed-out tab onto the chat.
+      await new LoginPage(first).signIn(
+        process.env.E2E_EMAIL ?? "",
+        process.env.E2E_PASSWORD ?? "",
+      );
+      await new ChatPage(first).composer.waitReady();
+      await new ChatPage(second).composer.waitReady();
+      await expect(new SignedOutPage(second).root).toBeHidden();
     } finally {
       await context.close();
     }
