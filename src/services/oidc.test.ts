@@ -279,8 +279,13 @@ describe("resumeStoredSession", () => {
     expect(manager.signinSilent).not.toHaveBeenCalled();
   });
 
-  it("reports false and drops the dead user when the IdP answers invalid_grant", async () => {
-    const { resumeStoredSession, manager } = await loadOidc({});
+  it("drops the dead user inside the lock, marking the session expired", async () => {
+    const request = vi.fn(
+      (_name: string, callback: () => Promise<unknown>) => callback()
+    );
+    vi.stubGlobal("navigator", { locks: { request } });
+    const localStorage = { setItem: vi.fn(), getItem: vi.fn() };
+    const { resumeStoredSession, manager } = await loadOidc({}, { localStorage });
     manager.getUser.mockResolvedValue({
       refresh_token: "revoked",
       expired: true,
@@ -292,6 +297,27 @@ describe("resumeStoredSession", () => {
 
     await expect(resumeStoredSession()).resolves.toBe(false);
     expect(manager.removeUser).toHaveBeenCalledTimes(1);
+    // One lock for the renew, one for the removal.
+    expect(request).toHaveBeenCalledTimes(2);
+    expect(localStorage.setItem).toHaveBeenCalledWith(
+      "eve.oidc.signed_out_reason",
+      "expired"
+    );
+  });
+
+  it("keeps a user another tab stored after the refused token", async () => {
+    const { resumeStoredSession, manager } = await loadOidc({});
+    manager.getUser
+      .mockResolvedValueOnce({ refresh_token: "revoked", expired: true })
+      .mockResolvedValueOnce({ refresh_token: "revoked", expired: true })
+      .mockResolvedValue({ refresh_token: "rotated-by-tab-b", expired: false });
+    manager.signinSilent.mockRejectedValue(
+      Object.assign(new Error("invalid_grant"), { error: "invalid_grant" })
+    );
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    await expect(resumeStoredSession()).resolves.toBe(false);
+    expect(manager.removeUser).not.toHaveBeenCalled();
   });
 
   it("keeps the stored user on a transient failure such as a timeout", async () => {
@@ -353,6 +379,32 @@ describe("cross-tab sign-out", () => {
     // No redirect from this tab: PrivateRoute and axios read the latch.
     expect(isSignedOutElsewhere()).toBe(true);
     expect(isSignoutInProgress()).toBe(true);
+  });
+
+  it("tells an expired session from a sign-out elsewhere", async () => {
+    const listeners: Record<string, (event: unknown) => void> = {};
+    const localStorage = {
+      getItem: vi.fn((key: string) =>
+        key === "eve.oidc.signed_out_reason" ? "expired" : null
+      ),
+    };
+    const { getSignedOutReason } = await loadOidc(
+      { AUTH_ISSUER: "https://idp.example.com/realms/eve", AUTH_CLIENT_ID: "c" },
+      {
+        localStorage,
+        addEventListener: (type: string, fn: (event: unknown) => void) => {
+          listeners[type] = fn;
+        },
+      }
+    );
+    expect(getSignedOutReason()).toBe("signed-out");
+
+    listeners.storage({
+      storageArea: localStorage,
+      key: "oidc.user:https://idp.example.com/realms/eve:c",
+      newValue: null,
+    });
+    expect(getSignedOutReason()).toBe("expired");
   });
 
   it("reloads when a user is stored again after a sign-out elsewhere", async () => {
@@ -451,6 +503,17 @@ describe("beginSignout", () => {
     await renew;
     await signout;
     expect(order).toEqual(["lock", "lock", "revoke", "remove"]);
+  });
+
+  it("records a sign-out as the reason other tabs show", async () => {
+    const localStorage = { setItem: vi.fn(), getItem: vi.fn() };
+    const { beginSignout } = await loadOidc({}, { localStorage });
+
+    await beginSignout();
+    expect(localStorage.setItem).toHaveBeenCalledWith(
+      "eve.oidc.signed_out_reason",
+      "signed-out"
+    );
   });
 
   it("revokes the refresh token before removing the stored user", async () => {

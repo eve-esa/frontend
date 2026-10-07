@@ -6,6 +6,7 @@ import { LOCAL_STORAGE_TOUR_COMPLETED } from "@/utilities/localStorage";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { Spinner } from "@/components/ui/Spinner";
 import {
+  getSignedOutReason,
   isSignedOutElsewhere,
   isSignoutInProgress,
   resumeStoredSession,
@@ -173,7 +174,7 @@ export const PrivateRoute = () => {
 
   switch (view) {
     case "signed-out":
-      return <SignedOutPage />;
+      return <SignedOutPage reason={getSignedOutReason()} />;
     case "spinner":
       return (
         <div className="flex h-screen w-screen items-center justify-center">

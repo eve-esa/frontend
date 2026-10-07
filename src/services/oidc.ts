@@ -88,6 +88,32 @@ const withRenewLock = async <T>(task: () => Promise<T>): Promise<T> => {
 let signoutInProgress = false;
 let signedOutElsewhere = false;
 
+/** Why the stored user went away: shown by the signed-out view of other tabs. */
+export type SignedOutReason = "signed-out" | "expired";
+
+// Written next to the user before it is removed, so the storage event in
+// other tabs can tell a sign-out from a dead refresh token.
+const SIGNED_OUT_REASON_KEY = "eve.oidc.signed_out_reason";
+let signedOutReason: SignedOutReason = "signed-out";
+
+const recordSignedOutReason = (reason: SignedOutReason): void => {
+  try {
+    window.localStorage?.setItem(SIGNED_OUT_REASON_KEY, reason);
+  } catch {
+    // Storage blocked: other tabs fall back to the sign-out wording.
+  }
+};
+
+const readSignedOutReason = (): SignedOutReason => {
+  try {
+    return window.localStorage?.getItem(SIGNED_OUT_REASON_KEY) === "expired"
+      ? "expired"
+      : "signed-out";
+  } catch {
+    return "signed-out";
+  }
+};
+
 /**
  * One renew across every tab of this origin. Inside the lock the stored user
  * is read again: when it still has more than RENEW_MARGIN_S left (another
@@ -157,9 +183,17 @@ export const resumeStoredSession = async (): Promise<boolean> => {
     console.error("Stored session renew failed:", error);
     // The refresh token is dead (expired, revoked or rotated away): drop
     // the user, id token and e-mail included, instead of keeping it on disk
-    // and spending a failing token request on every boot.
+    // and spending a failing token request on every boot. Inside the lock
+    // and only while the refused token is still the stored one: another tab
+    // may have stored a live user meanwhile.
     if ((error as { error?: string } | null)?.error === "invalid_grant") {
-      await userManager.removeUser();
+      await withRenewLock(async () => {
+        const current = await userManager.getUser();
+        if (current?.refresh_token === stored.refresh_token) {
+          recordSignedOutReason("expired");
+          await userManager.removeUser();
+        }
+      });
     }
     return false;
   }
@@ -213,6 +247,9 @@ export const isSignoutInProgress = (): boolean =>
  */
 export const isSignedOutElsewhere = (): boolean => signedOutElsewhere;
 
+/** What the signed-out view says: a sign-out elsewhere or an expired session. */
+export const getSignedOutReason = (): SignedOutReason => signedOutReason;
+
 /** The user chose to sign in again from the signed-out view. */
 export const clearSignedOutElsewhere = (): void => {
   signedOutElsewhere = false;
@@ -241,6 +278,7 @@ export const beginSignout = async (): Promise<
   SignoutRedirectArgs | undefined
 > => {
   signoutInProgress = true;
+  recordSignedOutReason("signed-out");
   // A renew already running in this tab or another one finishes first, so
   // the token revoked below is the one in storage and no renew stores a new
   // user after it.
@@ -291,6 +329,7 @@ if (typeof window !== "undefined" && typeof window.addEventListener === "functio
       return;
     }
     if (event.newValue === null) {
+      signedOutReason = readSignedOutReason();
       signedOutElsewhere = true;
       void userManager.removeUser();
       return;

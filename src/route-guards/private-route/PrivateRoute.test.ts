@@ -10,6 +10,7 @@ import {
 vi.mock("@/services/oidc", () => ({
   CALLBACK_PATH: "/callback",
   clearSignedOutElsewhere: vi.fn(),
+  getSignedOutReason: vi.fn(() => "signed-out"),
   isSignedOutElsewhere: vi.fn(() => false),
   isSignoutInProgress: vi.fn(() => false),
   resumeStoredSession: vi.fn(),
