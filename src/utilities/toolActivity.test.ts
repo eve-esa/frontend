@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { applyToolCall, applyToolResult } from "./toolActivity";
+import {
+  applyToolCall,
+  applyToolResult,
+  mcpServerForTool,
+} from "./toolActivity";
 import type { ToolActivityEntry } from "@/types";
 
 describe("applyToolCall", () => {
@@ -16,6 +20,7 @@ describe("applyToolCall", () => {
         label: "Calling dummy get text summary",
         tool: "dummy_get_text_summary",
         query: "solar wind",
+        server: "dummy_get_text_summary",
         state: "running",
       },
     ]);
@@ -89,5 +94,33 @@ describe("applyToolResult", () => {
 
     activity = applyToolResult(activity, { tool: "search" });
     expect(activity.map((e) => e.state)).toEqual(["done", "done"]);
+  });
+});
+
+describe("mcpServerForTool", () => {
+  it("picks the selected server that prefixes the tool name", () => {
+    expect(
+      mcpServerForTool("eve_retrieval_retrieve", ["eve_retrieval", "geocode"]),
+    ).toBe("eve_retrieval");
+    expect(
+      mcpServerForTool("geocode_geocode_place", ["eve_retrieval", "geocode"]),
+    ).toBe("geocode");
+  });
+
+  it("prefers the longest match and needs a whole name before the _", () => {
+    expect(mcpServerForTool("eve_retrieval_retrieve", ["eve", "eve_retrieval"])).toBe(
+      "eve_retrieval",
+    );
+    expect(mcpServerForTool("geocodex_find", ["geocode"])).toBe("geocodex_find");
+    expect(mcpServerForTool("geocode", ["geocode"])).toBe("geocode");
+  });
+
+  it("falls back to the tool name when no selected server matches", () => {
+    expect(mcpServerForTool("serpapi_search_google", ["eve_retrieval"])).toBe(
+      "serpapi_search_google",
+    );
+    expect(mcpServerForTool("serpapi_search_google", [])).toBe(
+      "serpapi_search_google",
+    );
   });
 });
