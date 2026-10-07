@@ -53,11 +53,13 @@ export type AgenticTraceStep = {
 // One MCP tool invocation within the streaming turn: appended as "running" on
 // a tool_call event and flipped to "done" by the matching tool_result. `tool`
 // and `query` come from the structured event fields newer backends emit, so
-// both are optional.
+// both are optional. `server` is the MCP server the tool belongs to, resolved
+// against the servers selected for the turn when the event arrives.
 export type ToolActivityEntry = {
   label: string;
   tool?: string;
   query?: string;
+  server?: string;
   state: "running" | "done";
 };
 

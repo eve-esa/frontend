@@ -248,6 +248,7 @@ export const useSendRequest = (conversationId?: string) => {
                 tool_activity: applyToolCall(
                   msg.tool_activity,
                   evt as Record<string, unknown>,
+                  selectedMcpServers(),
                 ),
               }));
             } else if (type === "tool_result") {
