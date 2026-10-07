@@ -1,5 +1,20 @@
-import { describe, expect, it } from "vitest";
-import { resolvePrivateRouteState, shouldAttemptSignin } from "./PrivateRoute";
+import { describe, expect, it, vi } from "vitest";
+import { isSignoutInProgress, resumeStoredSession } from "@/services/oidc";
+import {
+  attemptSignin,
+  resolvePrivateRouteState,
+  shouldAttemptSignin,
+  signinAfterStoredSession,
+} from "./PrivateRoute";
+
+vi.mock("@/services/oidc", () => ({
+  CALLBACK_PATH: "/callback",
+  clearSignedOutElsewhere: vi.fn(),
+  getSignedOutReason: vi.fn(() => "signed-out"),
+  isSignedOutElsewhere: vi.fn(() => false),
+  isSignoutInProgress: vi.fn(() => false),
+  resumeStoredSession: vi.fn(),
+}));
 
 // The base case: everything is in the "should redirect" state. Each test
 // below flips exactly one field to false and checks the result flips too,
@@ -55,6 +70,7 @@ describe("shouldAttemptSignin", () => {
 // onboarding needed. Each test below flips exactly one field and checks the
 // view flips too.
 const viewBase = {
+  signedOutElsewhere: false,
   authLoading: false,
   isAuthenticated: true,
   isProfileLoading: false,
@@ -63,6 +79,22 @@ const viewBase = {
 };
 
 describe("resolvePrivateRouteState", () => {
+  it("shows the signed-out view once another tab signed out", () => {
+    expect(
+      resolvePrivateRouteState({
+        ...viewBase,
+        isAuthenticated: false,
+        signedOutElsewhere: true,
+      })
+    ).toBe("signed-out");
+  });
+
+  it("keeps the outlet when signed in again after a sign-out elsewhere", () => {
+    expect(
+      resolvePrivateRouteState({ ...viewBase, signedOutElsewhere: true })
+    ).toBe("outlet");
+  });
+
   it("renders the outlet when everything is settled", () => {
     expect(resolvePrivateRouteState(viewBase)).toBe("outlet");
   });
@@ -105,5 +137,60 @@ describe("resolvePrivateRouteState", () => {
         needsOnboarding: true,
       })
     ).toBe("pending-approval");
+  });
+});
+
+describe("signinAfterStoredSession", () => {
+  it("renews from the stored refresh token without a redirect", async () => {
+    vi.mocked(resumeStoredSession).mockResolvedValue(true);
+    const redirect = vi.fn(() => Promise.resolve());
+
+    await signinAfterStoredSession(redirect);
+    expect(redirect).not.toHaveBeenCalled();
+  });
+
+  it("redirects when the stored session cannot be renewed", async () => {
+    vi.mocked(resumeStoredSession).mockResolvedValue(false);
+    const redirect = vi.fn(() => Promise.resolve());
+
+    await signinAfterStoredSession(redirect);
+    expect(redirect).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not redirect when a sign-out started during the renew", async () => {
+    vi.mocked(resumeStoredSession).mockResolvedValue(false);
+    vi.mocked(isSignoutInProgress).mockReturnValueOnce(true);
+    const redirect = vi.fn(() => Promise.resolve());
+
+    await signinAfterStoredSession(redirect);
+    expect(redirect).not.toHaveBeenCalled();
+  });
+});
+
+describe("attemptSignin", () => {
+  it("clears the tried flag after a resume, so a later sign-out can redirect", async () => {
+    vi.mocked(resumeStoredSession).mockResolvedValue(true);
+    const tried = { current: false };
+
+    await attemptSignin(tried, () => Promise.resolve());
+    expect(tried.current).toBe(false);
+  });
+
+  it("keeps the tried flag after a redirect, one redirect per mount", async () => {
+    vi.mocked(resumeStoredSession).mockResolvedValue(false);
+    const tried = { current: false };
+    const redirect = vi.fn(() => Promise.resolve());
+
+    await attemptSignin(tried, redirect);
+    expect(redirect).toHaveBeenCalledTimes(1);
+    expect(tried.current).toBe(true);
+  });
+
+  it("sets the tried flag before the renew settles", () => {
+    vi.mocked(resumeStoredSession).mockReturnValue(new Promise(() => undefined));
+    const tried = { current: false };
+
+    void attemptSignin(tried, () => Promise.resolve());
+    expect(tried.current).toBe(true);
   });
 });

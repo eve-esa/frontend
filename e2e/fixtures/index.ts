@@ -107,7 +107,7 @@ export type Api = {
   patch<T = unknown>(path: string, body: unknown): Promise<ApiResponse<T>>;
   /** DELETE `/api<path>` with the same bearer, for cleanup. Throws on a production target. */
   delete<T = unknown>(path: string): Promise<ApiResponse<T>>;
-  /** The OIDC access token from the `oidc.user:` session storage entry. */
+  /** The OIDC access token from the `oidc.user:` local storage entry. */
   bearer(): Promise<string>;
 };
 
@@ -123,22 +123,22 @@ export function apiBaseURL(baseURL: string, projectName: string): string {
 }
 
 /**
- * `Api` on a signed-in page: the bearer is read from the page's OIDC session storage on
+ * `Api` on a signed-in page: the bearer is read from the page's OIDC local storage on
  * every call, so a token renewal is picked up. Writes are refused on a production target.
  */
 export function pageApi(page: Page, baseURL: string, projectName: string): Api {
   const apiBase = apiBaseURL(baseURL, projectName);
   const bearer = async (): Promise<string> => {
     const token = await page.evaluate(() => {
-      for (let i = 0; i < sessionStorage.length; i += 1) {
-        const key = sessionStorage.key(i);
+      for (let i = 0; i < localStorage.length; i += 1) {
+        const key = localStorage.key(i);
         if (!key?.startsWith("oidc.user:")) continue;
-        const raw = sessionStorage.getItem(key);
+        const raw = localStorage.getItem(key);
         return raw ? (JSON.parse(raw) as { access_token?: string }).access_token ?? null : null;
       }
       return null;
     });
-    if (!token) throw new Error("no oidc.user: entry in session storage");
+    if (!token) throw new Error("no oidc.user: entry in local storage");
     return token;
   };
   const toApiResponse = async <T>(response: APIResponse): Promise<ApiResponse<T>> => {
@@ -218,10 +218,15 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     await use(authState);
   },
 
-  authedPage: async ({ page, context, baseURL }, use, testInfo) => {
+  authedPage: async ({ page, context, baseURL, authState }, use, testInfo) => {
     const origin = new URL(baseURL as string).origin;
     await skipOnboarding(context, origin);
     await signIn(page, origin, canWrite(origin, testInfo.project.name));
+    // The stored user carries the refresh token, and rotation retires the
+    // one in the file once any test refreshed: write the current one back so
+    // a run longer than the access token does not fall back to the hosted
+    // login.
+    await context.storageState({ path: authState });
     await use(page);
   },
 
