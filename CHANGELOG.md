@@ -16,6 +16,15 @@ Release and promotes staging. Production is promoted from there by an explicit d
 The "Pilot history" section at the bottom predates this repository's version series: no tag was ever
 cut for it. The released tags start at `v0.0.1`.
 
+## [1.2.1](https://github.com/eve-esa/frontend/compare/v1.2.0...v1.2.1) (2026-10-07)
+
+
+### Fixed
+
+* **auth:** keep the session across tabs and browser restarts ([#167](https://github.com/eve-esa/frontend/issues/167)) ([829747a](https://github.com/eve-esa/frontend/commit/829747a6cbf3dad6f267d4c8bce0fe1653a6453f))
+* **chat:** name the MCP server while a tool runs ([#163](https://github.com/eve-esa/frontend/issues/163)) ([fe1de35](https://github.com/eve-esa/frontend/commit/fe1de352925bf5301f7eda04bb9741c4ad6227e0))
+* **onboarding:** make the on hold text readable ([#164](https://github.com/eve-esa/frontend/issues/164)) ([ba5c60a](https://github.com/eve-esa/frontend/commit/ba5c60ae13e8c0c3b79272ebf3a1f359e9ec2e05))
+
 ## [1.2.0](https://github.com/eve-esa/frontend/compare/v1.1.1...v1.2.0) (2026-10-06)
 
 
