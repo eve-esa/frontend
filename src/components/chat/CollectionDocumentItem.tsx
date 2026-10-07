@@ -1,5 +1,5 @@
 import type { DocumentType } from "@/services/useGetDocuments";
-import { formatDate } from "@/utilities/dayjs";
+import { formatApiDate } from "@/utilities/dayjs";
 import { faTrashCan } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useState } from "react";
@@ -20,6 +20,7 @@ export const CollectionDocumentItem = ({
 
   const { data: profile } = useGetProfile();
   const isMine = profile?.id === document.user_id;
+  const uploadedOn = formatApiDate(document.timestamp);
 
   return (
     <div
@@ -49,9 +50,14 @@ export const CollectionDocumentItem = ({
             )}
           </div>
 
-          <span className="text-[12px] text-primary-50">
-            {formatDate(document.createdAt)}
-          </span>
+          {uploadedOn && (
+            <span
+              className="text-[12px] text-primary-50"
+              data-testid="collection-document-date"
+            >
+              {uploadedOn}
+            </span>
+          )}
         </div>
       </div>
       {!isLastItem && (

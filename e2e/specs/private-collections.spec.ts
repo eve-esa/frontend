@@ -4,7 +4,7 @@ import { expect, test } from "../fixtures";
 import { lastPersistedDocuments, lastPersistedTurn } from "./conversation";
 
 type CollectionRow = { id: string; name: string };
-type DocumentRow = { id: string; name: string; collection_id: string };
+type DocumentRow = { id: string; name: string; collection_id: string; timestamp?: string };
 type Paged<T> = { data?: T[] };
 
 const FIXTURE = path.join(
@@ -66,8 +66,13 @@ test.describe("private collections @dev", () => {
           timeout: 60_000,
         })
         .toContain(FILE_NAME);
-      const documentId = (await documents(collectionId)).find((d) => d.name === FILE_NAME)
-        ?.id as string;
+      const uploaded = (await documents(collectionId)).find((d) => d.name === FILE_NAME);
+      const documentId = uploaded?.id as string;
+      // The date under the document comes from its API timestamp, not the clock.
+      expect(uploaded?.timestamp, "the document row carries no timestamp").toBeTruthy();
+      await expect(myCollections.documentDate(FILE_NAME)).toHaveText(
+        await myCollections.localDay(uploaded?.timestamp as string),
+      );
 
       // 4. Enable the collection for the chat, set a year range, ask about the fact.
       // Private uploads carry no year: the range must not hide them (backend #294).

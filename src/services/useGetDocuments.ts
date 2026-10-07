@@ -9,7 +9,6 @@ import { isTourCollection } from "@/components/onboarding/tourCollection";
 export const DocumentSchema = z.object({
   id: z.string(),
   name: z.string(),
-  createdAt: z.string(),
   chunk_count: z.number(),
   collection_id: z.string(),
   file_size: z.number(),
