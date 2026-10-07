@@ -46,6 +46,7 @@ export const ToolkitsMenuBar = ({
 
   const triggerContent = (
     <MenubarTrigger
+      data-testid="sidebar-toolkits"
       className={`flex items-center gap-2 rounded-lg p-2 text-natural-50 cursor-pointer ${
         isToolkitsSidebarOpen
           ? "bg-primary-600/60 text-white"
@@ -82,6 +83,7 @@ export const ToolkitsMenuBar = ({
 
         <MenubarContent side="bottom" className="flex flex-col gap-1">
           <MenubarItem
+            data-testid="sidebar-toolkits-shared"
             onClick={() => openDynamicSidebar({ type: "toolkits" })}
             className={cn(
               content?.type === "toolkits" && "bg-primary-500 text-white"

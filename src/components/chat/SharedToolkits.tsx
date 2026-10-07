@@ -24,7 +24,10 @@ export const SharedToolkits = ({ onToggle }: SharedToolkitsProps) => {
   const isEmpty = !isLoading && !isError && serversList.length === 0;
 
   return (
-    <div className="flex flex-col h-full py-6 gap-6 md:gap-10">
+    <div
+      data-testid="toolkits-panel"
+      className="flex flex-col h-full py-6 gap-6 md:gap-10"
+    >
       <div className="flex-none flex flex-col gap-6 md:gap-10 px-6">
         <div className="flex items-center justify-between">
           <h2 className="text-lg 3xl:text-3xl text-natural-50 ">
