@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi, type Mock } from "vitest";
 
-// The real UserManager touches sessionStorage at construction, which the
+// The real UserManager touches web storage at construction, which the
 // plain Node test environment does not have; the mock also lets each test
 // inspect the settings the module builds and script signinSilent.
 vi.mock("oidc-client-ts", () => {
@@ -9,15 +9,21 @@ vi.mock("oidc-client-ts", () => {
     signinSilent = vi.fn();
     signoutRedirect = vi.fn(() => Promise.resolve());
     removeUser = vi.fn(() => Promise.resolve());
+    revokeTokens = vi.fn(() => Promise.resolve());
+    getUser = vi.fn(() => Promise.resolve(null));
     events = {
       addAccessTokenExpiring: vi.fn(),
+      load: vi.fn(() => Promise.resolve()),
     };
 
     constructor(settings: Record<string, unknown>) {
       this.settings = settings;
     }
   }
-  return { UserManager };
+  class WebStorageStateStore {
+    constructor(readonly args: { store: unknown }) {}
+  }
+  return { UserManager, WebStorageStateStore };
 });
 
 type MockedUserManager = {
@@ -25,18 +31,24 @@ type MockedUserManager = {
   signinSilent: Mock;
   signoutRedirect: Mock;
   removeUser: Mock;
-  events: { addAccessTokenExpiring: Mock };
+  revokeTokens: Mock;
+  getUser: Mock;
+  events: { addAccessTokenExpiring: Mock; load: Mock };
 };
 
 const ORIGIN = "https://app.example.com";
 
 // oidc.ts builds its UserManager at module scope from runtimeConfig, so each
 // test re-imports it against a fresh window carrying the wanted config.
-const loadOidc = async (config: Record<string, string>) => {
+const loadOidc = async (
+  config: Record<string, string>,
+  extraWindow: Record<string, unknown> = {}
+) => {
   vi.resetModules();
   vi.stubGlobal("window", {
     location: { origin: ORIGIN },
     __EVE_CONFIG__: config,
+    ...extraWindow,
   });
   const oidc = await import("./oidc");
   return {
@@ -47,6 +59,7 @@ const loadOidc = async (config: Record<string, string>) => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 describe("userManager settings", () => {
@@ -75,6 +88,14 @@ describe("userManager settings", () => {
 
     expect(manager.settings.scope).toBe("openid profile email");
   });
+
+  it("keeps the user in localStorage so a new tab and a restart find it", async () => {
+    const localStorage = { getItem: vi.fn() };
+    const { manager } = await loadOidc({}, { localStorage });
+
+    const store = manager.settings.userStore as { args: { store: unknown } };
+    expect(store.args.store).toBe(localStorage);
+  });
 });
 
 describe("renewToken", () => {
@@ -90,7 +111,9 @@ describe("renewToken", () => {
 
     const first = renewToken();
     const second = renewToken();
-    expect(manager.signinSilent).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() => {
+      expect(manager.signinSilent).toHaveBeenCalledTimes(1);
+    });
 
     resolve(user);
     await expect(first).resolves.toBe(user);
@@ -131,7 +154,9 @@ describe("renewToken", () => {
 
     onExpiring();
     onExpiring();
-    expect(manager.signinSilent).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() => {
+      expect(manager.signinSilent).toHaveBeenCalledTimes(1);
+    });
     resolve({ access_token: "token" });
   });
 
@@ -155,7 +180,147 @@ describe("renewToken", () => {
   });
 });
 
+describe("renew across tabs", () => {
+  const stubLocks = () => {
+    const request = vi.fn(
+      (_name: string, callback: () => Promise<unknown>) => callback()
+    );
+    vi.stubGlobal("navigator", { locks: { request } });
+    return request;
+  };
+
+  it("renews inside the eve-oidc-renew Web Lock", async () => {
+    const request = stubLocks();
+    const { renewToken, manager } = await loadOidc({});
+    manager.signinSilent.mockResolvedValue({ access_token: "new" });
+
+    await expect(renewToken()).resolves.toEqual({ access_token: "new" });
+    expect(request).toHaveBeenCalledWith("eve-oidc-renew", expect.any(Function));
+    expect(manager.signinSilent).toHaveBeenCalledTimes(1);
+  });
+
+  it("re-reads the stored user in the lock and takes another tab's renew", async () => {
+    stubLocks();
+    const { renewToken, manager } = await loadOidc({});
+    const renewedElsewhere = { access_token: "from-tab-b", expired: false };
+    manager.getUser
+      .mockResolvedValueOnce({ access_token: "old", expired: true })
+      .mockResolvedValueOnce(renewedElsewhere);
+
+    await expect(renewToken()).resolves.toBe(renewedElsewhere);
+    expect(manager.signinSilent).not.toHaveBeenCalled();
+    expect(manager.events.load).toHaveBeenCalledWith(renewedElsewhere);
+  });
+
+  it("refreshes when the stored user is still the one it started from", async () => {
+    stubLocks();
+    const { renewToken, manager } = await loadOidc({});
+    const expiring = { access_token: "old", expired: false };
+    manager.getUser.mockResolvedValue(expiring);
+    manager.signinSilent.mockResolvedValue({ access_token: "new" });
+
+    await renewToken();
+    expect(manager.signinSilent).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("resumeStoredSession", () => {
+  it("renews an expired stored user with its refresh token", async () => {
+    const { resumeStoredSession, manager } = await loadOidc({});
+    manager.getUser.mockResolvedValue({
+      access_token: "old",
+      refresh_token: "refresh",
+      expired: true,
+    });
+    manager.signinSilent.mockResolvedValue({ access_token: "new" });
+
+    await expect(resumeStoredSession()).resolves.toBe(true);
+    expect(manager.signinSilent).toHaveBeenCalledTimes(1);
+  });
+
+  it("gives up without a token request when no refresh token is stored", async () => {
+    const { resumeStoredSession, manager } = await loadOidc({});
+    manager.getUser.mockResolvedValue({ access_token: "old", expired: true });
+
+    await expect(resumeStoredSession()).resolves.toBe(false);
+    expect(manager.signinSilent).not.toHaveBeenCalled();
+  });
+
+  it("reports false when the IdP refuses the refresh token", async () => {
+    const { resumeStoredSession, manager } = await loadOidc({});
+    manager.getUser.mockResolvedValue({
+      refresh_token: "revoked",
+      expired: true,
+    });
+    manager.signinSilent.mockRejectedValue(new Error("invalid_grant"));
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    await expect(resumeStoredSession()).resolves.toBe(false);
+  });
+});
+
+describe("cross-tab sign-out", () => {
+  it("drops this tab's user when another tab removes the stored one", async () => {
+    const listeners: Record<string, (event: unknown) => void> = {};
+    const localStorage = { getItem: vi.fn() };
+    const { manager } = await loadOidc(
+      {
+        AUTH_ISSUER: "https://idp.example.com/realms/eve",
+        AUTH_CLIENT_ID: "eve-frontend",
+      },
+      {
+        localStorage,
+        addEventListener: (type: string, fn: (event: unknown) => void) => {
+          listeners[type] = fn;
+        },
+      }
+    );
+
+    listeners.storage({
+      storageArea: localStorage,
+      key: "oidc.user:https://idp.example.com/realms/eve:eve-frontend",
+      newValue: "{}",
+    });
+    expect(manager.removeUser).not.toHaveBeenCalled();
+
+    listeners.storage({
+      storageArea: localStorage,
+      key: "oidc.user:https://idp.example.com/realms/eve:eve-frontend",
+      newValue: null,
+    });
+    expect(manager.removeUser).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("beginSignout", () => {
+  it("revokes the refresh token before removing the stored user", async () => {
+    const { beginSignout, manager } = await loadOidc({
+      AUTH_ISSUER:
+        "https://cognito-idp.eu-west-1.amazonaws.com/eu-west-1_AbCdEf123",
+      AUTH_CLIENT_ID: "cognito-client",
+    });
+
+    await beginSignout();
+    expect(manager.revokeTokens).toHaveBeenCalledWith(["refresh_token"]);
+    expect(manager.removeUser).toHaveBeenCalledTimes(1);
+    expect(manager.revokeTokens.mock.invocationCallOrder[0]).toBeLessThan(
+      manager.removeUser.mock.invocationCallOrder[0]
+    );
+  });
+
+  it("still signs out when the revocation fails", async () => {
+    const { beginSignout, manager } = await loadOidc({
+      AUTH_ISSUER:
+        "https://cognito-idp.eu-west-1.amazonaws.com/eu-west-1_AbCdEf123",
+      AUTH_CLIENT_ID: "cognito-client",
+    });
+    manager.revokeTokens.mockRejectedValue(new Error("network"));
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    await expect(beginSignout()).resolves.toBeDefined();
+    expect(manager.removeUser).toHaveBeenCalledTimes(1);
+  });
+
   it("returns Cognito's non-standard logout parameters for a Cognito issuer", async () => {
     const { beginSignout } = await loadOidc({
       AUTH_ISSUER:

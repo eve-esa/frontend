@@ -5,7 +5,7 @@ import { routes } from "@/utilities/routes.tsx";
 import { LOCAL_STORAGE_TOUR_COMPLETED } from "@/utilities/localStorage";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { Spinner } from "@/components/ui/Spinner";
-import { isSignoutInProgress } from "@/services/oidc";
+import { isSignoutInProgress, resumeStoredSession } from "@/services/oidc";
 import { useGetProfile } from "@/services/useMe";
 import { isPendingApproval } from "@/services/approval";
 import { PendingApprovalPage } from "@/pages/pending-approval/PendingApprovalPage";
@@ -33,6 +33,25 @@ export const shouldAttemptSignin = (p: {
   !p.signoutInProgress &&
   !p.hasAuthParams &&
   !p.hasTriedSignin;
+
+/**
+ * The stored refresh token first, the interactive redirect only when it
+ * cannot bring the session back. A successful renew raises the user loaded
+ * event, so AuthProvider flips to authenticated without a navigation. The
+ * sign-out latch is read again after the renew: a sign-out may have started
+ * while it ran.
+ */
+export const signinAfterStoredSession = async (
+  redirect: () => Promise<unknown>
+): Promise<void> => {
+  if (await resumeStoredSession()) {
+    return;
+  }
+  if (isSignoutInProgress()) {
+    return;
+  }
+  await redirect();
+};
 
 /**
  * The view PrivateRoute renders, decided in one place so the truth table can
@@ -106,10 +125,12 @@ export const PrivateRoute = () => {
       })
     ) {
       hasTriedSignin.current = true;
-      // The deep link travels in OIDC state and comes back to onSigninCallback.
-      void auth.signinRedirect({
-        state: { returnTo: location.pathname + location.search },
-      });
+      void signinAfterStoredSession(() =>
+        // The deep link travels in OIDC state and comes back to onSigninCallback.
+        auth.signinRedirect({
+          state: { returnTo: location.pathname + location.search },
+        })
+      );
     }
   }, [auth, location]);
 

@@ -1,5 +1,4 @@
-import type { Page } from "@playwright/test";
-import { ChatPage, LoginPage, LogoutDialog, type UserMenuLink } from "../pages";
+import { ChatPage, LoginPage, LogoutDialog, OidcStorage, type UserMenuLink } from "../pages";
 import { canWrite, expect, signIn, skipOnboarding, test } from "../fixtures";
 
 const LINKS: { label: string; testId: UserMenuLink; key: string }[] = [
@@ -16,10 +15,6 @@ const linkTarget = (url: string): string => {
   const parsed = new URL(url);
   return `${parsed.host}${parsed.pathname.replace(/\/+$/, "")}${parsed.search}`;
 };
-
-/** Session storage keys holding the signed-in OIDC user, on the page's current origin. */
-const oidcUserKeys = (page: Page): Promise<string[]> =>
-  page.evaluate(() => Object.keys(sessionStorage).filter((key) => key.startsWith("oidc.user:")));
 
 test.describe("account links @prod", () => {
   for (const link of LINKS) {
@@ -45,7 +40,8 @@ test.describe("account links @prod", () => {
       await skipOnboarding(context, origin);
       const page = await context.newPage();
       await signIn(page, origin, canWrite(origin, testInfo.project.name));
-      expect(await oidcUserKeys(page)).not.toHaveLength(0);
+      const storage = new OidcStorage(page);
+      expect(await storage.userKeys()).not.toHaveLength(0);
 
       const chat = new ChatPage(page);
       const logout = new LogoutDialog(page, chat);
@@ -53,14 +49,14 @@ test.describe("account links @prod", () => {
       await logout.confirm();
       await new LoginPage(page).expectForm(origin);
 
-      // Session storage belongs to the tab and the origin, so the app's entries outlive the
-      // trip to the provider. Back on the app with the provider unreachable, the app cannot
+      // Local storage belongs to the origin, so the app's entries outlive the trip to the
+      // provider. Back on the app with the provider unreachable, the app cannot
       // redirect again (it needs the provider's metadata first), so its storage stays
       // readable.
       await page.route((url) => url.origin !== origin, (route) => route.abort());
       await page.goto("/");
       expect(new URL(page.url()).origin).toBe(origin);
-      expect(await oidcUserKeys(page)).toEqual([]);
+      expect(await storage.userKeys()).toEqual([]);
     } finally {
       await context.close();
     }

@@ -1,5 +1,6 @@
 import {
   UserManager,
+  WebStorageStateStore,
   type SignoutRedirectArgs,
   type User,
 } from "oidc-client-ts";
@@ -25,9 +26,12 @@ const PAGE_ORIGIN =
 const AUTH_ISSUER = configValue("AUTH_ISSUER") ?? "";
 const AUTH_CLIENT_ID = configValue("AUTH_CLIENT_ID") ?? "";
 
-// userStore is left at the library default (sessionStorage): a narrower XSS
-// blast radius than localStorage, and persistence across tabs comes from the
-// IdP session cookie via silent sign-in (see the identity ADR).
+// userStore is localStorage, not the library default (sessionStorage): the
+// session must survive a new tab and a browser restart, and the only thing
+// that outlives the 1 hour Cognito login cookie is the refresh token. No
+// silent_redirect_uri is configured, so signinSilent renews only through the
+// refresh token grant. Any XSS could read sessionStorage too; the mitigations
+// are refresh token rotation, revocation on sign-out and the CSP.
 // automaticSilentRenew stays off: the library's internal timer calls
 // signinSilent directly and would bypass the single-flight wrapper below;
 // the expiring event subscription at the bottom replaces it.
@@ -38,7 +42,43 @@ export const userManager = new UserManager({
   post_logout_redirect_uri: PAGE_ORIGIN,
   scope: configValue("AUTH_SCOPE") ?? "openid profile email",
   automaticSilentRenew: false,
+  userStore:
+    typeof window !== "undefined" && window.localStorage
+      ? new WebStorageStateStore({ store: window.localStorage })
+      : undefined,
 });
+
+// The key oidc-client-ts stores the User under: "oidc." prefix of
+// WebStorageStateStore plus UserManager's user:<authority>:<client_id>.
+const USER_STORAGE_KEY = `oidc.user:${AUTH_ISSUER}:${AUTH_CLIENT_ID}`;
+
+export const RENEW_LOCK_NAME = "eve-oidc-renew";
+
+/**
+ * One renew across every tab of this origin. Inside the lock the stored user
+ * is read again: when another tab renewed while this one waited, its fresh
+ * tokens are taken as they are. With refresh token rotation on, a second
+ * refresh with the token the first one rotated away would fail.
+ */
+const renewAcrossTabs = async (): Promise<User | null> => {
+  const before = await userManager.getUser();
+  const renew = async (): Promise<User | null> => {
+    const current = await userManager.getUser();
+    if (
+      current &&
+      !current.expired &&
+      current.access_token !== before?.access_token
+    ) {
+      // Tell this tab's AuthProvider about the user another tab stored.
+      await userManager.events.load(current);
+      return current;
+    }
+    return userManager.signinSilent();
+  };
+  const locks =
+    typeof navigator !== "undefined" ? navigator.locks : undefined;
+  return locks ? locks.request(RENEW_LOCK_NAME, renew) : renew();
+};
 
 let renewInFlight: Promise<User | null> | null = null;
 
@@ -47,15 +87,37 @@ let renewInFlight: Promise<User | null> | null = null;
  *
  * `oidc-client-ts` has no internal dedupe (upstream #1618): two concurrent
  * 401s would otherwise start two token requests at the IdP. Every caller that
- * wants a renew goes through here so at most one is in flight at a time.
+ * wants a renew goes through here so at most one is in flight at a time, and
+ * the Web Lock in renewAcrossTabs extends that to other tabs.
  */
 export const renewToken = (): Promise<User | null> => {
   if (!renewInFlight) {
-    renewInFlight = userManager.signinSilent().finally(() => {
+    renewInFlight = renewAcrossTabs().finally(() => {
       renewInFlight = null;
     });
   }
   return renewInFlight;
+};
+
+/**
+ * Tries the stored refresh token once before an interactive sign-in. A new
+ * tab, a reload after the access token expired or a browser restart finds
+ * an expired User that react-oidc-context reports as signed out; without
+ * this the refresh token sitting in the store would never be used. Resolves
+ * true when the session is back, false when only a redirect can help (no
+ * refresh token, or the IdP refused it: expired, revoked or rotated away).
+ */
+export const resumeStoredSession = async (): Promise<boolean> => {
+  const stored = await userManager.getUser();
+  if (!stored?.refresh_token) {
+    return false;
+  }
+  try {
+    return Boolean(await renewToken());
+  } catch (error) {
+    console.error("Stored session renew failed:", error);
+    return false;
+  }
 };
 
 // Anchored on the parsed hostname with a leading dot: a bare
@@ -111,7 +173,8 @@ export const endSignout = (): void => {
  * Marks sign-out as started synchronously, before anything else runs, and
  * returns the args for `useAuth().signoutRedirect()`.
  *
- * Cognito's `/logout` ignores `id_token_hint`, so the stored user is removed
+ * The refresh token is revoked first. Cognito's `/logout` ignores
+ * `id_token_hint`, so the stored user is removed
  * first to keep the token out of the redirect URL and history. Other
  * providers are left alone: oidc-client-ts reads `id_token_hint` from the
  * stored user before removing it, and Keycloak needs the hint to skip its
@@ -121,6 +184,16 @@ export const beginSignout = async (): Promise<
   SignoutRedirectArgs | undefined
 > => {
   signoutInProgress = true;
+  // The refresh token outlives the IdP session by up to 30 days, so ending
+  // that session alone would leave it usable from storage. The revocation
+  // endpoint comes from the discovery document.
+  try {
+    await userManager.revokeTokens(["refresh_token"]);
+  } catch (error) {
+    // Never block a sign-out: the stored user is still removed below or by
+    // signoutRedirect.
+    console.error("Refresh token revocation failed:", error);
+  }
   if (isCognitoIssuer(AUTH_ISSUER)) {
     await userManager.removeUser();
   }
@@ -137,3 +210,18 @@ userManager.events.addAccessTokenExpiring(() => {
     console.error("Proactive token renew failed:", error);
   });
 });
+
+// Sign-out in another tab removes the shared stored user; this tab drops to
+// the signed-out state too instead of keeping tokens it holds in memory.
+// removeUser raises the unloaded event AuthProvider listens to.
+if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
+  window.addEventListener("storage", (event) => {
+    if (
+      event.storageArea === window.localStorage &&
+      (event.key === USER_STORAGE_KEY || event.key === null) &&
+      event.newValue === null
+    ) {
+      void userManager.removeUser();
+    }
+  });
+}

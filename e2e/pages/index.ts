@@ -5,6 +5,7 @@ export { LoginPage } from "./LoginPage";
 export { LogoutDialog } from "./LogoutDialog";
 export { MessagePanel } from "./MessagePanel";
 export { MyCollectionsPanel } from "./MyCollectionsPanel";
+export { OidcStorage } from "./OidcStorage";
 export { PendingApprovalPage } from "./PendingApprovalPage";
 export { ProfileDialog } from "./ProfileDialog";
 export { ProfileRequiredDialog } from "./ProfileRequiredDialog";
