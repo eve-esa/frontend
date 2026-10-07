@@ -1,5 +1,5 @@
 import { ChatPage, LoginPage, LogoutDialog, OidcStorage, SignedOutPage } from "../pages";
-import { canWrite, expect, signIn, skipOnboarding, test } from "../fixtures";
+import { canWrite, expect, freshContext, signIn, skipOnboarding, test } from "../fixtures";
 
 /**
  * The session outlives the tab: the OIDC user, refresh token included, is in local storage,
@@ -13,7 +13,7 @@ test.describe("session persistence", () => {
     baseURL,
   }, testInfo) => {
     const origin = new URL(baseURL as string).origin;
-    const first = await browser.newContext({ baseURL });
+    const first = await freshContext(browser, baseURL);
     let state: Awaited<ReturnType<typeof first.storageState>>;
     try {
       await skipOnboarding(first, origin);
@@ -78,7 +78,7 @@ test.describe("session persistence", () => {
     baseURL,
   }, testInfo) => {
     const origin = new URL(baseURL as string).origin;
-    const context = await browser.newContext({ baseURL });
+    const context = await freshContext(browser, baseURL);
     try {
       await skipOnboarding(context, origin);
       const first = await context.newPage();
