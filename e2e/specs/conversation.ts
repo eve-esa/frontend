@@ -78,3 +78,40 @@ export const STOP_QUESTION =
   process.env.E2E_STOP_QUESTION ??
   "Write a very detailed, long essay of at least 1500 words on the history of the Copernicus " +
     "Sentinel missions, covering each mission, its instruments, launch dates and scientific results.";
+
+/** One persisted agentic trace step, the fields the specs read. */
+export type PersistedTraceStep = {
+  node?: string;
+  role?: string;
+  name?: string;
+  content?: unknown;
+  tool_calls?: { name?: string }[];
+};
+
+/** The trace persisted on the last message; empty on the classic route. */
+export async function lastPersistedTrace(
+  api: Api,
+  conversationId: string,
+): Promise<PersistedTraceStep[]> {
+  const { status, body } = await api.get<{ messages?: { trace?: PersistedTraceStep[] | null }[] }>(
+    `/conversations/${conversationId}`,
+  );
+  const messages = status === 200 && body && typeof body === "object" ? body.messages ?? [] : [];
+  const trace = messages[messages.length - 1]?.trace;
+  return Array.isArray(trace) ? trace : [];
+}
+
+/** Index of the first tool step that ran `tool`, or -1. */
+export function toolStepIndex(trace: PersistedTraceStep[], tool: string): number {
+  return trace.findIndex((step) => step.role === "tool" && step.name === tool);
+}
+
+/** Index of the final answer: the last assistant step with text and no tool call, or -1. */
+export function answerStepIndex(trace: PersistedTraceStep[]): number {
+  for (let i = trace.length - 1; i >= 0; i -= 1) {
+    const step = trace[i];
+    const text = typeof step.content === "string" ? step.content.trim() : "";
+    if (step.role === "assistant" && text && !(step.tool_calls ?? []).length) return i;
+  }
+  return -1;
+}

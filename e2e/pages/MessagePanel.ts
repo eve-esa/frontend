@@ -105,6 +105,11 @@ export class MessagePanel {
     expect(appeared, "the last turn showed the error copy").toBe(false);
   }
 
+  /** MCP tool chips of the last turn; rendered only while that turn streams. */
+  get lastToolChips(): Locator {
+    return this.last.getByTestId("tool-chip");
+  }
+
   /** The skeleton or notices shown before the first token of the last turn. */
   get lastLoading(): Locator {
     return this.last.getByTestId("message-loading");
