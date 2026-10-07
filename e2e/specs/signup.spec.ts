@@ -8,7 +8,7 @@ import {
   flagOn,
   type NewAccount,
 } from "../pages";
-import { canWrite, expect, pageApi, skipOnboarding, test, type Api } from "../fixtures";
+import { canWrite, expect, freshContext, pageApi, skipOnboarding, test, type Api } from "../fixtures";
 import { deleteKeycloakUser } from "../fixtures/keycloak";
 import { Mailbox, verificationLink } from "../fixtures/mailbox";
 import { lastPersistedTurn } from "./conversation";
@@ -123,7 +123,7 @@ test.describe("first-time user journey @signup @local", () => {
       : { email: PROVISIONED_EMAIL, password: PROVISIONED_PASSWORD, firstName: "", lastName: "" };
     const institution = `EVE e2e signup ${stamp}`;
 
-    created.context = await browser.newContext({ baseURL });
+    created.context = await freshContext(browser, baseURL);
     await skipOnboarding(created.context, origin);
     const page = await created.context.newPage();
     const login = new LoginPage(page);
