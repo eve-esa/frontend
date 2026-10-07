@@ -7,7 +7,6 @@ The Control Panel lets you adjust how the assistant retrieves and generates answ
 - **Similarity threshold**: minimum relevance score for retrieved chunks.
 - **Max documents (k)**: number of documents to pass into the answer.
 - **Year range**: restrict document publication years.
-- **Topic filters**: thematic, scientific/technical, and market perspectives (hidden when `VITE_HIDE_CLASSIFICATION_FILTERS=true`).
 - **Minimum citations**: require a minimum citation count.
 
 ## Persistence & defaults
