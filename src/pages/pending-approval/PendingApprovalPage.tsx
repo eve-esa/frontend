@@ -26,7 +26,10 @@ export const PendingApprovalPage = () => {
         <h1 className="text-xl font-bold">
           Access to EVE is on hold for now
         </h1>
-        <p className="text-sm text-natural-300">
+        <p
+          data-testid="pending-approval-message"
+          className="text-sm text-natural-200"
+        >
           Apologies, due to high demand we cannot give you access to EVE at
           this time. {email ? `Your account ${email} is` : "Your account is"}{" "}
           registered and on hold. We will email you as soon as you can start.
