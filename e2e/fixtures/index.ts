@@ -4,6 +4,7 @@ import {
   test as base,
   expect,
   type APIResponse,
+  type Browser,
   type BrowserContext,
   type Page,
 } from "@playwright/test";
@@ -20,6 +21,16 @@ import {
 const E2E_EMAIL = process.env.E2E_EMAIL ?? "";
 const E2E_PASSWORD = process.env.E2E_PASSWORD ?? "";
 const AUTH_DIR = path.join(path.dirname(new URL(import.meta.url).pathname), "..", ".auth");
+
+/**
+ * A context with no cookies and no storage, for a spec that runs its own hosted login.
+ * `browser.newContext()` inside a test inherits the project's `storageState`, which is the
+ * worker auth file: a sign-out there would revoke the refresh token every later context of
+ * the worker restores, and its first refresh would then fail with invalid_grant.
+ */
+export function freshContext(browser: Browser, baseURL: string | undefined): Promise<BrowserContext> {
+  return browser.newContext({ baseURL, storageState: { cookies: [], origins: [] } });
+}
 
 /**
  * Local storage the app reads on start: no product tour, no welcome dialog.

@@ -1,5 +1,5 @@
 import { ChatPage, LoginPage, LogoutDialog, OidcStorage, type UserMenuLink } from "../pages";
-import { canWrite, expect, signIn, skipOnboarding, test } from "../fixtures";
+import { canWrite, expect, freshContext, signIn, skipOnboarding, test } from "../fixtures";
 
 const LINKS: { label: string; testId: UserMenuLink; key: string }[] = [
   { label: "About Us", testId: "user-menu-about", key: "ABOUT_US_URL" },
@@ -28,14 +28,14 @@ test.describe("account links @prod", () => {
     });
   }
 
-  // Its own hosted login in a fresh context: the sign-out ends that session only, never the
-  // one in the worker's stored auth state the other specs reuse.
+  // Its own hosted login in a fresh context: the sign-out revokes that session's refresh
+  // token only, never the one in the worker's stored auth state the other specs reuse.
   test("sign-out lands on the hosted login and drops the OIDC user", async ({
     browser,
     baseURL,
   }, testInfo) => {
     const origin = new URL(baseURL as string).origin;
-    const context = await browser.newContext({ baseURL });
+    const context = await freshContext(browser, baseURL);
     try {
       await skipOnboarding(context, origin);
       const page = await context.newPage();
