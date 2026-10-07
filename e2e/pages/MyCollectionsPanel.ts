@@ -82,6 +82,27 @@ export class MyCollectionsPanel {
     });
   }
 
+  /** The upload date shown under a document of the open collection. */
+  documentDate(name: string): Locator {
+    return this.document(name).getByTestId("collection-document-date");
+  }
+
+  /**
+   * A backend timestamp as the panel shows it: offsetless means UTC, rendered
+   * as the browser's local day ("7 October 2026"), computed in the page.
+   */
+  localDay(timestamp: string): Promise<string> {
+    return this.page.evaluate((value) => {
+      const months = [
+        "January", "February", "March", "April", "May", "June", "July",
+        "August", "September", "October", "November", "December",
+      ];
+      const iso = /(Z|[+-]\d{2}:?\d{2})$/i.test(value) ? value : `${value}Z`;
+      const date = new Date(iso);
+      return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
+    }, timestamp);
+  }
+
   /** Deletes a document of the open collection through the confirm dialog. */
   async deleteDocument(name: string): Promise<void> {
     const item = this.document(name);
