@@ -1,33 +1,37 @@
-# EVE Frontend
+# EVE web app
 
-Welcome to the EVE frontend documentation. This React + TypeScript app lets you chat with the EVE Large Language Model about Earth Observation (EO) data with rich controls for retrieval, generation, and collection management.
+EVE is an assistant for Earth Observation (EO). The hosted service runs at
+[https://eve-chat.chat](https://eve-chat.chat). This guide describes the web app as it works
+there today.
 
-## Key Features
+## Account
 
-### Chat and Conversations
+- Sign in and sign up on the EVE sign-in page, not inside the app. See
+  [Account and profile](features/profile.md).
+- Before the first chat, add your country and institution to your profile.
 
-Work with EVE using a chat-first interface:
+## Chat
 
-- Markdown-rendered responses with citation links back to sources.
-- Conversation management including create, rename, delete, and retry on errors.
-- Contextual retries and follow-up questions within the same thread.
+- Streamed answers with Markdown, formulas and links to their sources. Stop an answer at any
+  time.
+- EVE searches its knowledge base while it answers, and the **Trace** of each answer shows
+  the steps it took.
+- Pick the model that answers, and choose which toolkits EVE can use.
+- Report a bug from any answer.
 
-### Retrieval and Generation Controls
+See [Chat](features/chat.md).
 
-- Adjust retrieval depth, temperature, and related generation parameters.
-- Configure context windows to balance precision and recall.
-- Apply presets or per-chat overrides through the Control Panel.
+## Knowledge base
 
-### Collections and Enrichment
+- [Shared collections](features/shared_collection.md): curated EO document sets.
+- [My collections](features/private_collection.md): your own PDF and TXT files.
+- [Control Panel](features/control_panel.md): retrieval and generation settings.
 
-- Browse shared EO collections provided by your organization.
-- Upload and manage private collections for personalized RAG enrichment.
-- Combine shared and private sources to tailor responses.
+## API access
 
-### Account and Security
+Create [API keys](features/api-keys.md) to call EVE from your own code through an
+OpenAI-compatible API.
 
-- Authentication flows for login, logout, and password resets.
-- Profile management for names, email, and other account details.
-- Session-aware UI to keep conversations scoped to the right user.
-- Self-service [API keys](features/api-keys.md) for programmatic access, no session token
-  copy-pasting required.
+## Run the app locally
+
+See [Getting started](getting_started.md).
