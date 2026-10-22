@@ -1,25 +1,42 @@
-# Profile & Authentication
+# Account and profile
 
-The app provides email-based authentication plus basic profile management.
+EVE has no login or password pages of its own. You sign in, sign up and reset your password on
+the EVE sign-in page, and the app takes you back to where you were.
 
-## Log in
-- **Log in** with email and password; a “Remember me” option stores your email locally.
+## Sign up
 
-## Password recovery
-- **Forgot password**: request a reset link via email.
-- **Reset password**: open the link, set a new password, and confirm it.
+1. Open [https://eve-chat.chat](https://eve-chat.chat). The sign-in page opens.
+2. Follow the sign-up link, then enter your email address and a password. The password
+   needs at least 12 characters, with an uppercase letter, a lowercase letter, a number and a
+   symbol.
+3. Enter the confirmation code that EVE sends to your email address.
 
-## Profile updates
-- Open the profile menu from the sidebar and choose **Profile**.
-- Update first and last name; email is displayed but not editable.
-- Where `FEATURE_PROFILE_FIELDS` is on, **Country** and **Institution** follow the names and are required: neither can be emptied. Country is picked from a list of country names (English); a country saved earlier as free text stays selected until the user picks another.
+New accounts are approved at once. If access is ever put on hold, EVE shows a page saying so
+and emails you when you can start.
 
-## Required profile fields
-- Where `FEATURE_PROFILE_FIELDS` is on, a signed-in user whose profile lacks a country or an institution sees **Complete your profile** before the chat can be used, new and existing accounts alike.
-- It opens after the onboarding tour and the welcome dialog, never on top of them.
-- It cannot be closed: no close button, Escape and a click outside do nothing. **Save** stores both through the same profile update; **Logout** signs out.
-- Off, the dialog never shows and nothing extra is requested.
+## Sign in
 
-## Logout
-- Use **Logout** in the profile menu to end the session safely.
+Open [https://eve-chat.chat](https://eve-chat.chat) and sign in with your email address and
+password. You stay signed in across tabs and browser restarts.
 
+## Reset your password
+
+On the sign-in page, follow the forgotten password link. EVE emails you a
+code to set a new password.
+
+## First visit
+
+- On a computer, a short tour introduces the app. You can skip it.
+- **Complete your profile** asks for your **Country** and **Institution**. The chat stays
+  unavailable until you save both. **Logout** is the only other option in that dialog.
+
+## Edit your profile
+
+1. In the sidebar, open the profile menu and choose **Profile**.
+2. Change your first name, last name, country or institution. Country and institution can't be
+   left empty. Your email address is shown but can't be changed.
+3. Click **Update Profile**.
+
+## Log out
+
+Choose **Logout** in the profile menu. Other open EVE tabs are signed out too.
