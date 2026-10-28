@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useId, useRef } from "react";
 import SmartText from "@/components/ui/LazySmartText";
 import { MessageFooter } from "./MessageFooter";
 import type { MessageType } from "@/types";
@@ -37,6 +37,9 @@ export const Message = ({
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const messageRef = useRef<HTMLDivElement | null>(null);
   const textRef = useRef<HTMLDivElement | null>(null);
+  // Mirrors isExpanded for the ResizeObserver callback, which outlives renders.
+  const isExpandedRef = useRef(false);
+  const inputId = useId();
 
   const attachments = (message.attachments ?? []).map(toImageAttachment);
   // Only images join the thumbnail grid + lightbox; other uploads (pdf, csv,
@@ -176,17 +179,28 @@ export const Message = ({
     [],
   );
 
-  // Check if text overflows
+  // Whether the user text overflows the six-line clamp. Re-measured whenever
+  // the text box resizes (viewport, sidebar drag, font step, webfont swap), not
+  // only when the text changes. While expanded nothing is clamped, so the last
+  // collapsed measure is kept; collapsing resizes the box and measures again.
   useEffect(() => {
-    if (textRef.current) {
-      const hasOverflow =
-        textRef.current.scrollHeight > textRef.current.clientHeight;
-      setIsOverflowing(hasOverflow);
-    }
+    const element = textRef.current;
+    if (!element) return;
+    const measure = () => {
+      if (isExpandedRef.current) return;
+      setIsOverflowing(element.scrollHeight > element.clientHeight);
+    };
+    measure();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
   }, [message.input]);
 
   const toggleExpanded = () => {
-    setIsExpanded(!isExpanded);
+    const next = !isExpanded;
+    isExpandedRef.current = next;
+    setIsExpanded(next);
   };
 
   const isRequery = message.metadata?.prompts?.rag_decision_result?.use_rag;
@@ -233,6 +247,8 @@ export const Message = ({
             ref={(el) => {
               textRef.current = el;
             }}
+            id={inputId}
+            data-testid="message-user-input"
             className={cn(
               "md:text-base text-sm 3xl:text-2xl whitespace-pre-wrap break-words overflow-hidden",
               isExpanded ? "line-clamp-none" : "line-clamp-6",
@@ -240,21 +256,18 @@ export const Message = ({
           >
             {message.input}
           </div>
-          {isOverflowing && !isExpanded && (
-            <div
+          {(isOverflowing || isExpanded) && (
+            // ring-primary-300 until the theme branch lands: after the rebase it maps the ring to its focus token.
+            <button
+              type="button"
               onClick={toggleExpanded}
-              className="mt-2 w-fit leading-none cursor-pointer text-xs text-primary-200 select-none hover:text-primary-100"
+              aria-expanded={isExpanded}
+              aria-controls={inputId}
+              data-testid="message-show-more"
+              className="mt-2 block w-fit leading-none cursor-pointer text-xs text-natural-100 select-none outline-none hover:text-natural-50 focus-visible:ring-2 focus-visible:ring-primary-300"
             >
-              Show more
-            </div>
-          )}
-          {isExpanded && (
-            <div
-              onClick={toggleExpanded}
-              className="mt-2 w-fit leading-none cursor-pointer text-xs text-primary-200 select-none hover:text-primary-100"
-            >
-              Show less
-            </div>
+              {isExpanded ? "Show less" : "Show more"}
+            </button>
           )}
         </div>
       </div>

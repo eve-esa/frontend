@@ -8,9 +8,12 @@ export type PersistedTurn = {
   documents: number;
   pipeline: string | null;
   outputChars: number;
+  /** The user text of the last message as stored. */
+  input: string;
 };
 
 type RawMessage = {
+  input?: string;
   output?: string;
   stopped?: boolean;
   documents?: unknown[];
@@ -31,6 +34,7 @@ export async function lastPersistedTurn(api: Api, conversationId: string): Promi
     documents: Array.isArray(docs) ? docs.length : 0,
     pipeline: last.metadata?.pipeline ?? null,
     outputChars: (last.output ?? "").length,
+    input: last.input ?? "",
   };
 }
 
