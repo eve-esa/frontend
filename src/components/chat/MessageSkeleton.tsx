@@ -4,7 +4,7 @@ export const MessageSkeleton = () => {
   return Array.from({ length: 3 }).map((_, index) => (
     <div
       key={index}
-      className="bg-natural-900 rounded-tl-[20px] rounded-br-[20px] mx-auto pb-8 pt-0 relative mt-4 md:mt-8"
+      className="bg-natural-900 rounded-tl-[20px] rounded-br-[20px] in-data-[theme=light]:bg-transparent mx-auto pb-8 pt-0 relative mt-4 md:mt-8"
     >
       {/* REQUEST SECTION */}
       <div className="py-8 border-b border-primary-50 z-10">

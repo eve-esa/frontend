@@ -159,3 +159,14 @@ export const REPORT_BUG_ENABLED = isEnabled("FEATURE_REPORT_BUG", false);
  * Default off: a new capability ships off in production and on where an environment opts in.
  */
 export const PROFILE_FIELDS_ENABLED = isEnabled("FEATURE_PROFILE_FIELDS", false);
+
+/**
+ * System, Light and Dark in the profile menu, and the light theme they can select. The choice is
+ * per browser (`localStorage.theme`), System follows the operating system live. Off, the menu
+ * group is gone and no `data-theme` is set, so the app stays dark whatever the operating system
+ * prefers. the inline script in `index.html` reads the same flag before the bundle runs, so a light page
+ * never flashes dark.
+ *
+ * Default off: a new capability ships off in production and on where an environment opts in.
+ */
+export const THEME_SWITCH_ENABLED = isEnabled("FEATURE_THEME_SWITCH", false);

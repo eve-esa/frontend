@@ -12,6 +12,7 @@ export class ApiKeysDialog {
   readonly createOpen: Locator;
   readonly nameInput: Locator;
   readonly createSubmit: Locator;
+  readonly createCancel: Locator;
   readonly reveal: Locator;
   readonly secret: Locator;
   readonly secretDone: Locator;
@@ -29,6 +30,7 @@ export class ApiKeysDialog {
     this.createOpen = page.getByTestId("api-keys-create-open");
     this.nameInput = page.getByTestId("api-key-name-input");
     this.createSubmit = page.getByTestId("api-key-create-submit");
+    this.createCancel = page.getByTestId("api-key-create-cancel");
     this.reveal = page.getByTestId("api-key-secret-reveal");
     this.secret = page.getByTestId("api-key-secret");
     this.secretDone = page.getByTestId("api-key-secret-done");
@@ -76,6 +78,12 @@ export class ApiKeysDialog {
   async openCreateForm(): Promise<void> {
     await this.createOpen.click();
     await expect(this.createSubmit).toBeVisible();
+  }
+
+  /** Leaves the create form unsent: back to the list, the only view with Close. */
+  async cancelCreateForm(): Promise<void> {
+    await this.createCancel.click();
+    await expect(this.createOpen).toBeVisible();
   }
 
   /** The next response to `method` on the API keys route, armed before the click that sends it. */

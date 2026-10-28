@@ -97,12 +97,14 @@ export const StepInput = ({
   return (
     <div
       className={cn(
-        "flex items-center border bg-natural-900 overflow-hidden rounded-lg px-1",
+        // No border in either theme (the inline border: none it had).
+        // Light: the highlight fill (#E8ECEF), so the control does not
+        // vanish on the white panel.
+        "flex items-center bg-natural-900 in-data-[theme=light]:bg-highlight overflow-hidden rounded-lg px-1",
         className
       )}
       style={{
         outline: "none",
-        border: "none",
         boxShadow: "none",
       }}
     >

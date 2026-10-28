@@ -53,7 +53,7 @@ export const TraceTimeline = ({ timeline, onSelectStep }: TraceTimelineProps) =>
       <div
         role="group"
         aria-label={`Timeline, ${formatDuration(timeline.totalS)} in total`}
-        className="relative h-2.5 w-full rounded-sm bg-primary-600"
+        className="relative h-2.5 w-full bg-primary-600 in-data-[theme=light]:bg-primary-500"
       >
         {timeline.segments.map((segment) => {
           const label = `Step ${segment.number}, ${segment.kindLabel}, ${segment.title}, ${formatDuration(segment.durationS)}`;
@@ -77,7 +77,7 @@ export const TraceTimeline = ({ timeline, onSelectStep }: TraceTimelineProps) =>
                 aria-label={label}
                 onClick={() => onSelectStep(segment.index)}
                 className={cn(
-                  "absolute inset-y-0 cursor-pointer rounded-sm ring-1 ring-primary-600 transition-[filter] hover:brightness-125 focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-natural-50",
+                  "absolute inset-y-0 cursor-pointer ring-1 ring-primary-600 transition-[filter] hover:brightness-125 focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-natural-50",
                   TRACE_KIND_CLASSES[segment.kind].fill,
                 )}
                 style={{

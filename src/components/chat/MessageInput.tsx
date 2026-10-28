@@ -20,7 +20,7 @@ import {
   type PendingAttachment,
 } from "./AttachmentPreviewList";
 import { useUploadImage } from "@/services/useUploadImage";
-import logo from "@/assets/images/esa_phi_lab_1.svg";
+import { EsaPhiLabLogo } from "@/components/ui/EsaPhiLabLogo";
 import { useTour } from "@/components/onboarding/TourContext";
 import { cn } from "@/lib/utils";
 import {
@@ -80,8 +80,6 @@ import { useTokenUsage } from "@/services/useTokenUsage";
 
 const TOKEN_RING_R = 7;
 const TOKEN_RING_C = 2 * Math.PI * TOKEN_RING_R;
-/** Teal ring accent aligned with ESA branding artwork (~#00BFA5) */
-const TOKEN_RING_TEAL = "#00BFA5";
 
 function TokenUsageRing({
   usedRatio,
@@ -107,8 +105,9 @@ function TokenUsageRing({
           cy="10"
           r={TOKEN_RING_R}
           fill="none"
-          stroke={TOKEN_RING_TEAL}
-          strokeOpacity={0.32}
+          // Dark: the ring colour at 32 %. Light: a full track in the chip
+          // fill (#E0E4E7), so the focus arc reads 3.2:1 against it.
+          className="stroke-token-ring [stroke-opacity:0.32] in-data-[theme=light]:stroke-primary-500 in-data-[theme=light]:[stroke-opacity:1]"
           strokeWidth="2.5"
         />
         {ratio > 0 && (
@@ -117,7 +116,8 @@ function TokenUsageRing({
             cy="10"
             r={TOKEN_RING_R}
             fill="none"
-            stroke={TOKEN_RING_TEAL}
+            // Light: the focus colour, a mark that carries meaning (3:1).
+            className="stroke-token-ring in-data-[theme=light]:stroke-focus"
             strokeOpacity={1}
             strokeWidth="2.5"
             strokeLinecap="round"
@@ -559,7 +559,7 @@ export const MessageInput = ({
       )}
     >
       {suggestions && (
-        <img src={logo} alt="logo" className="h-[60px] md:h-[110px]" />
+        <EsaPhiLabLogo className="h-[60px] md:h-[110px]" />
       )}
 
       <div className="flex flex-col gap-2 h-full">
@@ -574,10 +574,13 @@ export const MessageInput = ({
           <div
             {...getRootProps()}
             className={cn(
-              "w-full  flex-none border-primary-400 border-2 flex flex-col bg-primary-900 relative start-new-chat-tour",
-              isDragActive && "border-dashed border-primary-200 bg-primary-800",
+              "w-full  flex-none border-composer-edge border-2 flex flex-col bg-primary-900 relative start-new-chat-tour",
+              isDragActive
+                ? "border-dashed bg-primary-800 in-data-[theme=light]:border-control"
+                : "in-data-[theme=light]:focus-within:border-focus",
             )}
             data-tour="start-new-chat-tour"
+            data-testid="composer-box"
           >
             {ATTACHMENTS_ENABLED && (
               <input
@@ -660,14 +663,23 @@ export const MessageInput = ({
                           );
                         }}
                       >
+                        {/* Bordered with control/60 in both themes, so in
+                            light it keeps its own white fill and the shared
+                            placeholder grey instead of the trigger's light
+                            highlight fill. */}
                         <SelectTrigger
                           data-testid="composer-model-picker"
                           size="sm"
-                          className="bg-primary-900/60 border border-primary-400/60"
+                          className="bg-primary-900/60 border border-control/60 in-data-[theme=light]:bg-primary-900/60 in-data-[theme=light]:[--color-placeholder:inherit]"
                         >
                           <SelectValue placeholder="Select model" />
                         </SelectTrigger>
-                        <SelectContent className="bg-primary-900/60 border-primary-400/60 backdrop-blur-[2px]">
+                        {/* Opaque in both themes: at 60 % and frosted, the
+                            text under the menu showed through. */}
+                        <SelectContent
+                          data-testid="composer-model-picker-menu"
+                          className="bg-primary-900 border-control/60"
+                        >
                           {models?.platform.map((model) => (
                             <SelectItem
                               key={model.id}

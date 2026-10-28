@@ -60,7 +60,7 @@ export const RenameConversationInput: React.FC<
         onKeyDown={handleKeyDown}
         onBlur={handleRenameCancel}
         variant="secondary"
-        className="border-0 focus-visible:border-0 focus-visible:ring-0 bg-transparent px-2 h-auto text-lg font-medium text-natural-100 pr-8 py-1 w-full"
+        className="border-0 focus-visible:border-0 focus-visible:ring-0 in-data-[theme=light]:focus-visible:ring-2 in-data-[theme=light]:focus-visible:ring-focus bg-transparent px-2 h-auto text-lg font-medium text-natural-100 pr-8 py-1 w-full"
         autoFocus
         endSlot={
           <FontAwesomeIcon

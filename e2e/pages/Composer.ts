@@ -2,6 +2,8 @@ import { expect, type Locator, type Page } from "@playwright/test";
 
 /** The message box at the bottom of a conversation. */
 export class Composer {
+  /** The card around the input and its controls. */
+  readonly box: Locator;
   readonly input: Locator;
   readonly sendButton: Locator;
   readonly stopButton: Locator;
@@ -12,6 +14,7 @@ export class Composer {
   readonly lastTurnEnded: Locator;
 
   constructor(page: Page) {
+    this.box = page.getByTestId("composer-box");
     this.input = page.getByTestId("composer-input");
     this.sendButton = page.getByTestId("composer-send");
     this.stopButton = page.getByTestId("composer-stop");

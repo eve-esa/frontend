@@ -52,7 +52,7 @@ export const ArtifactsPage = () => {
                   className={cn(
                     "px-3 py-2 text-sm transition-colors",
                     activeTab === tab.id
-                      ? "border-b-2 border-success-200 text-natural-50"
+                      ? "border-b-2 border-success-200 text-natural-50 in-data-[theme=light]:border-focus"
                       : "text-natural-200 hover:text-natural-50",
                     !tab.enabled && "opacity-40 cursor-not-allowed",
                   )}

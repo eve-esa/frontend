@@ -120,9 +120,9 @@ export const ChatLayout = () => {
                   }}
                   styles={{
                     options: {
-                      primaryColor: "var(--color-primary-500)",
+                      primaryColor: "var(--color-cta)",
                       zIndex: 10000,
-                      arrowColor: "#335e6f",
+                      arrowColor: "var(--color-tour-arrow)",
                     },
                   }}
                 />
@@ -134,10 +134,12 @@ export const ChatLayout = () => {
 
             {/* Main content: Chat. data-chat-column lets the resizable right
                 sidebar measure the room it can take; the docked-layout minimum
-                keeps the chat usable whatever the sidebars do. */}
+                keeps the chat usable whatever the sidebars do. In light it
+                paints the chat ground, which the chat roots repeat. */}
             <div
               data-chat-column
-              className="flex-1 h-full flex flex-col @container lg:min-w-[400px]"
+              data-testid="chat-ground"
+              className="flex-1 h-full flex flex-col @container lg:min-w-[400px] in-data-[theme=light]:bg-(--color-chat-ground)"
             >
               <Outlet />
             </div>

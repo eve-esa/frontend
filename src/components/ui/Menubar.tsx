@@ -2,6 +2,8 @@
 
 import * as React from "react";
 import * as MenubarPrimitive from "@radix-ui/react-menubar";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCheck } from "@fortawesome/free-solid-svg-icons";
 
 import { cn } from "@/lib/utils";
 
@@ -44,7 +46,7 @@ function MenubarTrigger({
     <MenubarPrimitive.Trigger
       data-slot="menubar-trigger"
       className={cn(
-        "flex items-center justify-center p-0 border-none bg-transparent outline-none select-none",
+        "flex items-center justify-center p-0 border-none bg-transparent outline-none select-none in-data-[theme=light]:focus-visible:ring-2 in-data-[theme=light]:focus-visible:ring-focus",
         className
       )}
       {...props}
@@ -93,9 +95,67 @@ function MenubarItem({
       data-inset={inset}
       data-variant={variant}
       className={cn(
-        "cursor-pointer focus:bg-primary-400 focus:rounded-sm relative flex items-center gap-2 rounded-sm px-2 py-1.5 text-md outline-none focus:outline-none focus:ring-0 focus:border-0 select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[inset]:pl-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "cursor-pointer focus:bg-highlight focus:rounded-sm relative flex items-center gap-2 rounded-sm px-2 py-1.5 text-md outline-none focus:outline-none focus:ring-0 focus:border-0 select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[inset]:pl-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className
       )}
+      {...props}
+    />
+  );
+}
+
+function MenubarRadioGroup({
+  ...props
+}: React.ComponentProps<typeof MenubarPrimitive.RadioGroup>) {
+  return (
+    <MenubarPrimitive.RadioGroup data-slot="menubar-radio-group" {...props} />
+  );
+}
+
+function MenubarRadioItem({
+  className,
+  children,
+  ...props
+}: React.ComponentProps<typeof MenubarPrimitive.RadioItem>) {
+  return (
+    <MenubarPrimitive.RadioItem
+      data-slot="menubar-radio-item"
+      className={cn(
+        "cursor-pointer focus:bg-highlight focus:rounded-sm relative flex items-center gap-2 rounded-sm py-1.5 pr-2 pl-8 text-md outline-none focus:outline-none focus:ring-0 focus:border-0 select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        className
+      )}
+      {...props}
+    >
+      <span className="pointer-events-none absolute left-2 flex size-3.5 items-center justify-center">
+        <MenubarPrimitive.ItemIndicator>
+          <FontAwesomeIcon icon={faCheck} className="size-3" />
+        </MenubarPrimitive.ItemIndicator>
+      </span>
+      {children}
+    </MenubarPrimitive.RadioItem>
+  );
+}
+
+function MenubarLabel({
+  className,
+  ...props
+}: React.ComponentProps<typeof MenubarPrimitive.Label>) {
+  return (
+    <MenubarPrimitive.Label
+      data-slot="menubar-label"
+      className={cn("px-2 py-1.5 text-sm text-primary-300", className)}
+      {...props}
+    />
+  );
+}
+
+function MenubarSeparator({
+  className,
+  ...props
+}: React.ComponentProps<typeof MenubarPrimitive.Separator>) {
+  return (
+    <MenubarPrimitive.Separator
+      data-slot="menubar-separator"
+      className={cn("-mx-1 my-1 h-px bg-primary-400", className)}
       {...props}
     />
   );
@@ -108,4 +168,8 @@ export {
   MenubarTrigger,
   MenubarContent,
   MenubarItem,
+  MenubarRadioGroup,
+  MenubarRadioItem,
+  MenubarLabel,
+  MenubarSeparator,
 };

@@ -42,7 +42,12 @@ function SelectTrigger({
       data-slot="select-trigger"
       data-size={size}
       className={cn(
-        "data-[placeholder]:text-primary-50 flex w-full items-center justify-between gap-2 rounded-lg bg-neutral-900 p-3 text-sm whitespace-nowrap cursor-pointer outline-none",
+        // Filled with no border in both themes. Light: the white fill would
+        // vanish on the white panels, so it takes the highlight fill
+        // (#E8ECEF), and the placeholder the secondary text tone (6.0:1 on
+        // it; the shared placeholder grey is 3.9:1 there). A caller that
+        // keeps a white, bordered trigger overrides both light classes.
+        "data-[placeholder]:text-primary-50 flex w-full items-center justify-between gap-2 rounded-lg bg-neutral-900 in-data-[theme=light]:bg-highlight in-data-[theme=light]:[--color-placeholder:var(--color-natural-200)] p-3 text-sm whitespace-nowrap cursor-pointer outline-none",
         className
       )}
       {...props}
@@ -71,7 +76,7 @@ function SelectContent({
     <SelectPrimitive.Content
       data-slot="select-content"
       className={cn(
-        "bg-neutral-900 max-h-[400px] text-neutral-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 relative z-50 min-w-[8rem] origin-(--radix-select-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-lg border border-primary-400 shadow-md",
+        "bg-neutral-900 max-h-[400px] text-neutral-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 relative z-50 min-w-[8rem] origin-(--radix-select-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-lg border border-control shadow-md",
         position === "popper" &&
           "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
         className

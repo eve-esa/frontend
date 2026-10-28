@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "react-oidc-context";
-import logo from "@/assets/images/esa_phi_lab_1.svg";
+import { EsaPhiLabLogo } from "@/components/ui/EsaPhiLabLogo";
 import { Button } from "@/components/ui/Button";
 import { LogoutDialog } from "@/components/auth/LogoutDialog";
 
@@ -21,7 +21,7 @@ export const PendingApprovalPage = () => {
       data-testid="pending-approval-page"
       className="flex h-screen w-screen flex-col items-center justify-center gap-6 bg-gradient-to-b from-primary-500 to-primary-600 px-4"
     >
-      <img src={logo} alt="logo" className="h-[48px]" />
+      <EsaPhiLabLogo className="h-[48px]" />
       <div className="flex max-w-[480px] flex-col items-center gap-2 text-center">
         <h1 className="text-xl font-bold">
           Access to EVE is on hold for now

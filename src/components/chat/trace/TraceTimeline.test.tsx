@@ -50,4 +50,10 @@ describe("TraceTimeline", () => {
     }
     expect(html).not.toContain(">Other<");
   });
+
+  it("keeps the bar and segments square, only the legend dots round", () => {
+    const rounded = render().match(/rounded[\w-]*/g) ?? [];
+    expect(rounded.every((c) => c === "rounded-full")).toBe(true);
+    expect(rounded).toHaveLength(3);
+  });
 });

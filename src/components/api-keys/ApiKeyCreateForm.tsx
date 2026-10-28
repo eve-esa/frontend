@@ -89,7 +89,7 @@ export const ApiKeyCreateForm = ({ onCancel, onCreated }: ApiKeyCreateFormProps)
                   onChange={() => setExpiry(option.value)}
                   className="peer sr-only"
                 />
-                <span className="flex h-full cursor-pointer items-center justify-center border-2 border-primary-400 px-3 py-2 text-center text-sm font-['NotesESA'] text-natural-100 [transition:background_0.3s_ease-in] hover:bg-primary-700 peer-checked:border-primary-300 peer-checked:bg-primary-500 peer-checked:text-natural-50 peer-focus-visible:ring-2 peer-focus-visible:ring-primary-400">
+                <span className="flex h-full cursor-pointer items-center justify-center border-2 border-primary-400 px-3 py-2 text-center text-sm font-['NotesESA'] text-natural-100 [transition:background_0.3s_ease-in] hover:bg-primary-700 peer-checked:border-primary-300 peer-checked:bg-primary-500 peer-checked:text-natural-50 peer-focus-visible:ring-2 peer-focus-visible:ring-focus">
                   {option.label}
                 </span>
               </label>

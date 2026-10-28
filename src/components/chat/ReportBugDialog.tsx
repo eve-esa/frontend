@@ -85,7 +85,7 @@ export const ReportBugForm = ({
         <label htmlFor="report-bug-description" className="text-sm">
           What went wrong?
         </label>
-        <div className="w-full border-primary-400 border-2 flex flex-col bg-primary-900">
+        <div className="w-full border-primary-400 border-2 flex flex-col bg-primary-900 in-data-[theme=light]:focus-within:border-focus">
           {/* data-private: session replay never records the description,
               same as the chat composer. */}
           <Textarea

@@ -70,7 +70,7 @@ export const Sidebar = ({
   // Base sidebar container classes
   const sidebarClasses = cn(
     // Base styles
-    "transition-all duration-200 ease-in-out !bg-primary-900",
+    "transition-all duration-200 ease-in-out !bg-primary-900 in-data-[theme=light]:bg-(--color-sidebar)!",
     getWidthConstraintClasses(),
 
     // Mobile

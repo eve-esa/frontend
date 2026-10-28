@@ -73,8 +73,8 @@ export const ConversationItem = ({
       className={cn(
         "group grid items-center rounded-lg cursor-pointer relative",
         isActive
-          ? "bg-primary-600/60 hover:bg-primary-500"
-          : "hover:bg-primary-500",
+          ? "bg-primary-600/60 hover:bg-primary-500 in-data-[theme=light]:bg-highlight in-data-[theme=light]:hover:bg-highlight"
+          : "hover:bg-primary-500 in-data-[theme=light]:hover:bg-highlight",
         isOpen
           ? isEditing
             ? "grid-cols-[1fr]"

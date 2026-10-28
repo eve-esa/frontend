@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { faBook } from "@fortawesome/free-solid-svg-icons";
 import {
   Menubar,
@@ -24,6 +25,10 @@ export const KnowledgeBaseMenuBar = ({
 }: KnowledgeBaseMenuBarProps) => {
   const { openDynamicSidebar, content, isOpenDynamicSidebar } = useSidebar();
   const { isRunning } = useTour();
+  // A mouse pick must not hand focus back to the trigger: the browser then
+  // matches :focus-visible and paints the light focus ring on the open item.
+  // A keyboard close keeps the focus return, and with it the ring.
+  const closedByPointer = useRef(false);
 
   // Check if the dynamic sidebar is open with collections type
   const isCollectionsSidebarOpen =
@@ -36,8 +41,8 @@ export const KnowledgeBaseMenuBar = ({
       data-testid="knowledge-base-menu"
       className={`flex items-center gap-2 rounded-lg p-2 text-natural-50 cursor-pointer ${
         isCollectionsSidebarOpen
-          ? "bg-primary-600/60 text-white"
-          : "hover:bg-primary-400 hover:text-white"
+          ? "bg-primary-600/60 in-data-[theme=light]:bg-highlight text-natural-50"
+          : "hover:bg-highlight hover:text-natural-50"
       } ${className}`}
     >
       <FontAwesomeIcon icon={faBook} className="w-4 h-4" />
@@ -53,7 +58,7 @@ export const KnowledgeBaseMenuBar = ({
   );
 
   return (
-    <Menubar>
+    <Menubar data-testid="knowledge-base-menubar">
       {/* The dropdown is pinned open for the tour because five of its steps
           point inside it. With private collections off those steps are gone,
           and a menu left open would only overlap the steps that remain. */}
@@ -73,12 +78,25 @@ export const KnowledgeBaseMenuBar = ({
           triggerContent
         )}
 
-        <MenubarContent side="bottom" className="flex flex-col gap-1 ">
+        <MenubarContent
+          side="bottom"
+          className="flex flex-col gap-1 "
+          onPointerDown={() => {
+            closedByPointer.current = true;
+          }}
+          onKeyDown={() => {
+            closedByPointer.current = false;
+          }}
+          onCloseAutoFocus={(event) => {
+            if (closedByPointer.current) event.preventDefault();
+            closedByPointer.current = false;
+          }}
+        >
           <MenubarItem
             onClick={() => openDynamicSidebar({ type: "shared-collections" })}
             className={
               content?.type === "shared-collections"
-                ? "bg-primary-500 text-white"
+                ? "bg-primary-500 text-natural-50"
                 : ""
             }
           >
@@ -98,7 +116,7 @@ export const KnowledgeBaseMenuBar = ({
                 className={cn(
                   "my-collections-button-tour ",
                   content?.type === "my-collections"
-                    ? "bg-primary-500 text-white"
+                    ? "bg-primary-500 text-natural-50"
                     : ""
                 )}
               >

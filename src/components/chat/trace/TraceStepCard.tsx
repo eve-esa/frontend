@@ -42,7 +42,7 @@ const Muted = ({ children }: { children: ReactNode }) => (
 );
 
 const CodeBox = ({ children }: { children: ReactNode }) => (
-  <div className="rounded-md border border-primary-400/40 bg-primary-600 px-2.5 py-2">
+  <div className="border border-primary-400/40 bg-primary-600 px-2.5 py-2">
     {children}
   </div>
 );
@@ -108,7 +108,7 @@ const AgentBody = ({ step }: { step: AgentStepView }) => (
         {step.toolCalls.map((call, index) => (
           <code
             key={`${call.id ?? call.name}-${index}`}
-            className="rounded-sm border border-primary-400/60 bg-primary-500 px-1.5 font-mono text-[12px] leading-5 text-natural-100 [overflow-wrap:anywhere]"
+            className="border border-primary-400/60 bg-primary-500 px-1.5 font-mono text-[12px] leading-5 text-natural-100 [overflow-wrap:anywhere]"
           >
             {call.name}
           </code>
@@ -141,6 +141,7 @@ const ToolOutputView = ({ step }: { step: ToolStepView }) => {
       <ExpandablePlainText
         text={truncateText(output.text, DISPLAY_TEXT_LIMIT)}
         textClassName="font-mono !text-[12px] leading-5"
+        boxClassName="rounded-none"
       />
     );
   }
@@ -218,9 +219,13 @@ const OtherBody = ({ step }: { step: OtherStepView }) => {
 
 const ToolStatusLabel = ({ status }: { status: ToolStatus }) => (
   <span
+    data-testid="trace-tool-status"
+    data-status={status}
     className={cn(
       "inline-flex items-center gap-1 text-xs",
-      status === "error" ? "text-danger-300" : "text-success-200",
+      status === "error"
+        ? "text-danger-300"
+        : "text-success-200 in-data-[theme=light]:text-success-100",
     )}
   >
     <FontAwesomeIcon
@@ -274,19 +279,19 @@ export const TraceStepCard = ({
         data-testid="trace-step"
         data-kind={step.kind}
         className={cn(
-          "scroll-mt-3 rounded-md border border-l-2 border-primary-400/50 bg-primary-200",
+          "scroll-mt-3 border border-l-2 border-primary-400/50 in-data-[theme=light]:border-y-primary-400 in-data-[theme=light]:border-r-primary-400 bg-primary-200",
           classes.accent,
         )}
       >
         <CollapsibleTrigger
           ref={triggerRef}
-          className="group flex w-full cursor-pointer flex-col gap-1 rounded-md px-3 py-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-primary-50"
+          className="group flex w-full cursor-pointer flex-col gap-1 px-3 py-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-primary-50"
         >
           <span className="flex w-full items-center gap-2">
             <span className="text-xs text-primary-300">Step {step.number}</span>
             <span
               className={cn(
-                "rounded-sm px-1.5 text-xs leading-[18px]",
+                "px-1.5 text-xs leading-[18px]",
                 classes.badge,
               )}
             >

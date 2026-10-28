@@ -1,4 +1,4 @@
-import { flagOn } from "../pages";
+import { flagOn, ThemeMenu, themeSwitchOn } from "../pages";
 import { expect, test } from "../fixtures";
 
 test.describe("flags as served @prod", () => {
@@ -11,5 +11,20 @@ test.describe("flags as served @prod", () => {
 
     await expect(chat.composer.manageModelsButton).toHaveCount(customModels ? 1 : 0);
     expect(await apiKeys.isEntryVisible()).toBe(apiKeysOn);
+  });
+
+  test("the theme switch follows the served config", async ({ chat, authedPage: page }) => {
+    // A light OS: with the flag off the app must stay dark, with no menu group and no data-theme.
+    await page.emulateMedia({ colorScheme: "light" });
+    await chat.goto();
+    const theme = new ThemeMenu(page, chat);
+    const on = themeSwitchOn(await chat.servedConfig());
+
+    expect(await theme.isOffered()).toBe(on);
+    if (on) {
+      expect(["light", "dark"]).toContain(await theme.current());
+    } else {
+      expect(await theme.current()).toBeNull();
+    }
   });
 });

@@ -16,7 +16,7 @@ export const SourceContent = ({ source }: { source: Document }) => {
   }, [text]);
 
   return (
-    <div className="!text-[13px] 3xl:text-xl text-natural-200 bg-primary-200 border-l border-neutral-200">
+    <div className="!text-[13px] 3xl:text-xl text-natural-200 bg-primary-200 border-l border-neutral-200 in-data-[theme=light]:border-primary-400" data-testid="source-content">
       <div
         className="relative text-sm leading-6  py-1 px-2 pr-1 rounded-tr-md rounded-br-md  overflow-hidden transition-all duration-300 ease-in-out"
         style={{
