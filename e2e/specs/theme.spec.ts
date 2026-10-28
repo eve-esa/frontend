@@ -1,7 +1,13 @@
 import type { Locator, Page } from "@playwright/test";
 import { type ChatPage, flagOn, ThemeMenu, themeSwitchOn } from "../pages";
 import { expect, test } from "../fixtures";
-import { contrastRatio, MIN_CONTRAST } from "../fixtures/contrast";
+import {
+  contrastRatio,
+  MIN_CONTRAST,
+  paintsShadow,
+  type ShadowRead,
+  VISIBLE_SHADOW_ALPHA,
+} from "../fixtures/contrast";
 import { QUESTION } from "./conversation";
 
 // The operating system asks for light in every test; the choice in the menu must win over it.
@@ -9,7 +15,8 @@ test.use({ colorScheme: "light" });
 
 // The light theme keeps the dark theme's structure: same corner radius, edge widths, shadow
 // and blur on every surface; only colours change (owner, 2026-10-28). The agent trace step card
-// is the one exception: square in both themes.
+// is the one exception: square in both themes. Light shows what dark shows: a resting shadow
+// dark cannot show (`shadow-xs`, black at 5 %) is not drawn in light (owner, 2026-10-28).
 //
 // docs/BRAND.md, light theme: placeholder #757575, control border Silver +1 #748D9C, focus
 // #008E7A (keyboard focus only), card and source card edge Silver #8197A6, user bubble edge Deep
@@ -43,7 +50,7 @@ const style = (
     | "backdropFilter",
 ) => locator.evaluate((element, property) => getComputedStyle(element)[property], property);
 
-/** What the light theme must copy from dark: corners, edge widths, shadow presence, blur. */
+/** What the light theme must copy from dark: corners, edge widths, visible shadow, blur. */
 type Shape = { radius: string; edges: string; shadow: boolean; backdrop: string };
 
 /**
@@ -53,8 +60,15 @@ type Shape = { radius: string; edges: string; shadow: boolean; backdrop: string 
  */
 type Target = "self" | "user-bubble" | "scroll-button";
 
-const shapeOf = (locator: Locator, target: Target = "self"): Promise<Shape | null> =>
-  locator.evaluate((element, target) => {
+/** The same node as `Target`, as a selector for paintsShadow. */
+const SHADOW_NODE: Record<Target, string | undefined> = {
+  self: undefined,
+  "user-bubble": ":scope > :first-child > :first-child",
+  "scroll-button": "[data-show-scroll-button]",
+};
+
+const shapeOf = async (locator: Locator, target: Target = "self"): Promise<Shape | null> => {
+  const shape = await locator.evaluate((element, target) => {
     const node =
       target === "user-bubble"
         ? element.firstElementChild?.firstElementChild
@@ -63,16 +77,6 @@ const shapeOf = (locator: Locator, target: Target = "self"): Promise<Shape | nul
           : element;
     if (!node) return null;
     const css = getComputedStyle(node);
-    // Same rule as paintsShadow: transparent or zero sized layers paint nothing.
-    const shadow =
-      css.boxShadow !== "none" &&
-      css.boxShadow.split(/,(?![^()]*\))/).some((layer) => {
-        const transparent = /rgba\([^()]*,\s*0\)|transparent/.test(layer);
-        const sizes = (layer.replace(/\([^()]*\)/g, "").match(/-?[\d.]+px/g) ?? []).map(
-          parseFloat,
-        );
-        return !transparent && sizes.some((size) => size !== 0);
-      });
     return {
       radius: [
         css.borderTopLeftRadius,
@@ -86,10 +90,17 @@ const shapeOf = (locator: Locator, target: Target = "self"): Promise<Shape | nul
         css.borderBottomWidth,
         css.borderLeftWidth,
       ].join(" "),
-      shadow,
       backdrop: css.backdropFilter,
     };
   }, target);
+  if (shape === null) return null;
+  // Visible shadow only: a resting `shadow-xs` cannot be seen on dark, so light may drop it.
+  const shadow = await paintsShadow(locator, {
+    minAlpha: VISIBLE_SHADOW_ALPHA,
+    inside: SHADOW_NODE[target],
+  });
+  return { ...shape, shadow };
+};
 
 /**
  * The colour the element stands on: its own background, else the first ancestor's that paints
@@ -504,6 +515,8 @@ test.describe("theme switch", () => {
   test("Light mirrors the dark shape of every surface; only colours change", async ({
     chat,
     profile,
+    settings,
+    myCollections,
     authedPage: page,
   }) => {
     const theme = new ThemeMenu(page, chat);
@@ -606,8 +619,16 @@ test.describe("theme switch", () => {
 
     await test.step("every surface has the same corners, edges, shadow and blur", () => {
       expect(Object.keys(light.shapes)).toEqual(Object.keys(dark.shapes));
+      // The user bubble's shadow-sm (black at 10 %) cannot be seen against the dark ground, so
+      // light leaves it out; its corners and edges must still match.
+      const invisibleInDark: Record<string, string[]> = { "user bubble": ["shadow"] };
       for (const [name, shape] of Object.entries(dark.shapes)) {
-        expect.soft(light.shapes[name], `${name}: light differs from dark`).toEqual(shape);
+        const skip = invisibleInDark[name] ?? [];
+        const pick = (s: Record<string, unknown>) =>
+          Object.fromEntries(Object.entries(s).filter(([key]) => !skip.includes(key)));
+        expect
+          .soft(pick(light.shapes[name]), `${name}: light differs from dark`)
+          .toEqual(pick(shape));
       }
     });
 
@@ -628,6 +649,45 @@ test.describe("theme switch", () => {
         expect(light.traceFill.open, "Trace fill, open").toBe(light.traceFill.closed);
       } else {
         expect(light.traceFill.open, "Trace fill, open").not.toBe(light.traceFill.closed);
+      }
+    });
+
+    await test.step("resting controls draw no shadow in light", async () => {
+      const MENUBAR = { closest: '[data-slot="menubar"]' };
+      const noShadow = async (name: string, locator: Locator, read: ShadowRead = {}) => {
+        // No hover and no focus ring in the reading: both draw a shadow on purpose.
+        await page.mouse.move(0, 0);
+        await expect(locator).toBeAttached();
+        await expect
+          .poll(() => paintsShadow(locator, read), {
+            message: `${name}: light draws a resting shadow`,
+            timeout: READ_TIMEOUT,
+          })
+          .toBe(false);
+      };
+
+      await noShadow("Knowledge Base menubar", page.getByTestId("knowledge-base-menu"), MENUBAR);
+      const toolkits = page.getByTestId("sidebar-toolkits");
+      if ((await toolkits.count()) > 0) await noShadow("Toolkits menubar", toolkits, MENUBAR);
+      await noShadow("profile entry menubar", chat.userMenu, MENUBAR);
+      await noShadow(
+        "conversation row menubar",
+        page.getByTestId("conversation-menubar").first(),
+      );
+      await noShadow("New chat button", chat.newChatButton);
+
+      await profile.open();
+      await profile.lastName.focus();
+      await noShadow("Profile first name input", profile.firstName);
+      await profile.close();
+
+      await settings.open();
+      await noShadow("SAVE VALUES button", page.getByTestId("settings-save"));
+      await noShadow("slider thumb", settings.root, { inside: '[data-slot="slider-thumb"]' });
+
+      if (flagOn(await chat.servedConfig(), "FEATURE_PRIVATE_COLLECTIONS", false)) {
+        await myCollections.open();
+        await noShadow("New collection button", myCollections.newButton);
       }
     });
   });

@@ -219,7 +219,7 @@ export const Message = ({
       <div className="flex justify-end">
         <div
           data-testid="message-user-bubble"
-          className="max-w-[min(1200px,90%)] bg-primary-900 border-2 border-primary-400 text-natural-50 rounded-2xl rounded-br-sm px-4 py-3 shadow-sm in-data-[theme=light]:border-composer-edge"
+          className="max-w-[min(1200px,90%)] bg-primary-900 border-2 border-primary-400 text-natural-50 rounded-2xl rounded-br-sm px-4 py-3 shadow-sm in-data-[theme=light]:shadow-none in-data-[theme=light]:border-composer-edge"
         >
           {imageAttachments.length > 0 && (
             <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
