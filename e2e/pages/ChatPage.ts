@@ -17,6 +17,8 @@ export class ChatPage {
   readonly userMenu: Locator;
   readonly userMenuEmail: Locator;
   readonly apiKeysEntry: Locator;
+  readonly sidebarToggle: Locator;
+  readonly sidebarToggleIcon: Locator;
 
   constructor(readonly page: Page) {
     this.composer = new Composer(page);
@@ -27,6 +29,24 @@ export class ChatPage {
     this.userMenu = page.getByTestId("user-menu");
     this.userMenuEmail = page.getByTestId("user-menu-email");
     this.apiKeysEntry = page.getByTestId("sidebar-api-keys");
+    this.sidebarToggle = page.getByTestId("sidebar-toggle");
+    this.sidebarToggleIcon = page.getByTestId("sidebar-toggle-icon");
+  }
+
+  /**
+   * Hovers the sidebar open or close toggle and returns the cursor the browser
+   * shows there: the computed cursor of the element hit at the icon's centre,
+   * so anything stacked over the icon counts too.
+   */
+  async hoverSidebarToggle(): Promise<string> {
+    await this.sidebarToggle.hover();
+    await expect(this.sidebarToggleIcon).toBeVisible();
+    const box = await this.sidebarToggleIcon.boundingBox();
+    if (!box) throw new Error("the sidebar toggle icon has no box");
+    return this.page.evaluate(([x, y]) => {
+      const hit = document.elementFromPoint(x, y);
+      return hit ? getComputedStyle(hit).cursor : "";
+    }, [box.x + box.width / 2, box.y + box.height / 2] as const);
   }
 
   async goto(): Promise<void> {

@@ -65,3 +65,14 @@ test.describe("conversation rename and delete @dev", () => {
     }
   });
 });
+
+test.describe("sidebar toggle @dev", () => {
+  test("the open and close toggle shows the pointer, not a resize cursor", async ({ chat }) => {
+    expect(await chat.hoverSidebarToggle(), "open sidebar").toBe("pointer");
+    await chat.sidebarToggle.click();
+    await expect(chat.newChatButton).toBeHidden();
+    expect(await chat.hoverSidebarToggle(), "collapsed sidebar").toBe("pointer");
+    await chat.sidebarToggle.click();
+    await expect(chat.newChatButton).toBeVisible();
+  });
+});

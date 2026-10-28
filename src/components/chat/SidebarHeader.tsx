@@ -49,6 +49,7 @@ export const SidebarHeader = ({
           <div
             className="cursor-pointer flex justify-center group"
             onClick={onToggle}
+            data-testid="sidebar-toggle"
           >
             <div className="relative">
               <img
@@ -69,7 +70,8 @@ export const SidebarHeader = ({
               <img
                 src={sidebar}
                 alt="sidebar"
-                className="h-[32px] hidden group-hover:block cursor-e-resize"
+                className="h-[32px] hidden group-hover:block cursor-pointer"
+                data-testid="sidebar-toggle-icon"
               />
             </Tooltip>
           </div>
@@ -93,6 +95,7 @@ export const SidebarHeader = ({
           <div
             className="cursor-pointer flex justify-center"
             onClick={onToggle}
+            data-testid="sidebar-toggle"
           >
             {isMobile ? (
               <FontAwesomeIcon icon={faClose} className="w-4 h-4" />
@@ -105,7 +108,8 @@ export const SidebarHeader = ({
                 <img
                   src={sidebar}
                   alt="sidebar"
-                  className="h-[32px] cursor-w-resize"
+                  className="h-[32px] cursor-pointer"
+                  data-testid="sidebar-toggle-icon"
                 />
               </Tooltip>
             )}
