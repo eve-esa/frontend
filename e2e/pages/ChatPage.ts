@@ -12,6 +12,7 @@ export class ChatPage {
   readonly composer: Composer;
   readonly messages: MessagePanel;
   readonly newChatButton: Locator;
+  readonly brandHomeLink: Locator;
   readonly conversations: Locator;
   readonly userMenu: Locator;
   readonly userMenuEmail: Locator;
@@ -21,6 +22,7 @@ export class ChatPage {
     this.composer = new Composer(page);
     this.messages = new MessagePanel(page);
     this.newChatButton = page.getByTestId("sidebar-new-chat");
+    this.brandHomeLink = page.getByTestId("brand-home-link");
     this.conversations = page.getByTestId("conversation-item");
     this.userMenu = page.getByTestId("user-menu");
     this.userMenuEmail = page.getByTestId("user-menu-email");
@@ -34,6 +36,18 @@ export class ChatPage {
 
   async newChat(): Promise<void> {
     await this.newChatButton.click();
+    await this.composer.waitReady();
+  }
+
+  /** Opens a conversation by its URL, the way a bookmark or a shared link does. */
+  async gotoConversation(conversationId: string): Promise<void> {
+    await this.page.goto(`/chat/${conversationId}`);
+    await this.composer.waitReady();
+  }
+
+  /** Clicks the logo at the top of the open sidebar. */
+  async goHomeFromLogo(): Promise<void> {
+    await this.brandHomeLink.click();
     await this.composer.waitReady();
   }
 

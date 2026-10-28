@@ -42,4 +42,26 @@ test.describe("conversation rename and delete @dev", () => {
       if (leftover) await api.delete(`/conversations/${leftover.id}`);
     }
   });
+
+  test("the sidebar logo takes you home from a conversation", async ({ chat, api }) => {
+    // Created through the API so the test needs no model answer.
+    const created = await api.post<{ id?: string }>("/conversations", {
+      name: `e2e logo ${Date.now()}`,
+    });
+    expect(created.status).toBe(200);
+    const conversationId = created.body.id ?? "";
+    expect(conversationId, "the API returned the new conversation id").not.toBe("");
+
+    try {
+      await chat.gotoConversation(conversationId);
+      expect(chat.conversationId()).toBe(conversationId);
+
+      await chat.goHomeFromLogo();
+      await expect(chat.page).toHaveURL((url) => url.pathname === "/");
+      expect(chat.conversationId()).toBeNull();
+      await expect(chat.composer.input).toHaveValue("");
+    } finally {
+      await api.delete(`/conversations/${conversationId}`);
+    }
+  });
 });
