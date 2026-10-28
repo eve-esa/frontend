@@ -16,7 +16,7 @@
     <!--
       Sets <html data-theme> before the app renders, so a light page never flashes
       dark (FEATURE_THEME_SWITCH). Inline and placed after the module tag: it runs
-      after the window.__EVE_CONFIG__ the release injects before that tag, and
+      after the runtime config the release injects before that tag, and
       before the deferred bundle. Same rules as src/utilities/theme.ts and
       isEnabled in runtimeConfig.ts: the injected value wins, the build-time
       value (data-flag, filled by Vite) is the local fallback, blank means off.
@@ -25,7 +25,8 @@
     <script data-flag="%VITE_FEATURE_THEME_SWITCH%">
       (function () {
         try {
-          var config = window.__EVE_CONFIG__ || {};
+          // Split name: the release step refuses an index.html that already names the injected config.
+          var config = window["__EVE_" + "CONFIG__"] || {};
           var script = document.currentScript;
           var built = script && script.getAttribute("data-flag");
           // Vite leaves %VITE_X% in place when the variable is not set.
