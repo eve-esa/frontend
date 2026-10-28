@@ -199,7 +199,7 @@ export const CustomModelsDialog = ({
               {/* Styled like the Input fields beside it: in light it keeps
                   their white fill, edge and placeholder grey, not the
                   trigger's highlight fill. */}
-              <SelectTrigger className="h-12 bg-primary-200 border border-control shadow-xs text-natural-100 data-[placeholder]:text-natural-200 in-data-[theme=light]:bg-primary-200 in-data-[theme=light]:[--color-placeholder:inherit]">
+              <SelectTrigger className="h-12 bg-primary-200 border border-control shadow-xs in-data-[theme=light]:shadow-none text-natural-100 data-[placeholder]:text-natural-200 in-data-[theme=light]:bg-primary-200 in-data-[theme=light]:[--color-placeholder:inherit]">
                 <SelectValue placeholder="Provider" />
               </SelectTrigger>
               <SelectContent portalled={false}>
@@ -225,7 +225,7 @@ export const CustomModelsDialog = ({
                 }));
               }}
             >
-              <SelectTrigger className="h-12 bg-primary-200 border border-control shadow-xs text-natural-100 data-[placeholder]:text-natural-200 in-data-[theme=light]:bg-primary-200 in-data-[theme=light]:[--color-placeholder:inherit]">
+              <SelectTrigger className="h-12 bg-primary-200 border border-control shadow-xs in-data-[theme=light]:shadow-none text-natural-100 data-[placeholder]:text-natural-200 in-data-[theme=light]:bg-primary-200 in-data-[theme=light]:[--color-placeholder:inherit]">
                 <SelectValue placeholder="Model" />
               </SelectTrigger>
               <SelectContent portalled={false}>

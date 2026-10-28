@@ -6,12 +6,12 @@ export const buttonVariants = cva(
     variants: {
       variant: {
         primary:
-          "bg-cta text-on-accent shadow-xs enabled:hover:bg-cta-hover",
+          "bg-cta text-on-accent shadow-xs in-data-[theme=light]:shadow-none enabled:hover:bg-cta-hover",
         outline:
-          "border-2 border-primary-400 bg-transparent hover:bg-highlight hover:text-natural-50 shadow-xs enabled:hover:bg-natural-700 enabled:hover:text-natural-50",
+          "border-2 border-primary-400 bg-transparent hover:bg-highlight hover:text-natural-50 shadow-xs in-data-[theme=light]:shadow-none enabled:hover:bg-natural-700 enabled:hover:text-natural-50",
         ghost: "enabled:hover:bg-primary-700 enabled:hover:text-natural-50",
         destructive:
-          "bg-danger-400 text-on-accent shadow-xs enabled:hover:bg-danger-500 border border-danger-500",
+          "bg-danger-400 text-on-accent shadow-xs in-data-[theme=light]:shadow-none enabled:hover:bg-danger-500 border border-danger-500",
         icon: "p-2 enabled:hover:text-natural-200 disabled:opacity-100",
       },
       size: {

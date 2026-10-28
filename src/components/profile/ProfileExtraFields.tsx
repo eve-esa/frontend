@@ -49,7 +49,7 @@ export const ProfileExtraFields = <T extends ProfileExtraFieldValues>({
             data-testid={countryId}
             className={cn(
               "rounded-lg h-12 w-full min-w-0 px-3 text-base outline-none cursor-pointer in-data-[theme=light]:focus-visible:ring-2 in-data-[theme=light]:focus-visible:ring-focus",
-              "border shadow-xs bg-primary-200 text-natural-100 border-control",
+              "border shadow-xs in-data-[theme=light]:shadow-none bg-primary-200 text-natural-100 border-control",
               // Light: the empty "Select a country" prompt in the placeholder
               // grey, the options in the text colour.
               "in-data-[theme=light]:has-[option[value='']:checked]:text-(--color-placeholder) in-data-[theme=light]:[&>option]:text-natural-100"

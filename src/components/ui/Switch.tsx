@@ -13,7 +13,7 @@ export const Switch = ({
     <SwitchPrimitive.Root
       data-slot="switch"
       className={cn(
-        "data-[state=checked]:bg-success-200  data-[state=unchecked]:!bg-primary-900 focus-visible:ring-none inline-flex h-4 w-8 shrink-0 items-center rounded-full border border-primary-400 in-data-[theme=light]:border-control shadow-xs transition-all outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer",
+        "data-[state=checked]:bg-success-200  data-[state=unchecked]:!bg-primary-900 focus-visible:ring-none inline-flex h-4 w-8 shrink-0 items-center rounded-full border border-primary-400 in-data-[theme=light]:border-control shadow-xs in-data-[theme=light]:shadow-none transition-all outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer",
         className
       )}
       {...props}
