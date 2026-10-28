@@ -10,8 +10,8 @@ export const MIN_CONTRAST = 4.5;
  * go through a canvas, so any CSS color syntax the build emits (rgb, oklch, color()) ends up
  * as sRGB bytes.
  */
-export function contrastRatio(locator: Locator): Promise<number> {
-  return locator.evaluate((element) => {
+export function contrastRatio(locator: Locator, pseudo?: "::placeholder"): Promise<number> {
+  return locator.evaluate((element, pseudo) => {
     type Rgba = [number, number, number, number];
     const canvas = document.createElement("canvas");
     canvas.width = 1;
@@ -57,7 +57,8 @@ export function contrastRatio(locator: Locator): Promise<number> {
       backgrounds = backgrounds.flatMap((base) => layer.map((top) => over(top, base)));
     }
 
-    const text = rgba(getComputedStyle(element).color);
+    // With a pseudo element, its text (a placeholder) on the element's own backgrounds.
+    const text = rgba(getComputedStyle(element, pseudo ?? null).color);
     return Math.min(
       ...backgrounds.map((bg) => {
         // Text with alpha blends over the background.
@@ -66,5 +67,22 @@ export function contrastRatio(locator: Locator): Promise<number> {
         return (hi + 0.05) / (lo + 0.05);
       }),
     );
+  }, pseudo);
+}
+
+/**
+ * Whether the element paints a shadow: false for `none` and for a stack of layers that are
+ * all transparent or zero sized (Tailwind's `shadow-none` keeps the ring layers at `0 0 #0000`).
+ */
+export function paintsShadow(locator: Locator): Promise<boolean> {
+  return locator.evaluate((element) => {
+    const value = getComputedStyle(element).boxShadow;
+    if (value === "none") return false;
+    const layers = value.split(/,(?![^()]*\))/);
+    return layers.some((layer) => {
+      const transparent = /rgba\([^()]*,\s*0\)|transparent/.test(layer);
+      const sizes = (layer.replace(/\([^()]*\)/g, "").match(/-?[\d.]+px/g) ?? []).map(parseFloat);
+      return !transparent && sizes.some((size) => size !== 0);
+    });
   });
 }

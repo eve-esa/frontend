@@ -11,8 +11,8 @@ import type { ImageAttachment } from "@/types";
 export type PendingAttachmentStatus = "uploading" | "done" | "error";
 
 // A locally-selected file being uploaded before the message is sent. For
-// images the thumbnail is a local object URL (no network) — empty for other
-// types — while `uploaded` holds the server-side attachment once
+// images the thumbnail is a local object URL (no network): empty for other
+// types, while `uploaded` holds the server-side attachment once
 // POST /artifacts resolves.
 export type PendingAttachment = {
   localId: string;

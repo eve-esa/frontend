@@ -71,7 +71,7 @@ export const AgenticTrace = ({ onToggle, trace, question }: AgenticTraceProps) =
               type="button"
               onClick={onToggle}
               aria-label="Close"
-              className="cursor-pointer rounded-md text-primary-50 outline-none transition-colors hover:text-natural-200 focus-visible:ring-2 focus-visible:ring-primary-50"
+              className="cursor-pointer text-primary-50 outline-none transition-colors hover:text-natural-200 focus-visible:ring-2 focus-visible:ring-primary-50"
             >
               <FontAwesomeIcon icon={faTimes} className="h-6" />
             </button>
@@ -111,7 +111,7 @@ export const AgenticTrace = ({ onToggle, trace, question }: AgenticTraceProps) =
             <button
               type="button"
               onClick={toggleAll}
-              className="cursor-pointer rounded-sm text-xs text-natural-200 outline-none transition-colors hover:text-natural-50 hover:underline focus-visible:ring-2 focus-visible:ring-primary-50"
+              className="cursor-pointer text-xs text-natural-200 outline-none transition-colors hover:text-natural-50 hover:underline focus-visible:ring-2 focus-visible:ring-primary-50"
             >
               {allOpen ? "Collapse all" : "Expand all"}
             </button>

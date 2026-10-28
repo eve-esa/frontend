@@ -38,10 +38,10 @@ export const ConversationMenubar: React.FC<ConversationMenubarProps> = ({
           ? "w-0"
           : `w-0 ${
               isMobile ? "w-auto" : "group-hover:w-auto"
-            } [&:has([data-state=open])]:w-full`
+            } [&:has([data-state=open])]:w-full has-[:focus-visible]:w-auto`
       )}
     >
-      <Menubar>
+      <Menubar data-testid="conversation-menubar">
         <MenubarMenu>
           <MenubarTrigger
             data-testid="conversation-menu-trigger"
@@ -58,7 +58,7 @@ export const ConversationMenubar: React.FC<ConversationMenubarProps> = ({
                   ? "opacity-0"
                   : `${
                       isMobile ? "opacity-100" : "opacity-0"
-                    } group-hover:opacity-100 [.group:has([data-state=open])_&]:opacity-100`
+                    } group-hover:opacity-100 [.group:has([data-state=open])_&]:opacity-100 [:focus-visible>&]:opacity-100`
               )}
             />
           </MenubarTrigger>

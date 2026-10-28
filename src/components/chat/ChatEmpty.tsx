@@ -57,7 +57,7 @@ export const ChatEmpty = () => {
   };
 
   return (
-    <div className="flex h-full w-full flex-col bg-natural-900 relative overflow-hidden">
+    <div className="flex h-full w-full flex-col bg-natural-900 in-data-[theme=light]:bg-(--color-chat-ground) relative overflow-hidden">
       <div className="flex-none">
         <ChatHeader />
       </div>

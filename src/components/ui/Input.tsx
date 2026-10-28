@@ -27,7 +27,7 @@ function Input({
           variant === "secondary" &&
             "!bg-natural-900 placeholder:text-primary-50 pl-4",
           variant === "default" &&
-            "border shadow-xs transition-[color,box-shadow] bg-primary-200 text-natural-100 placeholder:text-natural-200/50 placeholder:text-sm border-primary-400",
+            "border shadow-xs transition-[color,box-shadow] bg-primary-200 text-natural-100 placeholder:text-natural-200/50 placeholder:text-sm border-control in-data-[theme=light]:focus-within:border-focus",
           // Override browser autocomplete styles
           "[&:-webkit-autofill]:!bg-primary-200 [&:-webkit-autofill]:!text-natural-100 [&:-webkit-autofill]:!shadow-[0_0_0_30px_theme(colors.primary.200)_inset]",
           "[&:-webkit-autofill]:![-webkit-text-fill-color:theme(colors.natural.100)]",

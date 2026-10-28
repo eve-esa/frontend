@@ -8,3 +8,4 @@ export const LOCAL_STORAGE_LLM_TYPE = "llm_type";
 export const LOCAL_STORAGE_MODEL_SELECTION = "model_selection";
 export const LOCAL_STORAGE_MCP_SERVERS = "mcp_servers";
 export const LOCAL_STORAGE_RIGHT_SIDEBAR_WIDTH = "right_sidebar_width";
+export const LOCAL_STORAGE_THEME = "theme";

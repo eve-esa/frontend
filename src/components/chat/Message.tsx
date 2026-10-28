@@ -217,7 +217,10 @@ export const Message = ({
     >
       {/* USER BUBBLE */}
       <div className="flex justify-end">
-        <div className="max-w-[min(1200px,90%)] bg-primary-900 border-2 border-primary-400 text-natural-50 rounded-2xl rounded-br-sm px-4 py-3 shadow-sm">
+        <div
+          data-testid="message-user-bubble"
+          className="max-w-[min(1200px,90%)] bg-primary-900 border-2 border-primary-400 text-natural-50 rounded-2xl rounded-br-sm px-4 py-3 shadow-sm in-data-[theme=light]:border-composer-edge"
+        >
           {imageAttachments.length > 0 && (
             <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
               {imageAttachments.map((attachment, index) => (
@@ -257,14 +260,14 @@ export const Message = ({
             {message.input}
           </div>
           {(isOverflowing || isExpanded) && (
-            // ring-primary-300 until the theme branch lands: after the rebase it maps the ring to its focus token.
+            // Light maps the ring to the focus token (#008E7A, 4.1:1 on the white bubble); the text reads as is (natural-100 is #003247 in light).
             <button
               type="button"
               onClick={toggleExpanded}
               aria-expanded={isExpanded}
               aria-controls={inputId}
               data-testid="message-show-more"
-              className="mt-2 block w-fit leading-none cursor-pointer text-xs text-natural-100 select-none outline-none hover:text-natural-50 focus-visible:ring-2 focus-visible:ring-primary-300"
+              className="mt-2 block w-fit leading-none cursor-pointer text-xs text-natural-100 select-none outline-none hover:text-natural-50 focus-visible:ring-2 focus-visible:ring-primary-300 in-data-[theme=light]:focus-visible:ring-focus"
             >
               {isExpanded ? "Show less" : "Show more"}
             </button>
@@ -272,8 +275,10 @@ export const Message = ({
         </div>
       </div>
 
-      {/* ASSISTANT BUBBLE */}
-      <div className="bg-natural-900 rounded-tl-[20px] rounded-br-[20px] pb-4 pt-0 relative">
+      {/* ASSISTANT BUBBLE. Dark: natural-900, the chat ground itself, so the
+          block has no visible fill. Light mirrors that with the chat ground
+          (#F5F5F5) instead of the white natural-900. */}
+      <div className="bg-natural-900 in-data-[theme=light]:bg-(--color-chat-ground) rounded-tl-[20px] rounded-br-[20px] pb-4 pt-0 relative">
         <div className="md:pt-8 pt-4 px-[1px]">
           {effectiveOutput ? (
             <>

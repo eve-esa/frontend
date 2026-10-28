@@ -105,7 +105,7 @@ const sanitizeSchema: SanitizeSchema = {
 
 // Markdown title of the form "MCP: {server}/{tool}" (or just "MCP") marks a
 // stub image the backend generated from an MCP tool call, per the backend
-// contract — used to render the provenance pill below.
+// contract, used to render the provenance pill below.
 const isMcpProvenance = (title: string | undefined): boolean =>
   Boolean(title?.toLowerCase().startsWith("mcp"));
 
@@ -115,7 +115,7 @@ const isMcpProvenance = (title: string | undefined): boolean =>
 const McpBadge = ({ title }: { title: string }) => (
   <span
     title={title}
-    className="absolute left-2 top-2 rounded-full border border-primary-400 bg-natural-1000/60 px-2 py-0.5 text-[10px] uppercase tracking-wide text-natural-50"
+    className="absolute left-2 top-2 rounded-full border border-primary-400 bg-natural-1000/60 px-2 py-0.5 text-[10px] uppercase tracking-wide text-natural-50 in-data-[theme=light]:bg-primary-500"
   >
     MCP
   </span>
@@ -123,7 +123,7 @@ const McpBadge = ({ title }: { title: string }) => (
 
 // Renders both `![]()` markdown images and raw `<img>` (rehype-raw routes both
 // through the `img` override). Memoized on src+alt+title so it doesn't
-// re-render — and re-fetch its blob — on every streamed token. The `tile`
+// re-render (and re-fetch its blob) on every streamed token. The `tile`
 // variant is used inside the gallery grid: uniform cropped thumbnails instead
 // of the free-flowing inline size.
 //
@@ -146,8 +146,8 @@ const MarkdownImage = React.memo(
   }) => {
     const [isLightboxOpen, setIsLightboxOpen] = useState(false);
     // The model's prose sometimes embeds invented image URLs that 404 (see
-    // AuthenticatedImage's onError). Collapse the whole wrapper — badge and
-    // lightbox trigger included — rather than leaving an empty husk behind.
+    // AuthenticatedImage's onError). Collapse the whole wrapper (badge and
+    // lightbox trigger included) rather than leaving an empty husk behind.
     const [hasError, setHasError] = useState(false);
     if (!src || hasError) return null;
     const showMcpBadge = isMcpProvenance(title);
@@ -274,12 +274,13 @@ const SmartText: React.FC<SmartTextProps> = ({ text, className }) => {
       }
       return (
         <a
+          data-testid="smart-text-link"
           href={href}
           target="_blank"
           rel="noreferrer"
           className={cn(
             baseText,
-            "text-success-200 hover:text-success-300 underline transition-colors"
+            "text-success-200 in-data-[theme=light]:text-success-100 underline transition-colors"
           )}
         >
           {children}
@@ -292,7 +293,7 @@ const SmartText: React.FC<SmartTextProps> = ({ text, className }) => {
       // positional reconciliation. If a sibling earlier in the paragraph
       // changes shape (e.g. a soft break turns into a paragraph break as
       // more text streams in), an already-rendered image can get bumped to
-      // a new position and remount — refetching its blob and flashing.
+      // a new position and remount, refetching its blob and flashing.
       // Keying by src lets React match it back up regardless of position.
       <MarkdownImage
         key={typeof src === "string" ? src : undefined}
@@ -347,7 +348,7 @@ const SmartText: React.FC<SmartTextProps> = ({ text, className }) => {
         <code
           className={cn(
             baseText,
-            "whitespace-pre-wrap break-words block bg-primary-800/40 p-4 pr-12 rounded-lg my-4 overflow-x-auto relative group",
+            "whitespace-pre-wrap break-words block bg-primary-800/40 p-4 pr-12 rounded-lg in-data-[theme=light]:bg-natural-900 my-4 overflow-x-auto relative group",
             className
           )}
           {...rest}

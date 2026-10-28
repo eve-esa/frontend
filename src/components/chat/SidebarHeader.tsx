@@ -1,14 +1,17 @@
-import logo from "@/assets/images/esa_phi_lab_1.svg";
+import { EsaPhiLabLogo } from "@/components/ui/EsaPhiLabLogo";
 import smallLogo from "@/assets/images/ESA_logo_2020_White_small.svg";
+import smallLogoLight from "@/assets/images/ESA_logo_DS_small.svg";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Button } from "@/components/ui/Button";
 import { faClose, faPlus } from "@fortawesome/free-solid-svg-icons";
 import sidebar from "@/assets/images/sidebar.svg";
+import sidebarLight from "@/assets/images/sidebar_ds.svg";
 import { Tooltip, TooltipTrigger } from "@/components/ui/Tooltip";
 import { Badge } from "./Badge";
 import type { MouseEvent } from "react";
 import { Link } from "react-router-dom";
 import { routes } from "@/utilities/routes";
+import { useTheme } from "@/hooks/useTheme";
 
 type SidebarHeaderProps = {
   isOpen: boolean;
@@ -42,6 +45,9 @@ export const SidebarHeader = ({
     handleNewChat();
   };
 
+  // ESA guidelines: the Deep Space logo on light backgrounds, the white one on dark.
+  const { resolved } = useTheme();
+  const sidebarIcon = resolved === "light" ? sidebarLight : sidebar;
   return (
     <div className="flex flex-col gap-8 px-4">
       {!isOpen && (
@@ -53,7 +59,7 @@ export const SidebarHeader = ({
           >
             <div className="relative">
               <img
-                src={smallLogo}
+                src={resolved === "light" ? smallLogoLight : smallLogo}
                 alt="logo"
                 className="h-[32px] 3xl:h-[70px] group-hover:hidden"
               />
@@ -68,7 +74,7 @@ export const SidebarHeader = ({
               className="max-w-[280px] md:max-w-[350px]"
             >
               <img
-                src={sidebar}
+                src={sidebarIcon}
                 alt="sidebar"
                 className="h-[32px] hidden group-hover:block cursor-pointer"
                 data-testid="sidebar-toggle-icon"
@@ -86,7 +92,7 @@ export const SidebarHeader = ({
             data-testid="brand-home-link"
             className="relative outline-none focus-visible:ring-2 focus-visible:ring-natural-50"
           >
-            <img src={logo} alt="logo" className="h-[48px] 3xl:h-[70px]" />
+            <EsaPhiLabLogo className="h-[48px] 3xl:h-[70px]" />
             <div className="absolute bottom-[-4px] left-[20px] 3xl:left-[30px] 3xl:bottom-[-10px]">
               <Badge />
             </div>
@@ -106,7 +112,7 @@ export const SidebarHeader = ({
                 className="max-w-[280px] md:max-w-[350px]"
               >
                 <img
-                  src={sidebar}
+                  src={sidebarIcon}
                   alt="sidebar"
                   className="h-[32px] cursor-pointer"
                   data-testid="sidebar-toggle-icon"
@@ -125,7 +131,7 @@ export const SidebarHeader = ({
         {isOpen ? (
           <div className="w-full flex flex-col gap-2">
             <Button
-              className="w-full bg-success-100 border-2 border-success-200"
+              className="w-full bg-success-100 text-on-accent border-2 border-success-200 in-data-[theme=light]:bg-cta in-data-[theme=light]:enabled:hover:bg-cta-hover"
               variant="primary"
               size="md"
               onClick={onDiscoverEve}

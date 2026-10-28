@@ -12,4 +12,5 @@ export { ProfileRequiredDialog } from "./ProfileRequiredDialog";
 export { SettingsPanel } from "./SettingsPanel";
 export { SignedOutPage } from "./SignedOutPage";
 export { SignupPage, type NewAccount } from "./SignupPage";
+export { ThemeMenu, themeSwitchOn, type ThemeChoice } from "./ThemeMenu";
 export { ToolkitsPanel } from "./ToolkitsPanel";

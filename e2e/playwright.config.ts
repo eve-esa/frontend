@@ -24,7 +24,13 @@ const TARGETS = {
 
 const target = (fallback: string): string => process.env.E2E_TARGET || fallback;
 const optIn = process.env.E2E_SIGNUP === "1" ? {} : { grepInvert: /@signup/ };
-const desktop = { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 } };
+// Pinned dark: Playwright emulates a light OS by default, which with FEATURE_THEME_SWITCH on would
+// run the whole suite in the light theme. theme.spec.ts overrides it per test.
+const desktop = {
+  ...devices["Desktop Chrome"],
+  viewport: { width: 1440, height: 900 },
+  colorScheme: "dark" as const,
+};
 
 export default defineConfig({
   testDir: ".",

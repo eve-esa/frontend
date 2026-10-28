@@ -514,6 +514,7 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
             {REPORT_BUG_ENABLED && message?.id ? (
               <Button
                 variant="primary"
+                data-testid="message-report-bug-button"
                 aria-haspopup="dialog"
                 disabled={!isPersistedId(message.id)}
                 onClick={() =>

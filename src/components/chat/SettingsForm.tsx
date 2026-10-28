@@ -72,7 +72,7 @@ export const SettingsForm = ({ onToggle }: SettingsFormProps) => {
       onSubmit={handleSubmit(onSubmit)}
     >
       {/* Header */}
-      <div className="flex-none flex items-center justify-between px-6 bg-primary-700 z-10 pt-6 relative">
+      <div className="flex-none flex items-center justify-between px-6 bg-primary-700 in-data-[theme=light]:bg-(--color-sidebar) z-10 pt-6 relative">
         <div className="flex flex-col gap-6 w-full">
           <div className="flex items-center justify-between w-full">
             <h2 className="text-lg 3xl:text-3xl text-natural-50">
@@ -95,7 +95,7 @@ export const SettingsForm = ({ onToggle }: SettingsFormProps) => {
             soon.
           </p>
         </div>
-        <div className="absolute bottom-[-26px] left-0 right-0 h-4 bg-gradient-to-b from-primary-900 to-transparent pointer-events-none" />
+        <div className="absolute bottom-[-26px] left-0 right-0 h-4 bg-gradient-to-b from-primary-900 in-data-[theme=light]:from-(--color-sidebar) to-transparent pointer-events-none" />
       </div>
 
       <div className="flex-1 overflow-y-auto">
@@ -434,8 +434,8 @@ export const SettingsForm = ({ onToggle }: SettingsFormProps) => {
         </div>
 
         {/* Footer */}
-        <div className="flex flex-col gap-4 items-center flex-none w-full px-6 sticky bottom-[-1px] bg-primary-700 z-10 py-6 mb-[-2px]">
-          <div className="absolute top-[-8px] left-0 right-0 h-3 bg-gradient-to-t from-primary-900 to-transparent pointer-events-none z-10" />
+        <div className="flex flex-col gap-4 items-center flex-none w-full px-6 sticky bottom-[-1px] bg-primary-700 in-data-[theme=light]:bg-(--color-sidebar) z-10 py-6 mb-[-2px]">
+          <div className="absolute top-[-8px] left-0 right-0 h-3 bg-gradient-to-t from-primary-900 in-data-[theme=light]:from-(--color-sidebar) to-transparent pointer-events-none z-10" />
           <Button
             type="submit"
             variant="outline"

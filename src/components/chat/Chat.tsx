@@ -166,7 +166,7 @@ export const Chat = () => {
   const showRetry = isRetry && !isMutating && lastMessageIsPersisted;
 
   return (
-    <div className="flex h-full w-full flex-col bg-natural-900 relative">
+    <div className="flex h-full w-full flex-col bg-natural-900 in-data-[theme=light]:bg-(--color-chat-ground) relative">
       <div className="flex-none">
         <ChatHeader />
       </div>
@@ -202,6 +202,7 @@ export const Chat = () => {
       <div className="flex-none p-4 @md:p-8 px-[2cqw] @sm:px-[3cqw] @md:px-[10cqw] @lg:px-[10cqw] @xl:px-[15cqw] @5xl:px-[14cqw] @7xl:px-[12cqw] @8xl:px-[15cqw] @9xl:px-[18cqw] @10xl:px-[20cqw] relative w-full">
         <div
           ref={scrollButtonRef}
+          data-testid="chat-scroll-to-bottom"
           onClick={() => scrollToBottom()}
           className="absolute top-[-50px] left-1/2 transform -translate-x-1/2 cursor-pointer w-10 h-10 bg-primary-500 hover:bg-primary-900 text-natural-200 hover:text-natural-50 rounded-full shadow-lg border-[1px] border-primary-400 transition-all duration-200 ease-in-out z-10 flex items-center justify-center opacity-0 pointer-events-none data-[show-scroll-button=true]:opacity-100 data-[show-scroll-button=true]:pointer-events-auto"
           data-show-scroll-button="false"

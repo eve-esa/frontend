@@ -35,7 +35,7 @@ export const SidebarMenu = ({ isOpen }: SidebarMenuProps) => {
   const email = profile?.email;
 
   const baseStyles =
-    "grid items-center gap-2 rounded-lg hover:bg-primary-500 p-2 w-full cursor-pointer";
+    "grid items-center gap-2 rounded-lg hover:bg-primary-500 in-data-[theme=light]:hover:bg-highlight p-2 w-full cursor-pointer";
 
   const layoutStyles = isOpen
     ? "grid-cols-[auto_1fr]"
@@ -45,7 +45,7 @@ export const SidebarMenu = ({ isOpen }: SidebarMenuProps) => {
     <button
       type="button"
       onClick={() => navigate(routes.ARTIFACTS.path)}
-      className={`${baseStyles} ${layoutStyles} text-natural-50 hover:text-white`}
+      className={`${baseStyles} ${layoutStyles} text-natural-50`}
     >
       <FontAwesomeIcon icon={faImages} className="w-4 h-4" />
       {isOpen && (
@@ -66,7 +66,7 @@ export const SidebarMenu = ({ isOpen }: SidebarMenuProps) => {
       aria-label="API keys"
       aria-haspopup="dialog"
       onClick={() => setIsOpenApiKeysDialog(true)}
-      className={`${baseStyles} ${layoutStyles} text-natural-50 hover:text-white`}
+      className={`${baseStyles} ${layoutStyles} text-natural-50`}
     >
       <FontAwesomeIcon icon={faKey} className="w-4 h-4" />
       {isOpen && (
@@ -83,7 +83,7 @@ export const SidebarMenu = ({ isOpen }: SidebarMenuProps) => {
     <div className="flex flex-col gap-4">
       <KnowledgeBaseMenuBar
         isOpen={isOpen}
-        className={`${baseStyles} ${layoutStyles} text-natural-50 hover:text-white`}
+        className={`${baseStyles} ${layoutStyles} text-natural-50`}
       />
 
       {/* Not rendered at all when off, so the entry point disappears together
@@ -91,7 +91,7 @@ export const SidebarMenu = ({ isOpen }: SidebarMenuProps) => {
       {TOOLKITS_ENABLED && (
         <ToolkitsMenuBar
           isOpen={isOpen}
-          className={`${baseStyles} ${layoutStyles} text-natural-50 hover:text-white`}
+          className={`${baseStyles} ${layoutStyles} text-natural-50`}
         />
       )}
 
@@ -119,7 +119,7 @@ export const SidebarMenu = ({ isOpen }: SidebarMenuProps) => {
         onProfileClick={() => setIsOpenProfileDialog(true)}
         onCO2eqClick={() => setIsOpenCO2eqDialog(true)}
         onLogoutClick={() => setIsOpenLogoutDialog(true)}
-        className={`${baseStyles} ${layoutStyles} text-natural-50 hover:text-white`}
+        className={`${baseStyles} ${layoutStyles} text-natural-50`}
         isOpen={isOpen}
       />
 

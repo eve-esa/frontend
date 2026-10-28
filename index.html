@@ -13,5 +13,46 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <!--
+      Sets <html data-theme> before the app renders, so a light page never flashes
+      dark (FEATURE_THEME_SWITCH). Inline and placed after the module tag: it runs
+      after the window.__EVE_CONFIG__ the release injects before that tag, and
+      before the deferred bundle. Same rules as src/utilities/theme.ts and
+      isEnabled in runtimeConfig.ts: the injected value wins, the build-time
+      value (data-flag, filled by Vite) is the local fallback, blank means off.
+      Flag off: nothing happens and the app stays dark.
+    -->
+    <script data-flag="%VITE_FEATURE_THEME_SWITCH%">
+      (function () {
+        try {
+          var config = window.__EVE_CONFIG__ || {};
+          var script = document.currentScript;
+          var built = script && script.getAttribute("data-flag");
+          // Vite leaves %VITE_X% in place when the variable is not set.
+          if (built && built.charAt(0) === "%") built = "";
+          var raw = config.FEATURE_THEME_SWITCH;
+          if (raw === undefined || raw === null) raw = built || "";
+          if (String(raw).trim().toLowerCase() !== "true") return;
+
+          var choice = null;
+          try {
+            choice = window.localStorage.getItem("theme");
+          } catch (e) {
+            choice = null;
+          }
+          if (choice !== "light" && choice !== "dark") {
+            var light =
+              window.matchMedia &&
+              window.matchMedia("(prefers-color-scheme: light)").matches;
+            choice = light ? "light" : "dark";
+          }
+          var root = document.documentElement;
+          root.setAttribute("data-theme", choice);
+          root.style.colorScheme = choice;
+        } catch (e) {
+          // The app sets the theme again on mount.
+        }
+      })();
+    </script>
   </body>
 </html>

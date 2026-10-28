@@ -54,7 +54,7 @@ export const ArtifactCard = ({
           </div>
         )}
         {sourceLabel(asset) && (
-          <span className="absolute left-2 top-2 rounded-full border border-primary-400 bg-natural-1000/60 px-2 py-0.5 text-[10px] uppercase tracking-wide text-natural-50">
+          <span className="absolute left-2 top-2 rounded-full border border-primary-400 bg-natural-1000/60 px-2 py-0.5 text-[10px] uppercase tracking-wide text-natural-50 in-data-[theme=light]:bg-primary-500">
             {sourceLabel(asset)}
           </span>
         )}
@@ -67,8 +67,8 @@ export const ArtifactCard = ({
         >
           {asset.filename}
         </span>
-        {/* natural-300 is near-black in this palette — unreadable on the
-            dark card; natural-200 is the light muted tone. */}
+        {/* natural-300 is near-black in the dark palette, unreadable on the
+            dark card; natural-200 is the muted text tone in both themes. */}
         <div className="flex items-center justify-between text-xs text-natural-200">
           <span>{asset.timestamp ? formatDate(asset.timestamp) : ""}</span>
           <span>{formatBytes(asset.size_bytes)}</span>
@@ -84,7 +84,7 @@ export const ArtifactCard = ({
             to={generatePath(routes.CHAT.path, {
               conversationId: asset.conversation_id,
             })}
-            className="mt-1 inline-flex items-center gap-1 text-xs text-success-200 hover:text-success-300"
+            className="mt-1 inline-flex items-center gap-1 text-xs text-success-200 in-data-[theme=light]:text-success-100"
           >
             <FontAwesomeIcon icon={faUpRightFromSquare} className="w-3 h-3" />
             Go to conversation

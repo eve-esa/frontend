@@ -89,8 +89,8 @@ export const ConversationsMenuSidebar = () => {
       className="border-r-2 border-primary-400 conversations-sidebar-tour"
       data-tour="conversations-sidebar"
     >
-      <div className="flex flex-col h-full bg-primary-900 gap-4 relative overflow-y-auto">
-        <div className="flex-none sticky top-0 left-0 right-0 z-10 pb-8 bg-primary-900 pt-6">
+      <div className="flex flex-col h-full bg-primary-900 in-data-[theme=light]:bg-(--color-sidebar) gap-4 relative overflow-y-auto">
+        <div className="flex-none sticky top-0 left-0 right-0 z-10 pb-8 bg-primary-900 in-data-[theme=light]:bg-(--color-sidebar) pt-6">
           <SidebarHeader
             isOpen={isOpenConversationsSidebar}
             isMobile={isMobile}
@@ -99,7 +99,7 @@ export const ConversationsMenuSidebar = () => {
             onDiscoverEve={handleOpenDiscoverDialog}
           />
 
-          <div className="absolute bottom-[-14px] left-0 right-0 h-4 bg-gradient-to-b from-primary-900 to-transparent pointer-events-none" />
+          <div className="absolute bottom-[-14px] left-0 right-0 h-4 bg-gradient-to-b from-primary-900 in-data-[theme=light]:from-(--color-sidebar) to-transparent pointer-events-none" />
         </div>
         <div
           className={cn(
@@ -134,9 +134,9 @@ export const ConversationsMenuSidebar = () => {
           )}
         </div>
 
-        <div className="flex-none px-6 pb-6 pt-8 sticky bottom-[-2px] left-0 right-0 z-10 bg-primary-900 ">
-          <div className="absolute top-[-10px] left-0 right-0 h-3 bg-gradient-to-t from-primary-900 to-transparent pointer-events-none z-10" />
-          <div className="border-t-2 border-primary-500 pb-6 bg-primary-900" />
+        <div className="flex-none px-6 pb-6 pt-8 sticky bottom-[-2px] left-0 right-0 z-10 bg-primary-900 in-data-[theme=light]:bg-(--color-sidebar) ">
+          <div className="absolute top-[-10px] left-0 right-0 h-3 bg-gradient-to-t from-primary-900 in-data-[theme=light]:from-(--color-sidebar) to-transparent pointer-events-none z-10" />
+          <div className="border-t-2 border-primary-500 pb-6 bg-primary-900 in-data-[theme=light]:bg-(--color-sidebar)" />
           <SidebarMenu isOpen={isOpenConversationsSidebar} />
         </div>
 

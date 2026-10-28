@@ -98,11 +98,13 @@ export const useUpdateProfile = (onSuccess?: () => void) => {
     mutationKey: [MUTATION_KEYS.profile],
     mutationFn: (body: ProfileUpdate) => httpUpdateProfile(body),
     onError: (error) => {
-      toast.error(error.message);
+      toast.error(error.message, { testId: "toast-profile-error" });
     },
     onSuccess: () => {
       onSuccess?.();
-      toast.success("Profile updated successfully");
+      toast.success("Profile updated successfully", {
+        testId: "toast-profile-updated",
+      });
       queryClient.invalidateQueries({
         queryKey: [QUERY_KEYS.profile],
       });

@@ -81,7 +81,7 @@ export const SendFeedbackDialog = ({
           className="flex flex-col gap-4 h-full overflow-hidden"
         >
           <div className="flex flex-col gap-2 flex-none">
-            <div className="w-full border-primary-400 border-2 flex flex-col bg-primary-900">
+            <div className="w-full border-primary-400 border-2 flex flex-col bg-primary-900 in-data-[theme=light]:focus-within:border-focus">
               <Textarea
                 ref={textareaRef}
                 value={feedbackValue}

@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { faScrewdriverWrench } from "@fortawesome/free-solid-svg-icons";
 import {
   Menubar,
@@ -26,6 +27,10 @@ export const ToolkitsMenuBar = ({
   const { openDynamicSidebar, content, isOpenDynamicSidebar } = useSidebar();
   const { isRunning } = useTour();
   const { data, isPending, isError } = useGetMcpServers();
+  // A mouse pick must not hand focus back to the trigger: the browser then
+  // matches :focus-visible and paints the light focus ring on the open item.
+  // A keyboard close keeps the focus return, and with it the ring.
+  const closedByPointer = useRef(false);
 
   const isToolkitsSidebarOpen =
     isOpenDynamicSidebar && content?.type === "toolkits";
@@ -49,8 +54,8 @@ export const ToolkitsMenuBar = ({
       data-testid="sidebar-toolkits"
       className={`flex items-center gap-2 rounded-lg p-2 text-natural-50 cursor-pointer ${
         isToolkitsSidebarOpen
-          ? "bg-primary-600/60 text-white"
-          : "hover:bg-primary-400 hover:text-white"
+          ? "bg-primary-600/60 in-data-[theme=light]:bg-highlight text-natural-50"
+          : "hover:bg-highlight hover:text-natural-50"
       } ${className}`}
     >
       <FontAwesomeIcon icon={faScrewdriverWrench} className="w-4 h-4" />
@@ -81,12 +86,25 @@ export const ToolkitsMenuBar = ({
           triggerContent
         )}
 
-        <MenubarContent side="bottom" className="flex flex-col gap-1">
+        <MenubarContent
+          side="bottom"
+          className="flex flex-col gap-1"
+          onPointerDown={() => {
+            closedByPointer.current = true;
+          }}
+          onKeyDown={() => {
+            closedByPointer.current = false;
+          }}
+          onCloseAutoFocus={(event) => {
+            if (closedByPointer.current) event.preventDefault();
+            closedByPointer.current = false;
+          }}
+        >
           <MenubarItem
             data-testid="sidebar-toolkits-shared"
             onClick={() => openDynamicSidebar({ type: "toolkits" })}
             className={cn(
-              content?.type === "toolkits" && "bg-primary-500 text-white"
+              content?.type === "toolkits" && "bg-primary-500 text-natural-50"
             )}
           >
             <span>Shared toolkits</span>

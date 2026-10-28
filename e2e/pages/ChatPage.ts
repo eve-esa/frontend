@@ -17,7 +17,10 @@ export class ChatPage {
   readonly userMenu: Locator;
   readonly userMenuEmail: Locator;
   readonly apiKeysEntry: Locator;
+  /** The chat column: the ground behind the message list and the composer. */
+  readonly chatGround: Locator;
   readonly sidebarToggle: Locator;
+  /** The sidebar toggle icon in the sidebar header: it paints nothing, so it sits on the sidebar ground. */
   readonly sidebarToggleIcon: Locator;
 
   constructor(readonly page: Page) {
@@ -29,6 +32,7 @@ export class ChatPage {
     this.userMenu = page.getByTestId("user-menu");
     this.userMenuEmail = page.getByTestId("user-menu-email");
     this.apiKeysEntry = page.getByTestId("sidebar-api-keys");
+    this.chatGround = page.getByTestId("chat-ground");
     this.sidebarToggle = page.getByTestId("sidebar-toggle");
     this.sidebarToggleIcon = page.getByTestId("sidebar-toggle-icon");
   }
@@ -54,8 +58,15 @@ export class ChatPage {
     await this.composer.waitReady();
   }
 
+  /**
+   * Opens the empty chat and waits until its composer is the one on screen. Right after the
+   * click the composer of the previous conversation is still visible: a read on it lands on
+   * an element React is about to detach.
+   */
   async newChat(): Promise<void> {
     await this.newChatButton.click();
+    await expect.poll(() => this.conversationId(), { timeout: 15_000 }).toBeNull();
+    await expect(this.messages.messages).toHaveCount(0, { timeout: 15_000 });
     await this.composer.waitReady();
   }
 

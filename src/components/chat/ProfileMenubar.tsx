@@ -3,13 +3,25 @@ import {
   Menubar,
   MenubarContent,
   MenubarItem,
+  MenubarLabel,
   MenubarMenu,
+  MenubarRadioGroup,
+  MenubarRadioItem,
+  MenubarSeparator,
   MenubarTrigger,
 } from "@/components/ui/Menubar";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Tooltip } from "../ui/Tooltip";
 import { configValue, type ConfigKey } from "@/utilities/runtimeConfig";
+import { useTheme } from "@/hooks/useTheme";
+import { parseThemeChoice, type ThemeChoice } from "@/utilities/theme";
+
+const THEME_OPTIONS: { value: ThemeChoice; label: string }[] = [
+  { value: "system", label: "System" },
+  { value: "light", label: "Light" },
+  { value: "dark", label: "Dark" },
+];
 
 type ProfileMenubarProps = {
   email?: string;
@@ -30,6 +42,8 @@ export const ProfileMenubar = ({
   onLogoutClick,
   isLoadingProfile,
 }: ProfileMenubarProps) => {
+  const theme = useTheme();
+
   // openLink rather than window.open directly: an unconfigured URL used to open
   // about:blank, which looks like a broken app rather than a missing setting.
   const openLink = (key: ConfigKey) => () => {
@@ -46,7 +60,7 @@ export const ProfileMenubar = ({
   const triggerContent = (
     <MenubarTrigger
       data-testid="user-menu"
-      className={`flex items-center gap-2 rounded-lg hover:bg-primary-400 p-2 text-natural-50 hover:text-white cursor-pointer ${className}`}
+      className={`flex items-center gap-2 rounded-lg hover:bg-highlight p-2 text-natural-50 cursor-pointer ${className}`}
     >
       <FontAwesomeIcon
         icon={faUser}
@@ -101,6 +115,31 @@ export const ProfileMenubar = ({
           <MenubarItem data-testid="user-menu-privacy" onClick={onPrivacyPolicyClick}>
             <span>Privacy Policy</span>
           </MenubarItem>
+          {theme.enabled && (
+            <>
+              <MenubarSeparator />
+              <MenubarLabel>Theme</MenubarLabel>
+              <MenubarRadioGroup
+                aria-label="Theme"
+                data-testid="theme-options"
+                value={theme.choice}
+                onValueChange={(value) =>
+                  theme.setChoice(parseThemeChoice(value))
+                }
+              >
+                {THEME_OPTIONS.map((option) => (
+                  <MenubarRadioItem
+                    key={option.value}
+                    value={option.value}
+                    data-testid={`theme-option-${option.value}`}
+                  >
+                    {option.label}
+                  </MenubarRadioItem>
+                ))}
+              </MenubarRadioGroup>
+              <MenubarSeparator />
+            </>
+          )}
           <MenubarItem data-testid="user-menu-logout" onClick={onLogoutClick}>
             <span className="text-danger-300">Logout</span>
           </MenubarItem>

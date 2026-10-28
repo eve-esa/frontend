@@ -288,7 +288,10 @@ export const ImageLightbox = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         data-testid="image-lightbox"
-        className="w-fit max-w-[92vw] sm:max-w-[92vw] border-0 bg-transparent p-2 shadow-none"
+        // Images read better on dark: light keeps the dark overlay colour,
+        // black at 65 %, instead of the shared scrim (docs/BRAND.md).
+        overlayClassName="in-data-[theme=light]:bg-natural-1000/65"
+        className="w-fit max-w-[92vw] sm:max-w-[92vw] border-0 bg-transparent p-2 shadow-none in-data-[theme=light]:text-on-accent"
       >
         <DialogTitle className="sr-only">
           {current.alt || "Image preview"}
@@ -364,7 +367,7 @@ export const ImageLightbox = ({
                   event.stopPropagation();
                   goPrev();
                 }}
-                className="absolute left-2 top-1/2 z-10 h-8 w-8 -translate-y-1/2 cursor-pointer p-0 text-natural-50"
+                className="absolute left-2 top-1/2 z-10 h-8 w-8 -translate-y-1/2 cursor-pointer p-0 text-natural-50 in-data-[theme=light]:text-on-accent in-data-[theme=light]:enabled:hover:text-on-accent"
               >
                 <FontAwesomeIcon icon={faChevronLeft} className="size-4" />
               </Button>
@@ -378,7 +381,7 @@ export const ImageLightbox = ({
                   event.stopPropagation();
                   goNext();
                 }}
-                className="absolute right-2 top-1/2 z-10 h-8 w-8 -translate-y-1/2 cursor-pointer p-0 text-natural-50"
+                className="absolute right-2 top-1/2 z-10 h-8 w-8 -translate-y-1/2 cursor-pointer p-0 text-natural-50 in-data-[theme=light]:text-on-accent in-data-[theme=light]:enabled:hover:text-on-accent"
               >
                 <FontAwesomeIcon icon={faChevronRight} className="size-4" />
               </Button>
@@ -399,7 +402,7 @@ export const ImageLightbox = ({
               aria-label="Zoom out"
               disabled={transform.zoom <= MIN_ZOOM}
               onClick={() => zoomBy(-ZOOM_STEP)}
-              className="h-8 w-8 p-0 cursor-pointer text-natural-50"
+              className="h-8 w-8 p-0 cursor-pointer text-natural-50 in-data-[theme=light]:text-on-accent in-data-[theme=light]:enabled:hover:text-on-accent"
             >
               <FontAwesomeIcon icon={faMagnifyingGlassMinus} className="size-4" />
             </Button>
@@ -411,7 +414,7 @@ export const ImageLightbox = ({
               aria-label="Zoom in"
               disabled={transform.zoom >= MAX_ZOOM}
               onClick={() => zoomBy(ZOOM_STEP)}
-              className="h-8 w-8 p-0 cursor-pointer text-natural-50"
+              className="h-8 w-8 p-0 cursor-pointer text-natural-50 in-data-[theme=light]:text-on-accent in-data-[theme=light]:enabled:hover:text-on-accent"
             >
               <FontAwesomeIcon icon={faMagnifyingGlassPlus} className="size-4" />
             </Button>
@@ -423,7 +426,7 @@ export const ImageLightbox = ({
               aria-label="Reset zoom"
               disabled={!isZoomed && transform.x === 0 && transform.y === 0}
               onClick={() => setTransform(INITIAL_TRANSFORM)}
-              className="h-8 w-8 p-0 cursor-pointer text-natural-50"
+              className="h-8 w-8 p-0 cursor-pointer text-natural-50 in-data-[theme=light]:text-on-accent in-data-[theme=light]:enabled:hover:text-on-accent"
             >
               <FontAwesomeIcon icon={faArrowsRotate} className="size-4" />
             </Button>
@@ -434,7 +437,7 @@ export const ImageLightbox = ({
               data-testid="lightbox-fullscreen"
               aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
               onClick={toggleFullscreen}
-              className="h-8 w-8 p-0 cursor-pointer text-natural-50"
+              className="h-8 w-8 p-0 cursor-pointer text-natural-50 in-data-[theme=light]:text-on-accent in-data-[theme=light]:enabled:hover:text-on-accent"
             >
               <FontAwesomeIcon
                 icon={isFullscreen ? faCompress : faExpand}

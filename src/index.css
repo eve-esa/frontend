@@ -52,6 +52,34 @@
   --color-success-50: #08af08;
   --color-success-100: #00a67c;
   --color-success-200: #00ae9d;
+
+  /* Text on a saturated fill (destructive button, error and success toasts).
+     White in both themes: the natural scale flips in the light theme, this
+     one does not. */
+  --color-on-accent: #ffffff;
+  /* Hover and focus fill under text (menu items, sidebar entries); in the
+     light theme also the fill of the select trigger and the stepper. Same
+     value as primary-400 in the dark theme; split from it because in the
+     light theme primary-400 is a border and too dark to read text on. */
+  --color-highlight: #335e6f;
+  /* Primary button fill and its hover; text on it is on-accent. */
+  --color-cta: #003247;
+  --color-cta-hover: #002b3d;
+  /* Border of form controls (inputs, select trigger and menu, model picker)
+     and the keyboard focus ring. Same value as primary-400 in the dark
+     theme; split from it because in the light theme primary-400 is the card
+     edge, Silver #8197A6, under the control weight and not a focus colour. */
+  --color-control: #335e6f;
+  --color-focus: #335e6f;
+  /* Composer edge, 2px: Deep Space -1 in both themes. Split from
+     primary-400, which is the card edge in the light theme, Silver #8197A6. */
+  --color-composer-edge: #335e6f;
+  /* Composer token usage ring, arc and (at 32 %) track. The light block sets
+     it to focus, but light paints the arc in focus and the track in
+     primary-500 by class, so only dark reads this token. */
+  --color-token-ring: #00bfa5;
+  /* Onboarding tour arrow. Light: cta, the same fill as the tour button. */
+  --color-tour-arrow: #335e6f;
   --animate-fade-in: fadeIn 0.2s ease-out;
   --animate-fade-out: fadeOut 0.2s ease-in;
   --animate-collapsible-down: collapsibleDown 0.15s ease-out;
@@ -112,6 +140,119 @@
   }
 }
 
+/* Light theme (FEATURE_THEME_SWITCH), palette v2 in docs/BRAND.md of the
+   meta repo (ESA guidelines 2026-06, pp. 22 to 24, and philab.esa.int):
+   surfaces white, sidebar Phi-lab light grey, active fills Silver tints,
+   card edges Silver, controls Silver +1, text Deep Space, secondary text Deep
+   Space -1, focus Pure Teal +1; goal colours take their +1 or +2 shade
+   where text needs 4.5:1 on white. The palette numbers are roles, not a
+   lightness ramp, so each token is re-declared by what it paints:
+   natural-50 to 300 are text; primary-200, 500 to 900 and natural-900 are
+   surfaces; primary-400 is the card edge. Light keeps the dark structure
+   (radii, edge widths, fill, shadows, blur, sizes): only colours change
+   here, no light rule changes a shape or a weight. Without data-theme
+   (flag off) none of this applies and the dark look stays as it was. */
+@layer base {
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+  }
+
+  :root[data-theme="light"] {
+    color-scheme: light;
+
+    /* Palette v2 (ESA guidelines, philab.esa.int). Roles, not a ramp. */
+
+    /* Text: Deep Space; secondary text and muted labels: Deep Space -1 */
+    --color-natural-50: #003247;
+    --color-natural-100: #003247;
+    --color-natural-200: #335e6f;
+    --color-natural-300: #335e6f;
+    --color-primary-50: #335e6f;
+    --color-primary-300: #335e6f;
+    /* Link text and its hover */
+    --color-primary-100: #006762;
+
+    /* Messages, composer, cards, inputs, dialogs, menus */
+    --color-natural-900: #ffffff;
+    --color-primary-200: #ffffff;
+    --color-primary-600: #ffffff;
+    --color-primary-900: #ffffff;
+    /* Sidebars (left list, right panel): white. Light only, read through
+       in-data-[theme=light] classes in the sidebar parts. */
+    --color-sidebar: #ffffff;
+    /* Chat area ground, behind messages and composer: Phi-lab light grey.
+       Light only, read through in-data-[theme=light] on the chat root. */
+    --color-chat-ground: #f5f5f5;
+    /* Chips, code and drop fills, token ring track: Silver 18 % over
+       #F5F5F5 (focus arc 3.2:1 on it) */
+    --color-primary-500: #e0e4e7;
+    --color-primary-700: #e0e4e7;
+    --color-primary-800: #e0e4e7;
+    /* Active and hover item on the white sidebar and menus, and the fill
+       of the select trigger and the stepper: Silver 18 % over white (text
+       11.4:1, secondary text 6.0:1) */
+    --color-highlight: #e8ecef;
+    /* Primary button: Deep Space, white label */
+    --color-cta: #003247;
+    --color-cta-hover: #335e6f;
+    /* Onboarding tour arrow: cta, like the tour button */
+    --color-tour-arrow: #003247;
+    /* Dialog scrim: Deep Space at 40 %, with the dark blur. Light only, read
+       through in-data-[theme=light] on the dialog overlay. */
+    --color-scrim: rgb(0 50 71 / 0.4);
+
+    /* Card edge, dividers, slider track: Silver (3.0:1 on
+       white, 2.8:1 on #F5F5F5), the weight the dark edge has on its
+       surfaces (about 2.5:1). Alpha fills on it stay light: /20 #E6EAED,
+       /40 #CDD5DB, Deep Space text 11.2:1 and 9.1:1. */
+    --color-primary-400: #8197a6;
+    /* Control border and switch track: Silver +1, Silver with 10 % Deep
+       Space (3.5:1 on white, 3.2:1 on #F5F5F5) */
+    --color-control: #748d9c;
+    /* Focus ring and meaningful UI marks: Pure Teal +1 (4.1:1 on white) */
+    --color-focus: #008e7a;
+    /* Composer token ring: the focus value, so the token matches what the
+       light arc paints (arc in focus, track in primary-500). */
+    --color-token-ring: #008e7a;
+    /* Placeholder text in every field: Phi-lab grey (4.6:1 on white) */
+    --color-placeholder: #757575;
+
+    /* Accent: decorative marks only (loading dot, checked switch). Never
+       text, never a focus indicator. */
+    --color-success-200: #00ae9d;
+    /* Success and link text: Pure Teal +2 */
+    --color-success-100: #006762;
+    /* Danger: Excite Red +1, deep +2 */
+    --color-danger-100: #cf1d39;
+    --color-danger-300: #cf1d39;
+    --color-danger-400: #cf1d39;
+    --color-danger-500: #960136;
+    /* Danger fills only (drop reject, failed upload), always with alpha:
+       Excite Red, pure tone. At 20 % and 40 % over white it paints the
+       tints #FBD1D5 and #F8A4AC. */
+    --color-danger-200: #ed1b2f;
+
+    --color-trace-agent: #00619e;
+    --color-trace-tool: #90278e;
+    --color-trace-answer: #006762;
+
+    --color-json-key: #00619e;
+    /* Trusty Azure +2: a string is data, not an error */
+    --color-json-string: #1e3378;
+    --color-json-number: #006762;
+    --color-json-boolean: #90278e;
+    --color-json-null: #335e6f;
+
+    /* Tailwind palette colours still used directly. neutral-200 is Select
+       menu text (source card edges use primary-400 in light). neutral-400 is
+       the uploader drop zone edge: control border, Silver +1. */
+    --color-neutral-200: #335e6f;
+    --color-neutral-400: #748d9c;
+    --color-neutral-900: #ffffff;
+    --color-red-500: #cf1d39;
+  }
+}
+
 /* Custom Scrollbar Styles */
 @layer components {
   ::-webkit-scrollbar {
@@ -138,19 +279,31 @@
     border: 3px solid transparent;
     background-clip: content-box;
   }
+
+  /* Light: chrome recedes. Thumb in the control border, hover in the
+     secondary text tone. */
+  :root[data-theme="light"] ::-webkit-scrollbar-thumb {
+    background: var(--color-control);
+    background-clip: content-box;
+  }
+
+  :root[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-natural-200);
+    background-clip: content-box;
+  }
 }
 
 /* Custom Sonner toast styles */
 @layer components {
   .toaster [data-sonner-toast][data-type="error"] {
     background: var(--color-danger-300) !important;
-    color: var(--color-natural-50) !important;
+    color: var(--color-on-accent) !important;
     border: 1px solid var(--color-danger-400) !important;
   }
 
   .toaster [data-sonner-toast][data-type="success"] {
     background: var(--color-success-100) !important;
-    color: var(--color-natural-50) !important;
+    color: var(--color-on-accent) !important;
     border: 2px solid var(--color-success-200) !important;
   }
 
@@ -174,6 +327,25 @@
     right: -18px !important;
     top: -4px !important;
     left: auto !important;
+  }
+}
+
+/* Light theme placeholders: one colour for every field, native
+   ::placeholder and the Radix Select trigger with no value
+   ([data-placeholder]). In the utilities layer and after the generated
+   utilities, with :root[data-theme] specificity, so it beats each
+   component's own placeholder: and data-[placeholder]: classes. Dark (and
+   flag off) keeps those classes untouched. opacity only on ::placeholder
+   (Firefox dims it): on [data-placeholder] it would beat
+   disabled:opacity-50 on an empty Select trigger. */
+@layer utilities {
+  :root[data-theme="light"] ::placeholder,
+  :root[data-theme="light"] [data-placeholder] {
+    color: var(--color-placeholder);
+  }
+
+  :root[data-theme="light"] ::placeholder {
+    opacity: 1;
   }
 }
 
@@ -290,7 +462,7 @@ body:has(.react-joyride__overlay) {
 
 /* Style the skip button */
 .react-joyride__tooltip button[data-action="skip"] {
-  color: var(--color-natural-200) !important;
+  color: #d2dadc !important;
   text-decoration: underline !important;
   background: transparent !important;
   border: none !important;
@@ -300,7 +472,7 @@ body:has(.react-joyride__overlay) {
 }
 
 .react-joyride__tooltip button[data-action="skip"]:hover {
-  color: var(--color-natural-50) !important;
+  color: #ffffff !important;
 }
 
 /* Style the navigation buttons (previous and next) */

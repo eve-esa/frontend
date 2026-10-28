@@ -8,12 +8,15 @@ type ExpandablePlainTextProps = {
   minLength?: number;
   // Extra classes for the text itself, e.g. a monospace font for tool output.
   textClassName?: string;
+  // Extra classes for the clipped box, e.g. rounded-none inside the agent trace.
+  boxClassName?: string;
 };
 
 export const ExpandablePlainText = ({
   text,
   minLength = DEFAULT_MIN_LENGTH,
   textClassName,
+  boxClassName,
 }: ExpandablePlainTextProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [contentHeight, setContentHeight] = useState(0);
@@ -28,9 +31,12 @@ export const ExpandablePlainText = ({
   const canExpand = text.length > minLength;
 
   return (
-    <div className="text-xs 3xl:text-xl text-natural-200 bg-primary-200 border-l border-neutral-200">
+    <div className="text-xs 3xl:text-xl text-natural-200 bg-primary-200 border-l border-neutral-200 in-data-[theme=light]:border-primary-400">
       <div
-        className="relative text-sm leading-6 py-1 px-2 pr-1 rounded-tr-md rounded-br-md overflow-hidden transition-all duration-300 ease-in-out"
+        className={cn(
+          "relative text-sm leading-6 py-1 px-2 pr-1 rounded-tr-md rounded-br-md overflow-hidden transition-all duration-300 ease-in-out",
+          boxClassName,
+        )}
         style={{
           maxHeight: isExpanded ? `${contentHeight + 60}px` : "8rem",
         }}
