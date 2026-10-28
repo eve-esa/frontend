@@ -115,6 +115,63 @@ export class MessagePanel {
     return this.last.getByTestId("message-loading");
   }
 
+  /** The user text of the last turn, clamped to six lines until expanded. */
+  get lastUserInput(): Locator {
+    return this.last.getByTestId("message-user-input");
+  }
+
+  /** The Show more / Show less toggle under the user text of the last turn. */
+  get lastShowMore(): Locator {
+    return this.last.getByTestId("message-show-more");
+  }
+
+  /**
+   * Moves keyboard focus to the Show more toggle of the last turn the way a keyboard user
+   * does: a click on the user text sets the sequential focus starting point (the text itself
+   * is not focusable), then one Tab must land on the toggle.
+   */
+  async tabToShowMore(): Promise<void> {
+    await this.lastUserInput.click();
+    await this.page.keyboard.press("Tab");
+  }
+
+  /** Whether the Show more toggle of the last turn matches `:focus-visible`. */
+  showMoreFocusVisible(): Promise<boolean> {
+    return this.lastShowMore.evaluate((el) => el.matches(":focus-visible"));
+  }
+
+  /**
+   * Paints the focus ring colour of the Show more toggle as the text colour of a probe placed
+   * in the bubble next to it, so the ring can be measured against the bubble with the same
+   * contrast helper as text. Returns the probe; `removeRingProbe` takes it away.
+   */
+  async ringProbe(): Promise<Locator> {
+    await this.lastShowMore.evaluate((el) => {
+      const shadow = getComputedStyle(el).boxShadow;
+      // Each shadow is "<color> <x> <y> <blur> <spread>"; the ring is the one with a spread.
+      const ring = shadow
+        .split(/,(?![^()]*\))/)
+        .map((part) => part.trim())
+        .find((part) => /\s[1-9][\d.]*px$/.test(part));
+      const color = ring?.match(/^(?:[a-z]+\([^()]*\)|#[0-9a-f]+)/i)?.[0] ?? "transparent";
+      const probe = document.createElement("span");
+      probe.dataset.testid = "e2e-ring-probe";
+      probe.textContent = "ring";
+      probe.style.color = color;
+      el.parentElement?.appendChild(probe);
+    });
+    return this.last.getByTestId("e2e-ring-probe");
+  }
+
+  async removeRingProbe(): Promise<void> {
+    await this.last.getByTestId("e2e-ring-probe").evaluate((el) => el.remove());
+  }
+
+  /** Activates the focused element with Enter, as a keyboard user toggles Show more. */
+  async pressEnter(): Promise<void> {
+    await this.page.keyboard.press("Enter");
+  }
+
   async copyAnswer(): Promise<void> {
     await this.last.getByTestId("message-copy").click();
   }
