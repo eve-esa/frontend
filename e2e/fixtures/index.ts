@@ -114,6 +114,8 @@ export type ApiResponse<T> = { status: number; body: T };
 export type Api = {
   /** GET `/api<path>` with the bearer the signed-in app holds. */
   get<T = unknown>(path: string): Promise<ApiResponse<T>>;
+  /** POST `/api<path>` with a JSON body and the same bearer. Throws on a production target. */
+  post<T = unknown>(path: string, body: unknown): Promise<ApiResponse<T>>;
   /** PATCH `/api<path>` with a JSON body and the same bearer. Throws on a production target. */
   patch<T = unknown>(path: string, body: unknown): Promise<ApiResponse<T>>;
   /** DELETE `/api<path>` with the same bearer, for cleanup. Throws on a production target. */
@@ -173,6 +175,15 @@ export function pageApi(page: Page, baseURL: string, projectName: string): Api {
       throw new Error(`refusing ${method} ${apiPath}: ${baseURL} is a production target`);
     }
   };
+  const post = async <T>(apiPath: string, data: unknown): Promise<ApiResponse<T>> => {
+    refuseOnProd("POST", apiPath);
+    return toApiResponse<T>(
+      await page.request.post(`${apiBase}${apiPath}`, {
+        headers: { Authorization: `Bearer ${await bearer()}` },
+        data,
+      }),
+    );
+  };
   const patch = async <T>(apiPath: string, data: unknown): Promise<ApiResponse<T>> => {
     refuseOnProd("PATCH", apiPath);
     return toApiResponse<T>(
@@ -190,7 +201,7 @@ export function pageApi(page: Page, baseURL: string, projectName: string): Api {
       }),
     );
   };
-  return { get, patch, delete: del, bearer };
+  return { get, post, patch, delete: del, bearer };
 }
 
 type TestFixtures = {

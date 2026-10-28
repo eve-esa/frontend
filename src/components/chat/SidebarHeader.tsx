@@ -6,6 +6,9 @@ import { faClose, faPlus } from "@fortawesome/free-solid-svg-icons";
 import sidebar from "@/assets/images/sidebar.svg";
 import { Tooltip, TooltipTrigger } from "@/components/ui/Tooltip";
 import { Badge } from "./Badge";
+import type { MouseEvent } from "react";
+import { Link } from "react-router-dom";
+import { routes } from "@/utilities/routes";
 
 type SidebarHeaderProps = {
   isOpen: boolean;
@@ -22,6 +25,23 @@ export const SidebarHeader = ({
   handleNewChat,
   onDiscoverEve,
 }: SidebarHeaderProps) => {
+  // The logo goes home the way New chat does (same handler, so the sidebar
+  // closes on mobile too). A modified or middle click keeps the browser
+  // default and opens home in a new tab.
+  const handleLogoClick = (event: MouseEvent<HTMLAnchorElement>) => {
+    if (
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
+      return;
+    }
+    event.preventDefault();
+    handleNewChat();
+  };
+
   return (
     <div className="flex flex-col gap-8 px-4">
       {!isOpen && (
@@ -57,12 +77,18 @@ export const SidebarHeader = ({
       )}
       {isOpen && (
         <div className="flex justify-between items-center gap-2 w-full">
-          <div className="relative">
+          <Link
+            to={routes.EMPTY_CHAT.path}
+            onClick={handleLogoClick}
+            aria-label="EVE home"
+            data-testid="brand-home-link"
+            className="relative outline-none focus-visible:ring-2 focus-visible:ring-natural-50"
+          >
             <img src={logo} alt="logo" className="h-[48px] 3xl:h-[70px]" />
             <div className="absolute bottom-[-4px] left-[20px] 3xl:left-[30px] 3xl:bottom-[-10px]">
               <Badge />
             </div>
-          </div>
+          </Link>
 
           <div
             className="cursor-pointer flex justify-center"
