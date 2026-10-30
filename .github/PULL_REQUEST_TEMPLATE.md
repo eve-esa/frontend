@@ -202,3 +202,5 @@ Related to #(issue number)
 ---
 
 **Note for Reviewers**: Please ensure all checkboxes are marked before approving this PR.
+
+<!-- Reviews use Conventional Comments: see the Code review section of CONTRIBUTING.md. -->
