@@ -508,7 +508,8 @@ body:has(.react-joyride__overlay) {
   padding-right: 2.5em;
 }
 
-.smarttext .katex-display > .katex > .katex-html > .tag {
+/* katex 0.18 prefixed its classes: the equation number is .katex-tag. */
+.smarttext .katex-display > .katex > .katex-html > .katex-tag {
   position: relative !important;
   margin-left: 15px;
 }

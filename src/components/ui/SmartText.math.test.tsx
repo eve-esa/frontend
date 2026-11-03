@@ -30,6 +30,16 @@ describe("SmartText math", () => {
     expect(html).not.toContain("katex-error");
   });
 
+  it("emits the equation number class that index.css targets", () => {
+    // index.css styles `.katex-display > .katex > .katex-html > .katex-tag`:
+    // a katex release that renames the class must fail here, not in the UI.
+    const html = render("$$\nE = mc^2 \\tag{1}\n$$");
+    expect(html).toContain('class="katex-display"');
+    expect(html).toContain('class="katex-tag"');
+    expect(html).not.toContain('class="tag"');
+    expect(html).not.toContain("katex-error");
+  });
+
   it("loads the same katex copy for rendering as the app imports for the CSS", () => {
     const require = createRequire(import.meta.url);
     const fromRehype = require.resolve("katex/package.json", {
