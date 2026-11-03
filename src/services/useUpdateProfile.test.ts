@@ -53,6 +53,20 @@ describe("toProfileFormValues, what the dialog is prefilled with", () => {
     expect(values.last_name).toBeUndefined();
   });
 
+  it("keeps a real name and accepts a profile with no name keys at all", () => {
+    const named = RequiredProfileSchema.safeParse({
+      first_name: " Ada ",
+      country: "Italy",
+      institution: "ESA ESRIN",
+    });
+    expect(named.success).toBe(true);
+    expect(named.data?.first_name).toBe(" Ada ");
+    const unnamed = RequiredProfileSchema.safeParse({ country: "Italy", institution: "ESA ESRIN" });
+    expect(unnamed.success).toBe(true);
+    expect(unnamed.data).not.toHaveProperty("first_name");
+    expect(unnamed.data).not.toHaveProperty("last_name");
+  });
+
   it("lets a profile with empty names save once country and institution are set", () => {
     // What react-hook-form holds: a name input with no default reads back "" from the DOM.
     const edited = { first_name: "", last_name: "  ", country: "Italy", institution: "ESA ESRIN" };
