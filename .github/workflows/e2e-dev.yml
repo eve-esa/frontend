@@ -61,7 +61,7 @@ jobs:
     environment: "${{ inputs.target == 'staging' && 'esa-eve-staging' || 'esa-eve-dev' }}"
     container:
       # Same Playwright version as the devDependency: the browsers ship in the image.
-      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
     env:
       CI: "true"
       E2E_EMAIL: ${{ secrets.E2E_EMAIL }}
