@@ -30,6 +30,7 @@ import {
   type CreateMessageResponse,
 } from "./agenticMessage";
 import { getSelectedMcpServerNames } from "@/utilities/mcpServers";
+import { getSelectedSkillNames } from "@/utilities/skills";
 import { applyToolCall, applyToolResult } from "@/utilities/toolActivity";
 import type { MessagePipeline } from "@/utilities/messageEndpoint";
 import { shouldToastStreamError } from "@/utilities/streamError";
@@ -51,11 +52,13 @@ import {
   withBusyRetry,
 } from "./serviceBusy";
 
-// FEATURE_AGENTIC_CHAT. The classic pipeline ignores the MCP selection, so it
-// is read only for agentic turns.
+// FEATURE_AGENTIC_CHAT. The classic pipeline ignores MCP servers and skills,
+// so both are read only for agentic turns.
 const PIPELINE: MessagePipeline = AGENTIC_CHAT_ENABLED ? "agentic" : "classic";
 const selectedMcpServers = () =>
   PIPELINE === "agentic" ? getSelectedMcpServerNames() : [];
+const selectedSkills = () =>
+  PIPELINE === "agentic" ? getSelectedSkillNames() : [];
 
 type SendRequestProps = {
   query: string;
@@ -79,6 +82,7 @@ export const sendRequest = async ({
     mode: "sync",
     pipeline: PIPELINE,
     mcpServers: selectedMcpServers(),
+    skills: selectedSkills(),
     query,
     settings,
     modelSelection,
@@ -145,6 +149,7 @@ export const useSendRequest = (conversationId?: string) => {
         mode: "stream",
         pipeline: PIPELINE,
         mcpServers: selectedMcpServers(),
+        skills: selectedSkills(),
         query,
         settings,
         modelSelection,

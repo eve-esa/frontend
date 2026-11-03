@@ -10,6 +10,7 @@ import {
   LOCAL_STORAGE_PRIVATE_COLLECTIONS,
   LOCAL_STORAGE_PUBLIC_COLLECTIONS,
   LOCAL_STORAGE_SETTINGS,
+  LOCAL_STORAGE_SKILLS,
 } from "@/utilities/localStorage";
 
 const MODELS: ModelListResponse = {
@@ -34,18 +35,21 @@ const seed = (key: string, value: unknown) =>
 // The flags themselves are covered in utilities/runtimeConfig.test.
 let buildGenerationPayload: typeof import("./agenticMessage").buildGenerationPayload;
 let getSelectedMcpServerNames: typeof import("@/utilities/mcpServers").getSelectedMcpServerNames;
+let getSelectedSkillNames: typeof import("@/utilities/skills").getSelectedSkillNames;
 
 // Mirrors useSendRequest: settings come from the caller (read from storage),
 // the endpoint is always agentic, MCP selection only fills public_mcp_servers,
-// and collections are read by the builder.
+// skill selection only fills skills, and collections are read by the builder.
 const buildRequest = (conversationId: string) => {
   const settings = JSON.parse(
     localStorage.getItem(LOCAL_STORAGE_SETTINGS) as string,
   ) as AdvancedSettingsValidation;
   const mcpServers = getSelectedMcpServerNames();
+  const skills = getSelectedSkillNames();
   const { url, extraPayload } = resolveMessageEndpoint(
     conversationId,
     mcpServers,
+    skills,
     "stream",
     "agentic",
   );
@@ -65,6 +69,7 @@ beforeEach(async () => {
   });
   ({ buildGenerationPayload } = await import("./agenticMessage"));
   ({ getSelectedMcpServerNames } = await import("@/utilities/mcpServers"));
+  ({ getSelectedSkillNames } = await import("@/utilities/skills"));
 
   installMemoryLocalStorage();
   seed(LOCAL_STORAGE_SETTINGS, SETTINGS);
@@ -109,6 +114,7 @@ describe("agentic request (no MCP servers)", () => {
 
     expect(url).toBe("/conversations/conv-1/stream-generate-agentic");
     expect(payload).not.toHaveProperty("public_mcp_servers");
+    expect(payload).not.toHaveProperty("skills");
   });
 });
 
@@ -128,6 +134,26 @@ describe("agentic request (MCP servers selected)", () => {
         private_collections: ["my-private"],
         public_mcp_servers: ["weather"],
       },
+    });
+  });
+
+  it("omits skills when none are selected", () => {
+    seed(LOCAL_STORAGE_MCP_SERVERS, ["weather"]);
+    seed(LOCAL_STORAGE_SKILLS, []);
+
+    const { payload } = buildRequest("conv-2");
+
+    expect(payload).not.toHaveProperty("skills");
+    expect(payload).toMatchObject({ public_mcp_servers: ["weather"] });
+  });
+
+  it("sends roll-dice and still sends public_mcp_servers", () => {
+    seed(LOCAL_STORAGE_MCP_SERVERS, ["weather"]);
+    seed(LOCAL_STORAGE_SKILLS, ["roll-dice"]);
+
+    expect(buildRequest("conv-2").payload).toMatchObject({
+      public_mcp_servers: ["weather"],
+      skills: ["roll-dice"],
     });
   });
 });
@@ -191,6 +217,7 @@ describe("classification filters with the flag off", () => {
     const { url, extraPayload } = resolveMessageEndpoint(
       conversationId,
       getSelectedMcpServerNames(),
+      getSelectedSkillNames(),
       "stream",
       "agentic",
     );
@@ -215,6 +242,7 @@ describe("classification filters with the flag off", () => {
     });
     ({ buildGenerationPayload } = await import("./agenticMessage"));
     ({ getSelectedMcpServerNames } = await import("@/utilities/mcpServers"));
+    ({ getSelectedSkillNames } = await import("@/utilities/skills"));
     ({ adaptSettingsForRequest } = await import("@/utilities/helpers"));
     ({ readStoredSettings } = await import(
       "@/utilities/messageDefaultSettings"
@@ -289,12 +317,14 @@ describe("buildMessageRequest", () => {
     mode: "stream" | "sync",
     mcpServers: string[],
     attachments?: (typeof ATTACHMENT)[],
+    skills: string[] = [],
   ) =>
     buildMessageRequest({
       conversationId: "conv-1",
       mode,
       pipeline,
       mcpServers,
+      skills,
       attachments,
       query: "hello",
       settings: SETTINGS,
@@ -357,6 +387,7 @@ describe("buildMessageRequest", () => {
         mode: "stream",
         pipeline,
         mcpServers: [],
+        skills: [],
         query: "hello",
         settings: SETTINGS,
         modelSelection: custom,
@@ -380,5 +411,43 @@ describe("buildMessageRequest", () => {
     expect(url).toBe("/conversations/conv-1/generate-agentic");
     expect(payload).not.toHaveProperty("artifact_ids");
     expect(payload).toMatchObject({ public_mcp_servers: ["eve_retrieval"] });
+    expect(payload).not.toHaveProperty("skills");
+  });
+
+  it("agentic streaming sends skills and still sends public_mcp_servers", () => {
+    expect(
+      request(
+        "agentic",
+        "stream",
+        ["eve_retrieval"],
+        [ATTACHMENT],
+        ["roll-dice"],
+      ),
+    ).toEqual({
+      url: "/conversations/conv-1/stream-generate-agentic",
+      payload: {
+        ...GENERATION_FIELDS,
+        artifact_ids: ["art-1"],
+        public_mcp_servers: ["eve_retrieval"],
+        skills: ["roll-dice"],
+      },
+    });
+  });
+
+  it("classic never sends skills", () => {
+    const streamed = request(
+      "classic",
+      "stream",
+      ["eve_retrieval"],
+      undefined,
+      ["roll-dice"],
+    );
+    expect(streamed.url).toBe("/conversations/conv-1/stream_messages");
+    expect(streamed.payload).not.toHaveProperty("skills");
+    expect(streamed.payload).not.toHaveProperty("public_mcp_servers");
+
+    const blocking = request("classic", "sync", [], undefined, ["roll-dice"]);
+    expect(blocking.url).toBe("/conversations/conv-1/messages");
+    expect(blocking.payload).not.toHaveProperty("skills");
   });
 });

@@ -23,6 +23,7 @@ export const QUERY_KEYS = {
   publicCollections: "publicCollections",
   mcpServers: "mcpServers",
   mcpServer: "mcpServer",
+  skills: "skills",
   myCollections: "myCollections",
   conversationsList: "conversationsList",
   conversation: "conversation",

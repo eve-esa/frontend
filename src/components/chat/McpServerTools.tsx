@@ -42,7 +42,7 @@ export const McpServerTools = ({ server }: McpServerToolsProps) => {
     data?.tools !== undefined && !discoveryError ? ` (${data.tools.length})` : "";
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex w-full min-w-0 flex-col gap-2">
       <button
         type="button"
         onClick={() => setIsToolsOpen((open) => !open)}
@@ -56,7 +56,7 @@ export const McpServerTools = ({ server }: McpServerToolsProps) => {
       </button>
 
       {isToolsOpen && (
-        <div className="flex flex-col gap-4 pl-4 border-l border-primary-400/40">
+        <div className="flex min-w-0 flex-col gap-4 border-l border-primary-400/40 pl-4">
           {isLoading && (
             <div className="flex flex-col gap-3">
               <Skeleton className="w-full h-4" />
@@ -90,7 +90,7 @@ export const McpServerTools = ({ server }: McpServerToolsProps) => {
                 key={`${serverId}-${tool.name ?? index}`}
                 className="flex flex-col gap-2"
               >
-                <span className="text-sm 3xl:text-lg text-natural-50 font-medium">
+                <span className="min-w-0 break-words text-sm 3xl:text-lg text-natural-50 font-medium">
                   {getToolName(tool)}
                 </span>
                 <ExpandablePlainText text={getToolDescription(tool)} />

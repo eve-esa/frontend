@@ -9,7 +9,10 @@ export type MessagePipeline = "agentic" | "classic";
 
 export type MessageRequestTarget = {
   url: string;
-  extraPayload: { public_mcp_servers?: string[] };
+  extraPayload: {
+    public_mcp_servers?: string[];
+    skills?: string[];
+  };
 };
 
 /**
@@ -22,12 +25,20 @@ export type MessageRequestTarget = {
  * tools and does not retrieve. FEATURE_TOOLKITS gates the Toolkits sidebar, not
  * this URL.
  *
- * Classic: `stream_messages` or `messages`, and `mcpServers` is ignored. The
- * classic routes run no tools, so `public_mcp_servers` is never sent.
+ * `skills` is names only (utilities/skills.ts), the ones switched on in the
+ * Toolkits panel. A non-empty list is sent as `skills` beside
+ * `public_mcp_servers`. An empty list omits the field. The server keeps the
+ * skills from the conversation's first turn, so a later toggle applies to
+ * the next new conversation. File bodies are not part of this field.
+ *
+ * Classic: `stream_messages` or `messages`. `mcpServers` and `skills` are
+ * ignored. The classic routes run no tools, so `public_mcp_servers` and
+ * `skills` are never sent.
  */
 export function resolveMessageEndpoint(
   conversationId: string | undefined,
   mcpServers: string[],
+  skills: string[],
   mode: MessageRequestMode,
   pipeline: MessagePipeline,
 ): MessageRequestTarget {
@@ -43,9 +54,12 @@ export function resolveMessageEndpoint(
   const path =
     mode === "stream" ? "stream-generate-agentic" : "generate-agentic";
 
+  const extraPayload: MessageRequestTarget["extraPayload"] = {};
+  if (mcpServers.length > 0) extraPayload.public_mcp_servers = mcpServers;
+  if (skills.length > 0) extraPayload.skills = skills;
+
   return {
     url: `${base}/${path}`,
-    extraPayload:
-      mcpServers.length > 0 ? { public_mcp_servers: mcpServers } : {},
+    extraPayload,
   };
 }

@@ -56,8 +56,8 @@ export const buildGenerationPayload = ({
   const modelFields = modelSelectionToPayload(selection, models);
 
   // Shared by both pipelines: the classic and agentic routes take the same
-  // GenerationRequest. What differs (URL, `public_mcp_servers`) is added by
-  // buildMessageRequest below.
+  // GenerationRequest. What differs (URL, `public_mcp_servers`, `skills`) is
+  // added by buildMessageRequest below.
   return {
     query,
     ...settings,
@@ -71,6 +71,7 @@ type MessageRequestInput = GenerationInput & {
   mode: MessageRequestMode;
   pipeline: MessagePipeline;
   mcpServers: string[];
+  skills: string[];
   attachments?: ImageAttachment[];
 };
 
@@ -84,12 +85,14 @@ export const buildMessageRequest = ({
   mode,
   pipeline,
   mcpServers,
+  skills,
   attachments,
   ...generation
 }: MessageRequestInput) => {
   const { url, extraPayload } = resolveMessageEndpoint(
     conversationId,
     mcpServers,
+    skills,
     mode,
     pipeline,
   );
