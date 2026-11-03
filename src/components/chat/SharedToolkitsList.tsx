@@ -50,27 +50,27 @@ export const SharedToolkitsList = ({
   }
 
   return (
-    <div className="flex flex-col gap-8 pr-2">
+    <div className="flex w-full min-w-0 flex-col gap-8">
       {serversList.map((server) => (
         <div
-          className="flex flex-col gap-4"
+          className="flex min-w-0 flex-col gap-4"
           key={server.id ?? server.name}
           data-testid="toolkit-item"
         >
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 items-center gap-2">
             <Switch
               checked={isSelected(server.name)}
               onCheckedChange={() => toggleServer(server.name)}
             />
             <span
               data-testid="toolkit-name"
-              className="leading-none 3xl:text-3xl font-semibold text-natural-50"
+              className="min-w-0 break-words leading-none 3xl:text-3xl font-semibold text-natural-50"
             >
               {server.name}
             </span>
           </div>
           {server.description && (
-            <p className="text-xs 3xl:text-xl text-natural-200">
+            <p className="break-words text-xs 3xl:text-xl text-natural-200">
               {server.description}
             </p>
           )}

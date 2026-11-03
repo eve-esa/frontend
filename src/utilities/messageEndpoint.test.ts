@@ -3,14 +3,18 @@ import { resolveMessageEndpoint } from "./messageEndpoint";
 
 describe("resolveMessageEndpoint, agentic pipeline", () => {
   it("targets the agentic streaming endpoint when no MCP server is selected", () => {
-    expect(resolveMessageEndpoint("conv-1", [], "stream", "agentic")).toEqual({
+    expect(
+      resolveMessageEndpoint("conv-1", [], [], "stream", "agentic"),
+    ).toEqual({
       url: "/conversations/conv-1/stream-generate-agentic",
       extraPayload: {},
     });
   });
 
   it("targets the agentic non-streaming endpoint when no MCP server is selected", () => {
-    expect(resolveMessageEndpoint("conv-1", [], "sync", "agentic")).toEqual({
+    expect(
+      resolveMessageEndpoint("conv-1", [], [], "sync", "agentic"),
+    ).toEqual({
       url: "/conversations/conv-1/generate-agentic",
       extraPayload: {},
     });
@@ -18,7 +22,13 @@ describe("resolveMessageEndpoint, agentic pipeline", () => {
 
   it("targets the agentic streaming endpoint and attaches server names when selected", () => {
     expect(
-      resolveMessageEndpoint("conv-1", ["weather", "search"], "stream", "agentic"),
+      resolveMessageEndpoint(
+        "conv-1",
+        ["weather", "search"],
+        [],
+        "stream",
+        "agentic",
+      ),
     ).toEqual({
       url: "/conversations/conv-1/stream-generate-agentic",
       extraPayload: { public_mcp_servers: ["weather", "search"] },
@@ -27,15 +37,57 @@ describe("resolveMessageEndpoint, agentic pipeline", () => {
 
   it("targets the agentic non-streaming endpoint and attaches server names when selected", () => {
     expect(
-      resolveMessageEndpoint("conv-1", ["weather"], "sync", "agentic"),
+      resolveMessageEndpoint("conv-1", ["weather"], [], "sync", "agentic"),
     ).toEqual({
       url: "/conversations/conv-1/generate-agentic",
       extraPayload: { public_mcp_servers: ["weather"] },
     });
   });
 
+  it("sends skills and still sends public_mcp_servers", () => {
+    expect(
+      resolveMessageEndpoint(
+        "conv-1",
+        ["weather"],
+        ["roll-dice"],
+        "stream",
+        "agentic",
+      ),
+    ).toEqual({
+      url: "/conversations/conv-1/stream-generate-agentic",
+      extraPayload: {
+        public_mcp_servers: ["weather"],
+        skills: ["roll-dice"],
+      },
+    });
+    expect(
+      resolveMessageEndpoint(
+        "conv-1",
+        ["weather"],
+        ["roll-dice"],
+        "sync",
+        "agentic",
+      ).extraPayload,
+    ).toEqual({
+      public_mcp_servers: ["weather"],
+      skills: ["roll-dice"],
+    });
+  });
+
+  it("omits skills when none are selected", () => {
+    expect(
+      resolveMessageEndpoint("conv-1", ["weather"], [], "stream", "agentic")
+        .extraPayload,
+    ).toEqual({ public_mcp_servers: ["weather"] });
+    expect(
+      resolveMessageEndpoint("conv-1", [], [], "sync", "agentic").extraPayload,
+    ).toEqual({});
+  });
+
   it("keeps working without a conversation id (new conversation flow)", () => {
-    expect(resolveMessageEndpoint(undefined, [], "stream", "agentic")).toEqual({
+    expect(
+      resolveMessageEndpoint(undefined, [], [], "stream", "agentic"),
+    ).toEqual({
       url: "/conversations/undefined/stream-generate-agentic",
       extraPayload: {},
     });
@@ -44,14 +96,18 @@ describe("resolveMessageEndpoint, agentic pipeline", () => {
 
 describe("resolveMessageEndpoint, classic pipeline", () => {
   it("targets the classic streaming endpoint", () => {
-    expect(resolveMessageEndpoint("conv-1", [], "stream", "classic")).toEqual({
+    expect(
+      resolveMessageEndpoint("conv-1", [], [], "stream", "classic"),
+    ).toEqual({
       url: "/conversations/conv-1/stream_messages",
       extraPayload: {},
     });
   });
 
   it("targets the classic non-streaming endpoint", () => {
-    expect(resolveMessageEndpoint("conv-1", [], "sync", "classic")).toEqual({
+    expect(
+      resolveMessageEndpoint("conv-1", [], [], "sync", "classic"),
+    ).toEqual({
       url: "/conversations/conv-1/messages",
       extraPayload: {},
     });
@@ -59,13 +115,46 @@ describe("resolveMessageEndpoint, classic pipeline", () => {
 
   it("never sends public_mcp_servers, even with servers selected", () => {
     expect(
-      resolveMessageEndpoint("conv-1", ["eve_retrieval", "weather"], "stream", "classic"),
+      resolveMessageEndpoint(
+        "conv-1",
+        ["eve_retrieval", "weather"],
+        [],
+        "stream",
+        "classic",
+      ),
     ).toEqual({
       url: "/conversations/conv-1/stream_messages",
       extraPayload: {},
     });
     expect(
-      resolveMessageEndpoint("conv-1", ["eve_retrieval"], "sync", "classic"),
+      resolveMessageEndpoint(
+        "conv-1",
+        ["eve_retrieval"],
+        [],
+        "sync",
+        "classic",
+      ),
+    ).toEqual({
+      url: "/conversations/conv-1/messages",
+      extraPayload: {},
+    });
+  });
+
+  it("never sends skills, even with skills selected", () => {
+    expect(
+      resolveMessageEndpoint(
+        "conv-1",
+        ["eve_retrieval"],
+        ["roll-dice"],
+        "stream",
+        "classic",
+      ),
+    ).toEqual({
+      url: "/conversations/conv-1/stream_messages",
+      extraPayload: {},
+    });
+    expect(
+      resolveMessageEndpoint("conv-1", [], ["roll-dice"], "sync", "classic"),
     ).toEqual({
       url: "/conversations/conv-1/messages",
       extraPayload: {},

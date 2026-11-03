@@ -8,6 +8,7 @@ import { QUERY_KEYS } from "./keys";
 import {
   LOCAL_STORAGE_MCP_SERVERS,
   LOCAL_STORAGE_MODEL_SELECTION,
+  LOCAL_STORAGE_SKILLS,
 } from "@/utilities/localStorage";
 
 // The pipeline is read from FEATURE_AGENTIC_CHAT at module scope, so these
@@ -90,8 +91,12 @@ type MutationOptions = {
   mutationFn: (props: Record<string, unknown>) => Promise<unknown>;
 };
 
-const streamOnce = async (agenticChat: "true" | "false") => {
+const streamOnce = async (
+  agenticChat: "true" | "false",
+  prepare?: () => void,
+) => {
   const { useSendRequest } = await load(agenticChat);
+  prepare?.();
   mocks.postStream.mockImplementation(
     ({ onEvent }: { onEvent: (evt: unknown) => void }) => {
       onEvent({ type: "final", answer: "done" });
@@ -137,9 +142,13 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
+const selectRollDice = () =>
+  localStorage.setItem(LOCAL_STORAGE_SKILLS, JSON.stringify(["roll-dice"]));
+
 describe("sendRequest with FEATURE_AGENTIC_CHAT=false", () => {
-  it("posts to the classic messages route without public_mcp_servers", async () => {
+  it("posts to the classic messages route without public_mcp_servers or skills", async () => {
     const { sendRequest } = await load("false");
+    selectRollDice();
 
     await sendRequest({
       query: "hello",
@@ -152,19 +161,21 @@ describe("sendRequest with FEATURE_AGENTIC_CHAT=false", () => {
     const [url, payload] = mocks.post.mock.calls[0];
     expect(url).toBe("/conversations/conv-1/messages");
     expect(payload).not.toHaveProperty("public_mcp_servers");
+    expect(payload).not.toHaveProperty("skills");
     expect(payload).toMatchObject({ query: "hello", llm_type: "main" });
   });
 
-  it("streams from stream_messages without public_mcp_servers", async () => {
-    const { url, payload } = await streamOnce("false");
+  it("streams from stream_messages without public_mcp_servers or skills", async () => {
+    const { url, payload } = await streamOnce("false", selectRollDice);
 
     expect(url).toBe("/conversations/conv-1/stream_messages");
     expect(payload).not.toHaveProperty("public_mcp_servers");
+    expect(payload).not.toHaveProperty("skills");
   });
 });
 
 describe("sendRequest with FEATURE_AGENTIC_CHAT=true", () => {
-  it("posts to generate-agentic with the selected MCP servers", async () => {
+  it("posts to generate-agentic with the selected MCP servers and no skills", async () => {
     const { sendRequest } = await load("true");
 
     await sendRequest({
@@ -179,14 +190,44 @@ describe("sendRequest with FEATURE_AGENTIC_CHAT=true", () => {
     expect(payload).toMatchObject({
       public_mcp_servers: ["eve_retrieval", "weather"],
     });
+    expect(payload).not.toHaveProperty("skills");
   });
 
-  it("streams from stream-generate-agentic with the selected MCP servers", async () => {
+  it("posts roll-dice and still sends the selected MCP servers", async () => {
+    const { sendRequest } = await load("true");
+    selectRollDice();
+
+    await sendRequest({
+      query: "hello",
+      conversationId: "conv-1",
+      settings: SETTINGS,
+      models: MODELS,
+    });
+
+    const [, payload] = mocks.post.mock.calls[0];
+    expect(payload).toMatchObject({
+      public_mcp_servers: ["eve_retrieval", "weather"],
+      skills: ["roll-dice"],
+    });
+  });
+
+  it("streams from stream-generate-agentic with the selected MCP servers and no skills", async () => {
     const { url, payload } = await streamOnce("true");
 
     expect(url).toBe("/conversations/conv-1/stream-generate-agentic");
     expect(payload).toMatchObject({
       public_mcp_servers: ["eve_retrieval", "weather"],
+    });
+    expect(payload).not.toHaveProperty("skills");
+  });
+
+  it("streams roll-dice and still sends the selected MCP servers", async () => {
+    const { url, payload } = await streamOnce("true", selectRollDice);
+
+    expect(url).toBe("/conversations/conv-1/stream-generate-agentic");
+    expect(payload).toMatchObject({
+      public_mcp_servers: ["eve_retrieval", "weather"],
+      skills: ["roll-dice"],
     });
   });
 });
