@@ -10,11 +10,13 @@ export const PROFILE_INSTITUTION_MAX = 200;
 
 // An empty or blank name, stored or typed, counts as no name. A name input left
 // without a default reads back "" from the DOM, so a rule on "" would keep the
-// form invalid with nothing to show.
+// form invalid with nothing to show. The transform sits inside optional() so the
+// key stays optional in the output type (zod 4 types a transform after
+// optional() as a required key); an absent name still skips it.
 const OptionalName = z
   .string()
-  .optional()
-  .transform((name) => (name?.trim() ? name : undefined));
+  .transform((name) => (name.trim() ? name : undefined))
+  .optional();
 
 export const ProfileSchema = z.object({
   first_name: OptionalName,
