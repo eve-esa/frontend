@@ -11,7 +11,7 @@ Node and the browsers come from the Playwright image, so nothing is installed on
 ```sh
 docker run --rm -it -v "$PWD":/work -w /work \
   -e E2E_EMAIL -e E2E_PASSWORD \
-  mcr.microsoft.com/playwright:v1.63.0-noble \
+  mcr.microsoft.com/playwright:v1.64.1-noble \
   sh -c "corepack enable && corepack yarn install --frozen-lockfile && corepack yarn e2e --project=dev"
 ```
 
@@ -44,7 +44,7 @@ The compose stack registers the account through Keycloak self-registration (real
 ```sh
 VITE_FEATURE_PROFILE_FIELDS=true VITE_FEATURE_AGENTIC_CHAT=false docker compose up -d --no-deps frontend
 docker run --rm --network host -v "$PWD":/work -w /work -e E2E_SIGNUP=1 -e E2E_PROFILE_FIELDS=true \
-  mcr.microsoft.com/playwright:v1.63.0-noble \
+  mcr.microsoft.com/playwright:v1.64.1-noble \
   sh -c "corepack enable && corepack yarn install --frozen-lockfile && corepack yarn e2e --project=local specs/signup.spec.ts"
 ```
 
