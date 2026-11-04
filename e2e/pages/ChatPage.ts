@@ -185,3 +185,14 @@ export function flagOn(config: Record<string, string>, key: string, fallback: bo
   if (raw === undefined || raw === "") return fallback;
   return raw.trim().toLowerCase() === "true";
 }
+
+/**
+ * `flagOn` that also works against the local Vite dev server, which injects no `__EVE_CONFIG__`:
+ * with the key absent from the served config, `E2E_<KEY without FEATURE_>` says whether the
+ * compose frontend turned it on (`E2E_ARTIFACTS=true` for `FEATURE_ARTIFACTS`), as
+ * `themeSwitchOn` does with `E2E_THEME_SWITCH`.
+ */
+export function flagOrEnvOn(config: Record<string, string>, key: string, fallback: boolean): boolean {
+  if (config[key] !== undefined) return flagOn(config, key, fallback);
+  return process.env[`E2E_${key.replace(/^FEATURE_/, "")}`] === "true";
+}

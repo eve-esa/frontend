@@ -44,6 +44,7 @@ export const SidebarMenu = ({ isOpen }: SidebarMenuProps) => {
   const artifactsItem = (
     <button
       type="button"
+      data-testid="sidebar-artifacts"
       onClick={() => navigate(routes.ARTIFACTS.path)}
       className={`${baseStyles} ${layoutStyles} text-natural-50`}
     >

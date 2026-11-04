@@ -308,6 +308,7 @@ export const ImageLightbox = ({
         >
           <div
             ref={setViewportEl}
+            data-testid="lightbox-viewport"
             className={cn(
               // The dialog is w-fit, so a tiny image (a 30px tool output)
               // would otherwise size the whole lightbox to itself and end up
@@ -336,6 +337,7 @@ export const ImageLightbox = ({
             onDragStart={(event) => event.preventDefault()}
           >
             <div
+              data-testid="lightbox-transform"
               className={cn(
                 "origin-center will-change-transform",
                 !isDragging && "transition-transform duration-200 ease-out",
@@ -347,6 +349,7 @@ export const ImageLightbox = ({
               <AuthenticatedImage
                 src={current.src}
                 alt={current.alt}
+                data-testid="lightbox-image"
                 className={cn(
                   "w-auto max-w-full rounded-lg object-contain",
                   isFullscreen ? "max-h-screen" : "max-h-[85vh]",

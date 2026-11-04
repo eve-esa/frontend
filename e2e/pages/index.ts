@@ -1,6 +1,8 @@
 export { ApiKeysDialog } from "./ApiKeysDialog";
-export { ChatPage, flagOn, type UserMenuLink } from "./ChatPage";
+export { ArtifactsPage } from "./ArtifactsPage";
+export { ChatPage, flagOn, flagOrEnvOn, type UserMenuLink } from "./ChatPage";
 export { Composer } from "./Composer";
+export { ImageLightbox, type LightboxState } from "./ImageLightbox";
 export { LoginPage } from "./LoginPage";
 export { LogoutDialog } from "./LogoutDialog";
 export { MessagePanel } from "./MessagePanel";
