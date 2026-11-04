@@ -41,6 +41,7 @@ export const ArtifactCard = ({
             src={assetUrl(asset)}
             alt={asset.filename}
             onClick={onOpen}
+            data-testid="artifact-card-image"
             className="h-full w-full object-cover cursor-zoom-in"
           />
         ) : (
@@ -62,6 +63,7 @@ export const ArtifactCard = ({
 
       <div className="flex flex-col gap-1 p-3">
         <span
+          data-testid="artifact-card-filename"
           className="truncate text-sm text-natural-50"
           title={asset.filename}
         >

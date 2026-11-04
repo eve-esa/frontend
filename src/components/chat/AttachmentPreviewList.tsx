@@ -65,7 +65,10 @@ export const AttachmentPreviewList = ({
           )}
 
           {attachment.status === "uploading" && (
-            <div className="absolute inset-0 flex items-center justify-center bg-natural-1000/50">
+            <div
+              data-testid="attachment-uploading"
+              className="absolute inset-0 flex items-center justify-center bg-natural-1000/50"
+            >
               <Spinner size="xs" />
             </div>
           )}

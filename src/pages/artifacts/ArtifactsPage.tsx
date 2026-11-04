@@ -41,7 +41,7 @@ export const ArtifactsPage = () => {
       <div className="flex-1 overflow-y-auto px-4 py-6 md:px-10 md:py-10">
         <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-6">
           <header className="flex flex-col gap-4">
-            <h1 className="text-2xl text-natural-50 3xl:text-4xl">Artifacts</h1>
+            <h1 data-testid="artifacts-title" className="text-2xl text-natural-50 3xl:text-4xl">Artifacts</h1>
             <div className="flex gap-2 border-b border-primary-500">
               {TABS.map((tab) => (
                 <button
@@ -77,7 +77,10 @@ export const ArtifactsPage = () => {
               Could not load your files. Please try again.
             </p>
           ) : images.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-2 py-20 text-center">
+            <div
+              data-testid="artifacts-empty"
+              className="flex flex-col items-center justify-center gap-2 py-20 text-center"
+            >
               <p className="text-natural-200">No files yet</p>
               <p className="text-sm text-natural-200">
                 Files you attach to a conversation will show up here.

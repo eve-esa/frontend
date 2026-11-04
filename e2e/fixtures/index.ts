@@ -8,6 +8,7 @@ import {
   type BrowserContext,
   type Page,
 } from "@playwright/test";
+import type { FilePayload } from "./png";
 import {
   ApiKeysDialog,
   ChatPage,
@@ -116,6 +117,8 @@ export type Api = {
   get<T = unknown>(path: string): Promise<ApiResponse<T>>;
   /** POST `/api<path>` with a JSON body and the same bearer. Throws on a production target. */
   post<T = unknown>(path: string, body: unknown): Promise<ApiResponse<T>>;
+  /** POST `/api<path>` as multipart with `file` in `field`, as a browser upload sends it. Throws on a production target. */
+  postFile<T = unknown>(path: string, file: FilePayload, field?: string): Promise<ApiResponse<T>>;
   /** PATCH `/api<path>` with a JSON body and the same bearer. Throws on a production target. */
   patch<T = unknown>(path: string, body: unknown): Promise<ApiResponse<T>>;
   /** DELETE `/api<path>` with the same bearer, for cleanup. Throws on a production target. */
@@ -184,6 +187,19 @@ export function pageApi(page: Page, baseURL: string, projectName: string): Api {
       }),
     );
   };
+  const postFile = async <T>(
+    apiPath: string,
+    file: FilePayload,
+    field = "file",
+  ): Promise<ApiResponse<T>> => {
+    refuseOnProd("POST", apiPath);
+    return toApiResponse<T>(
+      await page.request.post(`${apiBase}${apiPath}`, {
+        headers: { Authorization: `Bearer ${await bearer()}` },
+        multipart: { [field]: file },
+      }),
+    );
+  };
   const patch = async <T>(apiPath: string, data: unknown): Promise<ApiResponse<T>> => {
     refuseOnProd("PATCH", apiPath);
     return toApiResponse<T>(
@@ -201,7 +217,7 @@ export function pageApi(page: Page, baseURL: string, projectName: string): Api {
       }),
     );
   };
-  return { get, post, patch, delete: del, bearer };
+  return { get, post, postFile, patch, delete: del, bearer };
 }
 
 type TestFixtures = {

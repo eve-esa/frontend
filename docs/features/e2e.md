@@ -76,6 +76,7 @@ Making steps 1 and 4 automatic later, two options:
 - `e2e/pages/`: one page object per screen or dialog. Methods return typed values (`sourcesCount(): Promise<number>`), never raw locators for a test to poke at.
 - `e2e/fixtures/index.ts`: the `test` to import. It provides `authedPage`, the page objects, and `api`, `GET` and `PATCH /api/...` helpers that send the bearer the signed-in app holds. When the required profile dialog covers the chat after sign-in (`FEATURE_PROFILE_FIELDS` on, the test account lacking country or institution), the sign-in fills it with fixed values. Nothing writes to a production host (`eve-chat.chat`, `app.eve-chat.chat`, whatever the project or `E2E_TARGET`) or in the `prod-readonly` project: the sign-in and `api.patch` fail there instead.
 - `e2e/specs/`: one file per behaviour. Each test checks the UI and then reads the persisted state through `api`.
+- `e2e/fixtures/png.ts`: a two-tone PNG built in memory with a unique name per run, for the upload specs (`artifacts.spec.ts`: an image attached to a turn and an image on the Artifacts page, each opened in the lightbox, zoomed, panned and reset, then read back from `GET /api/conversations/{id}` and `GET /api/artifacts`). Artifacts have no delete route, so every run leaves its two small images on the test account.
 - `e2e/api/`: API specs with no browser (below).
 
 ## API suites
@@ -101,7 +102,7 @@ Making steps 1 and 4 automatic later, two options:
 
 1. Create `e2e/specs/<behaviour>.spec.ts` and import `test` and `expect` from `../fixtures`.
 2. Tag the `describe` title: `@prod` when the test only reads, `@dev` when it writes (a conversation, a profile change). Only `@prod` tests run against production.
-3. When the behaviour sits behind a flag, read the served config with `chat.servedConfig()` and `flagOn()`, and skip or branch on it instead of assuming an environment.
+3. When the behaviour sits behind a flag, read the served config with `chat.servedConfig()` and `flagOn()`, and skip or branch on it instead of assuming an environment. The Vite dev server serves no config: for a spec that must also run on `local`, `flagOrEnvOn()` reads `E2E_<flag without FEATURE_>` when the key is absent (`E2E_ARTIFACTS=true`, `E2E_ATTACHMENTS=true` for the compose defaults).
 
 ## The test id rule
 
