@@ -4,6 +4,38 @@ import api from "./axios";
 import type { Meta } from "@/types";
 import { nextPageParam } from "@/utilities/pagination";
 
+export type McpServerAuthor = {
+  name: string;
+  given_names: string | null;
+  family_names: string | null;
+  alias: string | null;
+  github_url: string | null;
+  affiliation: string | null;
+  orcid: string | null;
+  website: string | null;
+};
+
+export type McpPreferredCitation = {
+  title: string;
+  authors: string[];
+  year: string | null;
+  doi: string | null;
+  url: string | null;
+};
+
+/**
+ * Citation for one server, from GET /mcp-servers and GET /mcp-servers/{id}.
+ * Null means this server has no citation.
+ */
+export type McpServerAttribution = {
+  title: string;
+  abstract: string | null;
+  authors: McpServerAuthor[];
+  license: string | null;
+  repository_url: string | null;
+  preferred_citation: McpPreferredCitation | null;
+};
+
 export type McpServerPublic = {
   id: string | null;
   timestamp: string;
@@ -20,6 +52,7 @@ export type McpServerPublic = {
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
+  attribution: McpServerAttribution | null;
 };
 
 export type McpServersResponse = {
