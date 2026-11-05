@@ -7,6 +7,7 @@ import {
   getSelectedMcpServerNames,
   toggleMcpServerSelection,
 } from "@/utilities/mcpServers";
+import { McpAttributionButton } from "./McpServerAttribution";
 import { McpServerTools } from "./McpServerTools";
 
 type SharedToolkitsListProps = {
@@ -64,10 +65,14 @@ export const SharedToolkitsList = ({
             />
             <span
               data-testid="toolkit-name"
-              className="min-w-0 break-words leading-none 3xl:text-3xl font-semibold text-natural-50"
+              className="min-w-0 flex-1 break-words leading-none 3xl:text-3xl font-semibold text-natural-50"
             >
               {server.name}
             </span>
+            <McpAttributionButton
+              attribution={server.attribution}
+              serverName={server.name}
+            />
           </div>
           {server.description && (
             <p className="break-words text-xs 3xl:text-xl text-natural-200">

@@ -16,6 +16,7 @@ const server = (name: string, enabled: boolean) =>
     created_at: "",
     updated_at: "",
     deleted_at: null,
+    attribution: null,
   });
 
 const page = (...servers: ReturnType<typeof server>[]): McpServersResponse => ({
