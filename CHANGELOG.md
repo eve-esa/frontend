@@ -16,6 +16,24 @@ Release and promotes staging. Production is promoted from there by an explicit d
 The "Pilot history" section at the bottom predates this repository's version series: no tag was ever
 cut for it. The released tags start at `v0.0.1`.
 
+## [1.3.0](https://github.com/eve-esa/frontend/compare/v1.2.2...v1.3.0) (2026-11-05)
+
+
+### Added
+
+* add agentic skills toggle ([#190](https://github.com/eve-esa/frontend/issues/190)) ([b3c364e](https://github.com/eve-esa/frontend/commit/b3c364e67c70a7932309668cacb891ef8a1f4baf))
+* show MCP citation dialog ([#192](https://github.com/eve-esa/frontend/issues/192)) ([21e8bbe](https://github.com/eve-esa/frontend/commit/21e8bbef025173bd718a5f7fc3978ca792f9e750))
+* **theme:** follow the OS theme and add a light theme ([#178](https://github.com/eve-esa/frontend/issues/178)) ([5c386e3](https://github.com/eve-esa/frontend/commit/5c386e3528193d17407e454dd306c2a49045115b))
+
+
+### Fixed
+
+* **chat:** make Show more on long messages visible and keyboard reachable ([#179](https://github.com/eve-esa/frontend/issues/179)) ([d42a8e4](https://github.com/eve-esa/frontend/commit/d42a8e4fc71ae31f222932fc6ef8050509a7a9c0))
+* **deps:** close the zod, follow-redirects and katex advisories ([#188](https://github.com/eve-esa/frontend/issues/188)) ([ce5b6f7](https://github.com/eve-esa/frontend/commit/ce5b6f7c81216a54c604c0c72ba8ce23e38aefe1))
+* **sidebar:** show the pointer, not the resize cursor, on the sidebar toggle ([#181](https://github.com/eve-esa/frontend/issues/181)) ([a310c7e](https://github.com/eve-esa/frontend/commit/a310c7ebec35422e285c3bf42bcc94b083810cbb))
+* **sidebar:** the logo takes you home ([#180](https://github.com/eve-esa/frontend/issues/180)) ([9951d88](https://github.com/eve-esa/frontend/commit/9951d881cbfcbbceda2981836018095aa5eb2de0))
+* **theme:** no resting shadows in light where dark shows none ([#184](https://github.com/eve-esa/frontend/issues/184)) ([80c2a87](https://github.com/eve-esa/frontend/commit/80c2a87fa2066e4f8406216047131d8273dad441))
+
 ## [1.2.2](https://github.com/eve-esa/frontend/compare/v1.2.1...v1.2.2) (2026-10-07)
 
 
