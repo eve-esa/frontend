@@ -134,6 +134,10 @@ export type MessageType = {
   // Live MCP tool activity for the streaming turn (agentic pipeline only).
   // Exists only on the optimistic temp message; never persisted.
   tool_activity?: ToolActivityEntry[];
+  // True while the deep agent compresses older history (summarizing SSE
+  // event). Exists only on the optimistic temp message; never persisted
+  // and never part of the answer text.
+  summarizing?: boolean;
   trace?: AgenticTraceStep[] | null;
   request_input: {
     llm_type: string | null;

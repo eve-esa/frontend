@@ -696,3 +696,169 @@ describe("stream ended by a cancellation", () => {
     errorSpy.mockRestore();
   });
 });
+
+type StreamMutation = MutationOptions & {
+  onMutate: (variables: Record<string, unknown>) => Promise<unknown>;
+};
+
+type TempMessage = {
+  output?: string;
+  summarizing?: boolean;
+  pre_answer_notices?: string[];
+};
+
+// The optimistic row onMutate inserts. Summarizing only ever lives here.
+const tempMessage = () => {
+  const data = (mocks.queryClient as QueryClient).getQueryData<{
+    messages: TempMessage[];
+  }>([QUERY_KEYS.conversation, "conv-1"]);
+  const messages = data?.messages ?? [];
+  return messages[messages.length - 1];
+};
+
+const play = async (events: Record<string, unknown>[]) => {
+  const { useSendRequest } = await load("true");
+  // logError reads window.location. The config stub replaces window and
+  // leaves no location, so a rejected stream would throw a second error.
+  (window as unknown as { location: { href: string } }).location = {
+    href: "http://localhost/chat/conv-1",
+  };
+  const options = useSendRequest("conv-1") as unknown as StreamMutation;
+  await options.onMutate(VARIABLES);
+  mocks.postStream.mockImplementationOnce(
+    ({ onEvent }: { onEvent: (evt: unknown) => void }) => {
+      for (const event of events) onEvent(event);
+      return Promise.resolve();
+    },
+  );
+  const result = await options
+    .mutationFn(VARIABLES)
+    .catch((error: unknown) => error);
+  return { result, temp: tempMessage() };
+};
+
+describe("summarizing events", () => {
+  it("sets the flag on started, clears it on finished, and never copies the event into the answer", async () => {
+    const { useSendRequest } = await load("true");
+    const options = useSendRequest("conv-1") as unknown as StreamMutation;
+    await options.onMutate(VARIABLES);
+    const flags: Array<boolean | undefined> = [];
+
+    mocks.postStream.mockImplementationOnce(
+      ({ onEvent }: { onEvent: (evt: unknown) => void }) => {
+        // Status notices are off in this load. The wait must still show.
+        onEvent({ type: "status", content: "Thinking" });
+        onEvent({
+          type: "summarizing",
+          phase: "started",
+          first_message_id: "m1",
+          last_message_id: "m4",
+          content: "compressed history",
+        });
+        flags.push(tempMessage()?.summarizing);
+        onEvent({
+          type: "summarizing",
+          phase: "finished",
+          first_message_id: null,
+          last_message_id: null,
+        });
+        flags.push(tempMessage()?.summarizing);
+        // A later tool round can compress history again.
+        onEvent({
+          type: "summarizing",
+          phase: "started",
+          first_message_id: null,
+          last_message_id: null,
+        });
+        flags.push(tempMessage()?.summarizing);
+        return Promise.resolve();
+      },
+    );
+
+    const result = await options.mutationFn(VARIABLES);
+
+    expect(flags).toEqual([true, false, true]);
+    expect(tempMessage()).toMatchObject({ output: "", summarizing: true });
+    expect(tempMessage()?.pre_answer_notices).toBeUndefined();
+    expect(JSON.stringify(tempMessage())).not.toContain("compressed history");
+    expect(JSON.stringify(tempMessage())).not.toContain("Thinking");
+    expect(result).toMatchObject({ output: "" });
+    expect(result).not.toHaveProperty("summarizing");
+  });
+
+  it("clears the flag on the first token and appends only that token", async () => {
+    const { temp } = await play([
+      {
+        type: "summarizing",
+        phase: "started",
+        first_message_id: "m1",
+        last_message_id: "m2",
+        content: "not the answer",
+      },
+      { type: "token", content: "Hi" },
+    ]);
+
+    expect(temp).toMatchObject({ summarizing: false, output: "Hi" });
+  });
+
+  it("clears the flag on final and keeps only the answer", async () => {
+    const { temp, result } = await play([
+      { type: "summarizing", phase: "started", content: "not the answer" },
+      { type: "final", answer: "Done" },
+    ]);
+
+    expect(temp).toMatchObject({ summarizing: false, output: "Done" });
+    expect(result).toMatchObject({ output: "Done" });
+    expect(result).not.toHaveProperty("summarizing");
+    expect(JSON.stringify(result)).not.toContain("not the answer");
+  });
+
+  it("clears the flag on error and does not append the error text", async () => {
+    const { temp, result } = await play([
+      { type: "summarizing", phase: "started" },
+      { type: "error", content: "boom", code: "upstream_error" },
+    ]);
+
+    expect(temp).toMatchObject({ summarizing: false, output: "" });
+    expect(result).toBeInstanceOf(Error);
+    expect(JSON.stringify(temp)).not.toContain("boom");
+  });
+
+  it("clears the flag on stopped", async () => {
+    const { temp } = await play([
+      { type: "summarizing", phase: "started" },
+      { type: "stopped" },
+    ]);
+
+    expect(temp).toMatchObject({ summarizing: false, output: "" });
+  });
+
+  it("ignores an unknown phase", async () => {
+    const { useSendRequest } = await load("true");
+    const options = useSendRequest("conv-1") as unknown as StreamMutation;
+    await options.onMutate(VARIABLES);
+    const flags: Array<boolean | undefined> = [];
+
+    mocks.postStream.mockImplementationOnce(
+      ({ onEvent }: { onEvent: (evt: unknown) => void }) => {
+        onEvent({
+          type: "summarizing",
+          phase: "compressing",
+          content: "skip me",
+          first_message_id: "m1",
+        });
+        flags.push(tempMessage()?.summarizing);
+        onEvent({ type: "summarizing", phase: "started" });
+        onEvent({ type: "summarizing", phase: "later" });
+        flags.push(tempMessage()?.summarizing);
+        return Promise.resolve();
+      },
+    );
+
+    await options.mutationFn(VARIABLES);
+
+    expect(flags).toEqual([undefined, true]);
+    expect(tempMessage()?.output).toBe("");
+    expect(JSON.stringify(tempMessage())).not.toContain("skip me");
+  });
+});

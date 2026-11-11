@@ -142,8 +142,8 @@ export const useSendRequest = (conversationId?: string) => {
         queryClient.getQueryData<ModelListResponse>([QUERY_KEYS.models]);
 
       // Both pipelines stream the same SSE events (status, requery, token,
-      // final, error), so one parser below serves both; tool_call and
-      // tool_result only ever arrive on the agentic one.
+      // final, error), so one parser below serves both; tool_call,
+      // tool_result, and summarizing only ever arrive on the agentic one.
       const { url: streamUrl, payload } = buildMessageRequest({
         conversationId,
         mode: "stream",
@@ -191,6 +191,12 @@ export const useSendRequest = (conversationId?: string) => {
             pre_answer_notices: [...(msg.pre_answer_notices ?? []), notice],
           }));
 
+        // A lost "finished" must not leave the wait line up, so every event
+        // that ends the wait clears it. No-op when it was never set, so a
+        // classic stream does not grow a field it never used.
+        const clearSummarizing = (msg: MessageType) =>
+          msg.summarizing ? { ...msg, summarizing: false } : msg;
+
         let finalAnswer: string | null = null;
         let finalArtifactIds: string[] | undefined;
         // Holder object rather than a plain let: the assignment happens inside
@@ -221,12 +227,15 @@ export const useSendRequest = (conversationId?: string) => {
                       ? content
                       : undefined,
               };
+              updateTemp(clearSummarizing);
             } else if (type === "token" && typeof content === "string") {
               streamedOutput += content;
-              updateTemp((msg) => ({
-                ...msg,
-                output: (msg.output || "") + content,
-              }));
+              updateTemp((msg) =>
+                clearSummarizing({
+                  ...msg,
+                  output: (msg.output || "") + content,
+                }),
+              );
             } else if (type === "final" && typeof answer === "string") {
               finalAnswer = answer;
               streamedOutput = answer;
@@ -238,7 +247,11 @@ export const useSendRequest = (conversationId?: string) => {
               // Read only: a bug report filed after this answer points at
               // its backend trace.
               rememberTraceFromFinalEvent(conversationId, evt);
-              updateTemp((msg) => ({ ...msg, output: answer }));
+              updateTemp((msg) =>
+                clearSummarizing({ ...msg, output: answer }),
+              );
+            } else if (type === "stopped") {
+              updateTemp(clearSummarizing);
             } else if (
               typeof content === "string" &&
               shouldShowPreAnswerNotice(type, STREAM_STATUS_NOTICES_ENABLED)
@@ -264,6 +277,15 @@ export const useSendRequest = (conversationId?: string) => {
                   evt as Record<string, unknown>,
                 ),
               }));
+            } else if (type === "summarizing") {
+              // Wait indicator only. The ids name the stored range the
+              // summary covers; nothing here is answer text.
+              const phase = (evt as { phase?: unknown }).phase;
+              if (phase === "started") {
+                updateTemp((msg) => ({ ...msg, summarizing: true }));
+              } else if (phase === "finished") {
+                updateTemp(clearSummarizing);
+              }
             }
           },
         }));
