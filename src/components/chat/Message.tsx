@@ -15,6 +15,7 @@ import {
   monotonicStreamingOutput,
   selectStreamingCandidate,
 } from "@/utilities/streamingOutput";
+import { SummarizingIndicator } from "./SummarizingIndicator";
 import { ToolActivityBar } from "./ToolActivityBar";
 
 type MessageProps = {
@@ -58,12 +59,18 @@ export const Message = ({
   const toolActivity = message.tool_activity ?? [];
   const showToolActivity = isStreamingTarget && toolActivity.length > 0;
 
+  // History compression is a real wait, not a status notice. It leaves as
+  // soon as answer text exists, so a lost "finished" cannot sit beside tokens.
+  const showSummarizing =
+    isStreamingTarget && Boolean(message.summarizing) && !message.output;
+
   const awaitingOutput = isLastMessage && !message?.output;
   const showLoading =
     awaitingOutput &&
     (isSending ||
       Boolean(message.pre_answer_notices?.length) ||
-      showToolActivity);
+      showToolActivity ||
+      showSummarizing);
   const persistKey = `${message.conversation_id ?? ""}:${String(
     messageIndex ?? (isLastMessage ? "last" : ""),
   )}`;
@@ -323,16 +330,19 @@ export const Message = ({
                   ))}
                 </div>
               ) : null}
+              {showSummarizing && <SummarizingIndicator />}
               {showToolActivity && <ToolActivityBar activity={toolActivity} />}
-              {!message.pre_answer_notices?.length && !showToolActivity && (
-                <>
-                  <Skeleton className="w-full h-2 max-w-[98%]" />
-                  <Skeleton className="w-full h-2 max-w-[100%]" />
-                  <Skeleton className="w-full h-2 max-w-[97%]" />
-                  <Skeleton className="w-full max-w-[87%] h-2" />
-                  <Skeleton className="w-full max-w-[40%] h-2" />
-                </>
-              )}
+              {!message.pre_answer_notices?.length &&
+                !showToolActivity &&
+                !showSummarizing && (
+                  <>
+                    <Skeleton className="w-full h-2 max-w-[98%]" />
+                    <Skeleton className="w-full h-2 max-w-[100%]" />
+                    <Skeleton className="w-full h-2 max-w-[97%]" />
+                    <Skeleton className="w-full max-w-[87%] h-2" />
+                    <Skeleton className="w-full max-w-[40%] h-2" />
+                  </>
+                )}
             </div>
           ) : message.stopped ? (
             <p

@@ -33,6 +33,14 @@ export type StreamEvent =
       status?: string;
       [key: string]: unknown;
     }
+  // Agentic pipeline only: the deep agent is compressing older stored
+  // messages before it answers. No answer text. Older backends never send it.
+  | {
+      type: "summarizing";
+      phase: "started" | "finished";
+      first_message_id?: string | null;
+      last_message_id?: string | null;
+    }
   | { type: "stopped" }
   | { type: "error"; content?: string; [key: string]: unknown }
   | { type: "label"; content: number | string }

@@ -16,6 +16,8 @@ describe("shouldShowPreAnswerNotice", () => {
     expect(shouldShowPreAnswerNotice("token", true)).toBe(false);
     expect(shouldShowPreAnswerNotice("final", true)).toBe(false);
     expect(shouldShowPreAnswerNotice("tool_call", true)).toBe(false);
+    expect(shouldShowPreAnswerNotice("summarizing", true)).toBe(false);
+    expect(shouldShowPreAnswerNotice("summarizing", false)).toBe(false);
     expect(shouldShowPreAnswerNotice("error", true)).toBe(false);
     expect(shouldShowPreAnswerNotice(undefined, true)).toBe(false);
   });
