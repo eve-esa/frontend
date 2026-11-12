@@ -78,3 +78,30 @@ describe("ProfileDialog country and institution", () => {
     expect(html).not.toMatch(/name="(country|institution)"[^>]*required/);
   });
 });
+
+describe("ProfileDialog keyboard order", () => {
+  const tagOf = (html: string, testId: string) =>
+    html.match(new RegExp(`<[a-z]+ [^>]*data-testid="${testId}"[^>]*>`))?.[0];
+
+  it("lets the keyboard reach Cancel and Save, after the fields", async () => {
+    const html = await render("true");
+    const cancel = tagOf(html, "profile-cancel");
+    const save = tagOf(html, "profile-save");
+    expect(cancel).toBeDefined();
+    expect(save).toBeDefined();
+    expect(cancel).not.toMatch(/tabindex/i);
+    expect(save).not.toMatch(/tabindex/i);
+
+    // DOM order is tab order when no tabindex is set.
+    const order = [
+      "profile-first-name",
+      "profile-last-name",
+      "profile-country",
+      "profile-institution",
+      "profile-cancel",
+      "profile-save",
+    ].map((id) => html.indexOf(`data-testid="${id}"`));
+    expect(order.every((i) => i >= 0)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+  });
+});

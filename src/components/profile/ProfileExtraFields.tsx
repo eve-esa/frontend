@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/Input";
 import { PROFILE_INSTITUTION_MAX } from "@/services/useMe";
 import { countryOptions } from "@/utilities/countries";
 import { cn } from "@/lib/utils";
+import { FIELD_ERROR_CLASS } from "./fieldError";
 
 type ProfileExtraFieldValues = {
   country?: string | null;
@@ -67,7 +68,7 @@ export const ProfileExtraFields = <T extends ProfileExtraFieldValues>({
             ))}
           </select>
           {fieldErrors?.country && (
-            <p id={`${countryId}-error`} className="text-sm text-red-500">
+            <p id={`${countryId}-error`} className={FIELD_ERROR_CLASS}>
               {fieldErrors.country.message}
             </p>
           )}
@@ -94,7 +95,7 @@ export const ProfileExtraFields = <T extends ProfileExtraFieldValues>({
             type="text"
           />
           {fieldErrors?.institution && (
-            <p id={`${institutionId}-error`} className="text-sm text-red-500">
+            <p id={`${institutionId}-error`} className={FIELD_ERROR_CLASS}>
               {fieldErrors.institution.message}
             </p>
           )}

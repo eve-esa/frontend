@@ -24,6 +24,7 @@ import {
 import { AppVersion } from "@/components/ui/AppVersion";
 import { PROFILE_FIELDS_ENABLED } from "@/utilities/features";
 import { ProfileExtraFields } from "./ProfileExtraFields";
+import { FIELD_ERROR_CLASS } from "./fieldError";
 
 type ProfileDialogProps = {
   isOpen: boolean;
@@ -88,7 +89,7 @@ export const ProfileDialog = ({ isOpen, onOpenChange }: ProfileDialogProps) => {
                 type="email"
               />
               {errors?.email && (
-                <p className="text-sm text-red-500">{errors.email.message}</p>
+                <p className={FIELD_ERROR_CLASS}>{errors.email.message}</p>
               )}
             </div>
           </div>
@@ -107,7 +108,7 @@ export const ProfileDialog = ({ isOpen, onOpenChange }: ProfileDialogProps) => {
                 type="text"
               />
               {errors?.first_name && (
-                <p className="text-sm text-red-500">
+                <p className={FIELD_ERROR_CLASS}>
                   {errors.first_name.message}
                 </p>
               )}
@@ -128,7 +129,7 @@ export const ProfileDialog = ({ isOpen, onOpenChange }: ProfileDialogProps) => {
                 type="text"
               />
               {errors?.last_name && (
-                <p className="text-sm text-red-500">
+                <p className={FIELD_ERROR_CLASS}>
                   {errors.last_name.message}
                 </p>
               )}
@@ -159,7 +160,6 @@ export const ProfileDialog = ({ isOpen, onOpenChange }: ProfileDialogProps) => {
 
             <div className="flex gap-2 ml-auto">
               <Button
-                tabIndex={-1}
                 variant="ghost"
                 size="md"
                 data-testid="profile-cancel"
@@ -169,7 +169,6 @@ export const ProfileDialog = ({ isOpen, onOpenChange }: ProfileDialogProps) => {
               </Button>
               <Button
                 disabled={isPending || !isValid || !isDirty}
-                tabIndex={-1}
                 size="md"
                 type="submit"
                 data-testid="profile-save"

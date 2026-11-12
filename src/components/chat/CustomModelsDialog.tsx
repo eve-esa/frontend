@@ -18,9 +18,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useListModels } from "@/services/useListModels";
 import {
   useCreateCustomModel,
-  useDeleteCustomModel,
   useUpdateCustomModel,
 } from "@/services/useCustomModels";
+import { DeleteCustomModelDialog } from "./DeleteCustomModelDialog";
 import {
   buildUpdatePayload,
   emptyCustomModelForm,
@@ -42,6 +42,7 @@ export const CustomModelsDialog = ({
   const [form, setForm] = useState<CustomModelFormState>(emptyCustomModelForm);
   const [providerSelectOpen, setProviderSelectOpen] = useState(false);
   const [catalogSelectOpen, setCatalogSelectOpen] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<CustomModel | null>(null);
   const isSelectOpen = providerSelectOpen || catalogSelectOpen;
 
   const providers = models?.providers ?? [];
@@ -73,7 +74,6 @@ export const CustomModelsDialog = ({
   const { mutate: updateModel, isPending: isUpdating } = useUpdateCustomModel(
     resetForm,
   );
-  const { mutate: deleteModel, isPending: isDeleting } = useDeleteCustomModel();
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -94,7 +94,7 @@ export const CustomModelsDialog = ({
     });
   };
 
-  const isPending = isCreating || isUpdating || isDeleting;
+  const isPending = isCreating || isUpdating;
 
   return (
     <Dialog
@@ -149,7 +149,9 @@ export const CustomModelsDialog = ({
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => deleteModel(model.id)}
+                      data-testid="custom-model-delete"
+                      aria-label={`Delete ${model.display_name}`}
+                      onClick={() => setPendingDelete(model)}
                       disabled={isPending}
                     >
                       Delete
@@ -266,6 +268,13 @@ export const CustomModelsDialog = ({
             </div>
           </form>
         </div>
+
+        <DeleteCustomModelDialog
+          model={pendingDelete}
+          onOpenChange={(open) => {
+            if (!open) setPendingDelete(null);
+          }}
+        />
       </DialogContent>
     </Dialog>
   );
