@@ -92,12 +92,28 @@ export const resetApprovedExternalImages = (): void => {
   approvedExternal.clear();
 };
 
+// Light: an opaque chip fill (primary-800 is #E0E4E7 there, the BRAND chips
+// row), so the text keeps its contrast on the black lightbox overlay too.
 const PLACEHOLDER_CLASS =
-  "my-1 inline-flex max-w-full items-center gap-2 rounded-lg border border-primary-400 bg-primary-800/40 px-3 py-1.5 text-sm text-natural-200";
+  "my-1 inline-flex max-w-full items-center gap-2 rounded-lg border border-primary-400 bg-primary-800/40 px-3 py-1.5 text-sm text-natural-200 in-data-[theme=light]:bg-primary-800";
+
+// Longest URL shown in the tooltip; the host is always on the chip itself.
+const TOOLTIP_URL_MAX = 200;
+
+const tooltipUrl = (src: string): string => {
+  const target = src.trim();
+  return target.length > TOOLTIP_URL_MAX
+    ? `${target.slice(0, TOOLTIP_URL_MAX)}...`
+    : target;
+};
 
 type ExternalImagePlaceholderProps = {
   host: string;
   alt?: string;
+  /** Full URL, shown in the tooltip so the user sees what a click requests. */
+  src?: string;
+  /** Sizing from the caller, e.g. a gallery tile. */
+  className?: string;
   onLoad: () => void;
 };
 
@@ -108,17 +124,29 @@ type ExternalImagePlaceholderProps = {
 export const ExternalImagePlaceholder = ({
   host,
   alt,
+  src,
+  className,
   onLoad,
 }: ExternalImagePlaceholderProps) => (
   <button
     type="button"
     data-testid="external-image-load"
     data-host={host}
-    onClick={onLoad}
-    title={alt || undefined}
+    onClick={(event) => {
+      // Inside a linked image the button sits in an <a>: load the image,
+      // do not follow the link.
+      event?.preventDefault?.();
+      event?.stopPropagation?.();
+      onLoad();
+    }}
+    title={src ? tooltipUrl(src) : alt || undefined}
+    aria-label={
+      alt ? `Load image ${alt} from ${host}` : `Load image from ${host}`
+    }
     className={cn(
       PLACEHOLDER_CLASS,
-      "cursor-pointer hover:bg-primary-800/70 outline-none focus-visible:ring-focus focus-visible:ring-[2px]",
+      "cursor-pointer hover:bg-primary-800/70 in-data-[theme=light]:hover:border-control outline-none focus-visible:ring-focus focus-visible:ring-[2px]",
+      className,
     )}
   >
     <FontAwesomeIcon icon={faImage} className="w-3.5 h-3.5 flex-none" />
@@ -131,14 +159,52 @@ export const ExternalImagePlaceholder = ({
   </button>
 );
 
-const BlockedImagePlaceholder = ({ alt }: { alt?: string }) => (
+const BlockedImagePlaceholder = ({
+  alt,
+  className,
+}: {
+  alt?: string;
+  className?: string;
+}) => (
   <span
     data-testid="blocked-image-placeholder"
+    role="img"
+    aria-label={alt ? `Image not shown: ${alt}` : "Image not shown"}
     title={alt || undefined}
-    className={PLACEHOLDER_CLASS}
+    className={cn(PLACEHOLDER_CLASS, className)}
   >
     <FontAwesomeIcon icon={faBan} className="w-3.5 h-3.5 flex-none" />
-    <span className="truncate">Image not shown</span>
+    <span className="truncate" aria-hidden="true">
+      Image not shown
+    </span>
+  </span>
+);
+
+/** An external image the user asked for that did not load (404, hotlink block). */
+const FailedImagePlaceholder = ({
+  alt,
+  host,
+  className,
+}: {
+  alt?: string;
+  host: string;
+  className?: string;
+}) => (
+  <span
+    data-testid="external-image-failed"
+    role="img"
+    aria-label={
+      alt
+        ? `Image ${alt} could not be loaded from ${host}`
+        : `Image could not be loaded from ${host}`
+    }
+    title={alt || undefined}
+    className={cn(PLACEHOLDER_CLASS, className)}
+  >
+    <FontAwesomeIcon icon={faBan} className="w-3.5 h-3.5 flex-none" />
+    <span className="truncate" aria-hidden="true">
+      Could not load image from {host}
+    </span>
   </span>
 );
 
@@ -146,6 +212,8 @@ type AuthenticatedImageProps = {
   src: string;
   alt?: string;
   className?: string;
+  /** Sizing for the placeholders, e.g. a gallery tile; the image keeps `className`. */
+  placeholderClassName?: string;
   onClick?: () => void;
   "data-testid"?: string;
   // Notifies the caller (e.g. MarkdownImage) that the image failed to load,
@@ -167,6 +235,7 @@ export const AuthenticatedImage = ({
   src,
   alt = "",
   className,
+  placeholderClassName,
   onClick,
   "data-testid": dataTestId,
   onError,
@@ -219,13 +288,17 @@ export const AuthenticatedImage = ({
     );
   }
 
-  if (kind === "blocked") return <BlockedImagePlaceholder alt={alt} />;
+  if (kind === "blocked") {
+    return <BlockedImagePlaceholder alt={alt} className={placeholderClassName} />;
+  }
 
   if (kind === "external" && !externalApproved) {
     return (
       <ExternalImagePlaceholder
         host={imageSrcHost(src)}
         alt={alt}
+        src={src}
+        className={placeholderClassName}
         onLoad={() => {
           approveExternalImage(src);
           setApprovedSrc(src);
@@ -234,7 +307,16 @@ export const AuthenticatedImage = ({
     );
   }
 
-  if (directError) return null;
+  if (directError) {
+    // The user clicked this one: say it failed instead of making it vanish.
+    return kind === "external" ? (
+      <FailedImagePlaceholder
+        alt={alt}
+        host={imageSrcHost(src)}
+        className={placeholderClassName}
+      />
+    ) : null;
+  }
 
   return (
     <img
@@ -246,7 +328,9 @@ export const AuthenticatedImage = ({
       onClick={onClick}
       onError={() => {
         setDirectError(true);
-        onError?.();
+        // An approved external image keeps its own "could not load" chip, so
+        // the caller must not collapse it.
+        if (kind !== "external") onError?.();
       }}
       data-testid={dataTestId}
       className={className}

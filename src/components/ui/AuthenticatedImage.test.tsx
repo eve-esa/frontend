@@ -94,7 +94,9 @@ describe("AuthenticatedImage", () => {
     const html = render(EXTERNAL);
 
     expect(html).not.toContain("<img");
-    expect(html).not.toContain("attacker.test/x.png");
+    // The URL may appear only as text (the tooltip), never as a source.
+    expect(html).not.toMatch(/(?:src|srcSet|href)="[^"]*attacker\.test/);
+    expect(html).not.toContain("url(");
     expect(html).toContain('data-testid="external-image-load"');
     expect(html).toMatch(/data-testid="external-image-host"[^>]*>attacker\.test</);
     expect(useImageBlob).toHaveBeenCalledWith(EXTERNAL, false);
@@ -109,6 +111,48 @@ describe("AuthenticatedImage", () => {
     expect(onLoad).not.toHaveBeenCalled();
     button?.props.onClick?.();
     expect(onLoad).toHaveBeenCalledOnce();
+  });
+
+  it("a click on the placeholder does not follow a link around the image", () => {
+    const onLoad = vi.fn();
+    const event = { preventDefault: vi.fn(), stopPropagation: vi.fn() };
+    const button = findButton(
+      ExternalImagePlaceholder({ host: "attacker.test", onLoad }),
+    ) as ReactElement<{ onClick?: (e: typeof event) => void }> | null;
+
+    button?.props.onClick?.(event);
+    expect(event.preventDefault).toHaveBeenCalledOnce();
+    expect(event.stopPropagation).toHaveBeenCalledOnce();
+    expect(onLoad).toHaveBeenCalledOnce();
+  });
+
+  it("names the image and its host for screen readers and shows the full URL", () => {
+    const html = renderToStaticMarkup(
+      <AuthenticatedImage src={EXTERNAL} alt="Sentinel-2 tile" />,
+    );
+
+    expect(html).toContain('aria-label="Load image Sentinel-2 tile from attacker.test"');
+    expect(html).toContain(`title="${EXTERNAL.replace("&", "&amp;")}"`);
+  });
+
+  it("names a blocked image as an image with its alt text", () => {
+    const html = renderToStaticMarkup(
+      <AuthenticatedImage src={SVG} alt="diagram" />,
+    );
+
+    expect(html).toContain('role="img"');
+    expect(html).toContain('aria-label="Image not shown: diagram"');
+  });
+
+  it("gives the placeholder the caller's tile size", () => {
+    const html = renderToStaticMarkup(
+      <AuthenticatedImage
+        src={EXTERNAL}
+        placeholderClassName="aspect-[4/3] w-full"
+      />,
+    );
+
+    expect(html).toMatch(/data-testid="external-image-load"[^>]*aspect-\[4\/3\] w-full/);
   });
 
   it("loads an external image once the user approved it, without a referrer", () => {

@@ -26,77 +26,19 @@ type SmartTextProps = {
   className?: string;
 };
 
-// Elements/attributes rehype-katex emits (via its rendered HTML, parsed back
-// into hast) that aren't part of GitHub's default sanitize schema. Needed so
-// rehype-sanitize (which runs after rehype-raw) doesn't strip KaTeX markup.
-const katexTagNames = [
-  "svg",
-  "path",
-  "math",
-  "semantics",
-  "annotation",
-  "mrow",
-  "mi",
-  "mo",
-  "mn",
-  "msup",
-  "msub",
-  "mfrac",
-  "mroot",
-  "msqrt",
-  "mtext",
-  "mspace",
-  "munder",
-  "mover",
-  "munderover",
-  "mtable",
-  "mtr",
-  "mtd",
-  "line",
-  "g",
-  "defs",
-  "use",
-];
-
-// Presentational SVG/MathML attributes: safe to allow anywhere, they can't
-// trigger navigation or script execution.
-const katexAttributes = [
-  "className",
-  "ariaHidden",
-  "viewBox",
-  "xmlns",
-  "xmlnsXLink",
-  "d",
-  "fill",
-  "stroke",
-  "preserveAspectRatio",
-  "focusable",
-  "role",
-  "encoding",
-  "mathvariant",
-];
-
-// `style` is excluded from the default schema (raw CSS is an XSS/clickjacking
-// vector), but KaTeX relies on inline `style` for spacing/sizing. Only allow
-// it on the tags KaTeX actually renders, not on links/images/etc.
-const katexStyleTagNames = ["span", ...katexTagNames];
-
-// Extends GitHub's default sanitize schema (which already covers GFM tables,
-// lists, code blocks, images, etc.) with what KaTeX needs, and locks link
-// protocols down to kill `javascript:`/`data:` hrefs (SEC-5).
+// GitHub's default sanitize schema (GFM tables, lists, code blocks, images,
+// ...) with three changes:
+// - no inline `style` anywhere: CSS such as `background-image:url(...)` would
+//   load a foreign host with no click. KaTeX needs `style`, so rehype-katex
+//   runs after this sanitizer (see the plugin order below) and its own output
+//   is never filtered.
+// - no `picture` or `source`: `srcSet` has no protocol check.
+// - link protocols locked down to kill `javascript:`/`data:` hrefs (SEC-5).
 const sanitizeSchema: SanitizeSchema = {
   ...defaultSchema,
-  tagNames: [...(defaultSchema.tagNames ?? []), ...katexTagNames],
-  attributes: {
-    ...defaultSchema.attributes,
-    "*": [...(defaultSchema.attributes?.["*"] ?? []), ...katexAttributes],
-    ...Object.fromEntries(
-      katexStyleTagNames.map((tag) => [
-        tag,
-        [...(defaultSchema.attributes?.[tag] ?? []), "style"],
-      ])
-    ),
-  },
+  tagNames: (defaultSchema.tagNames ?? []).filter(
+    (tag) => tag !== "picture" && tag !== "source",
+  ),
   protocols: {
     ...defaultSchema.protocols,
     href: ["http", "https", "mailto"],
@@ -172,6 +114,12 @@ const MarkdownImage = React.memo(
               variant === "tile"
                 ? "aspect-[4/3] w-full rounded-lg object-cover cursor-zoom-in"
                 : "my-2 max-h-[400px] max-w-[480px] w-auto rounded-lg object-contain cursor-zoom-in"
+            }
+            // A gallery tile keeps its size while it is still a placeholder.
+            placeholderClassName={
+              variant === "tile"
+                ? "my-0 flex aspect-[4/3] w-full justify-center"
+                : undefined
             }
           />
           {showMcpBadge && <McpBadge title={title!} />}
@@ -494,7 +442,10 @@ const SmartText: React.FC<SmartTextProps> = ({ text, className }) => {
     () => (
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath]}
-        rehypePlugins={[rehypeKatex, rehypeRaw, [rehypeSanitize, sanitizeSchema]]}
+        // Sanitize first, KaTeX last: the sanitizer keeps the
+        // `language-math` class remark-math puts on formulas, and KaTeX's
+        // generated markup (inline style included) is added after it.
+        rehypePlugins={[rehypeRaw, [rehypeSanitize, sanitizeSchema], rehypeKatex]}
         components={components}
       >
         {preparedText}
