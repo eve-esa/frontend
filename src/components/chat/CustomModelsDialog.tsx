@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/Select";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useListModels } from "@/services/useListModels";
 import {
   useCreateCustomModel,
@@ -43,6 +43,9 @@ export const CustomModelsDialog = ({
   const [providerSelectOpen, setProviderSelectOpen] = useState(false);
   const [catalogSelectOpen, setCatalogSelectOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<CustomModel | null>(null);
+  // After a delete the row and its trigger are gone: focus goes to the name
+  // field instead of falling back to the dialog container.
+  const nameInputRef = useRef<HTMLInputElement>(null);
   const isSelectOpen = providerSelectOpen || catalogSelectOpen;
 
   const providers = models?.providers ?? [];
@@ -140,6 +143,7 @@ export const CustomModelsDialog = ({
                       type="button"
                       variant="outline"
                       size="sm"
+                      aria-label={`Edit ${model.display_name}`}
                       onClick={() => startEdit(model)}
                       disabled={isPending}
                     >
@@ -169,6 +173,7 @@ export const CustomModelsDialog = ({
               {editing ? "Edit model" : "Add model"}
             </p>
             <Input
+              ref={nameInputRef}
               name="eve-custom-model-name"
               autoComplete="off"
               data-1p-ignore="true"
@@ -274,6 +279,7 @@ export const CustomModelsDialog = ({
           onOpenChange={(open) => {
             if (!open) setPendingDelete(null);
           }}
+          onDeletedFocus={() => nameInputRef.current?.focus()}
         />
       </DialogContent>
     </Dialog>

@@ -97,7 +97,29 @@ describe("CustomModelsDialog delete", () => {
     expect(deleteMutate).not.toHaveBeenCalled();
 
     byTestId("custom-model-delete-confirm")!.onClick!({} as never);
-    expect(deleteMutate).toHaveBeenCalledWith("cm-1");
+    expect(deleteMutate).toHaveBeenCalledWith("cm-1", expect.anything());
+  });
+
+  it("closes after a successful delete of the model it is open for", async () => {
+    const { DeleteCustomModelDialog } = await import("./DeleteCustomModelDialog");
+    const onOpenChange = vi.fn();
+    renderToStaticMarkup(
+      <DeleteCustomModelDialog model={model} onOpenChange={onOpenChange} />,
+    );
+    byTestId("custom-model-delete-confirm")!.onClick!({} as never);
+    const options = deleteMutate.mock.calls[0][1] as { onSuccess: () => void };
+
+    expect(onOpenChange).not.toHaveBeenCalled();
+    options.onSuccess();
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("names the model on each row's Edit button", async () => {
+    const { CustomModelsDialog } = await import("./CustomModelsDialog");
+    const html = renderToStaticMarkup(
+      <CustomModelsDialog isOpen={true} onOpenChange={vi.fn()} />,
+    );
+    expect(html).toContain('aria-label="Edit My GPT"');
   });
 
   it("renders nothing without a model", async () => {

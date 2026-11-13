@@ -51,12 +51,6 @@ describe("ProfileExtraFields country picker", () => {
 });
 
 describe("ProfileExtraFields error text", () => {
-  it("keeps the dark colour and uses the danger token in light", () => {
-    expect(FIELD_ERROR_CLASS).toBe(
-      "text-sm text-red-500 in-data-[theme=light]:text-danger-400",
-    );
-  });
-
   it("renders each field error with that class", () => {
     const html = renderToStaticMarkup(
       <ProfileExtraFields

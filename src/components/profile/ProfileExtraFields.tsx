@@ -40,7 +40,7 @@ export const ProfileExtraFields = <T extends ProfileExtraFieldValues>({
 
       <div className="flex w-full justify-center flex-col gap-2">
         <label htmlFor={countryId} className="flex items-center gap-1">
-          <p className="font-['NotesESA'] text-sm">Country*</p>
+          <span className="font-['NotesESA'] text-sm">Country*</span>
         </label>
         <div className="flex flex-col gap-2">
           {/* A native select: the browser's own type-to-search works over the
@@ -79,7 +79,7 @@ export const ProfileExtraFields = <T extends ProfileExtraFieldValues>({
 
       <div className="flex w-full justify-center flex-col gap-2">
         <label htmlFor={institutionId} className="flex items-center gap-1">
-          <p className="font-['NotesESA'] text-sm">Institution*</p>
+          <span className="font-['NotesESA'] text-sm">Institution*</span>
         </label>
         <div className="flex flex-col gap-2">
           <Input

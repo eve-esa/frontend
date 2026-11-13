@@ -77,19 +77,22 @@ export const ProfileDialog = ({ isOpen, onOpenChange }: ProfileDialogProps) => {
           {/* EMAIL */}
 
           <div className="flex w-full justify-center flex-col gap-2">
-            <label htmlFor="email" className="flex items-center gap-1">
-              <p className="font-['NotesESA'] text-sm">Email*</p>
+            <label htmlFor="profile-email" className="flex items-center gap-1">
+              <span className="font-['NotesESA'] text-sm">Email*</span>
             </label>
             <div className="flex flex-col gap-2">
               <Input
                 className="w-full"
+                id="profile-email"
                 data-testid="profile-email"
                 {...register("email")}
                 disabled
                 type="email"
               />
               {errors?.email && (
-                <p className={FIELD_ERROR_CLASS}>{errors.email.message}</p>
+                <p id="profile-email-error" className={FIELD_ERROR_CLASS}>
+                  {errors.email.message}
+                </p>
               )}
             </div>
           </div>
@@ -97,18 +100,21 @@ export const ProfileDialog = ({ isOpen, onOpenChange }: ProfileDialogProps) => {
           {/* FIRST NAME */}
 
           <div className="flex w-full justify-center flex-col gap-2">
-            <label htmlFor="first_name" className="flex items-center gap-1">
-              <p className="font-['NotesESA'] text-sm">First Name</p>
+            <label htmlFor="profile-first-name" className="flex items-center gap-1">
+              <span className="font-['NotesESA'] text-sm">First Name</span>
             </label>
             <div className="flex flex-col gap-2">
               <Input
                 className="w-full"
+                id="profile-first-name"
                 data-testid="profile-first-name"
+                aria-invalid={Boolean(errors?.first_name)}
+                aria-describedby={errors?.first_name ? "profile-first-name-error" : undefined}
                 {...register("first_name")}
                 type="text"
               />
               {errors?.first_name && (
-                <p className={FIELD_ERROR_CLASS}>
+                <p id="profile-first-name-error" className={FIELD_ERROR_CLASS}>
                   {errors.first_name.message}
                 </p>
               )}
@@ -118,18 +124,21 @@ export const ProfileDialog = ({ isOpen, onOpenChange }: ProfileDialogProps) => {
           {/* LAST NAME */}
 
           <div className="flex w-full justify-center flex-col gap-2">
-            <label htmlFor="last_name" className="flex items-center gap-1">
-              <p className="font-['NotesESA'] text-sm">Last Name</p>
+            <label htmlFor="profile-last-name" className="flex items-center gap-1">
+              <span className="font-['NotesESA'] text-sm">Last Name</span>
             </label>
             <div className="flex flex-col gap-2">
               <Input
                 className="w-full"
+                id="profile-last-name"
                 data-testid="profile-last-name"
+                aria-invalid={Boolean(errors?.last_name)}
+                aria-describedby={errors?.last_name ? "profile-last-name-error" : undefined}
                 {...register("last_name")}
                 type="text"
               />
               {errors?.last_name && (
-                <p className={FIELD_ERROR_CLASS}>
+                <p id="profile-last-name-error" className={FIELD_ERROR_CLASS}>
                   {errors.last_name.message}
                 </p>
               )}
