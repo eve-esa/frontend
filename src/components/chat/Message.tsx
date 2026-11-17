@@ -1,7 +1,7 @@
-import { useState, useEffect, useId, useRef } from "react";
+import { useState, useEffect, useId, useMemo, useRef, type ReactNode } from "react";
 import SmartText from "@/components/ui/LazySmartText";
 import { MessageFooter } from "./MessageFooter";
-import type { MessageType } from "@/types";
+import type { MessageType, ModelListResponse } from "@/types";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { cn } from "@/lib/utils";
 import { useSmoothStream } from "@/hooks/useSmoothStream";
@@ -17,6 +17,39 @@ import {
 } from "@/utilities/streamingOutput";
 import { SummarizingIndicator } from "./SummarizingIndicator";
 import { ToolActivityBar } from "./ToolActivityBar";
+import { AgentSteps } from "./AgentSteps";
+import {
+  AGENTIC_CHAT_ENABLED,
+  AGENT_STEPS_ENABLED,
+  INLINE_CITATIONS_ENABLED,
+  STREAMDOWN_ENABLED,
+} from "@/utilities/features";
+import {
+  hasInlineCitations,
+  markCitations,
+  normalizeCitations,
+  normalizeRetrieved,
+  scrubPlaceholders,
+  shareNumbersByDocument,
+  uncitedSources,
+  type MarkerInstance,
+} from "@/utilities/citations";
+import { CitationsProvider } from "./citations/CitationsContext";
+import { MessageSources } from "./citations/MessageSources";
+import { hasAgentStepRows, type CollectionCatalog } from "@/utilities/agentSteps";
+import { answeredModelLabel } from "@/utilities/modelLabel";
+
+const NO_MARKERS: readonly MarkerInstance[] = [];
+
+/** The citations provider around a turn that carries citations; a plain fragment otherwise. */
+const CitationsScope = ({
+  enabled,
+  children,
+  ...props
+}: Omit<Parameters<typeof CitationsProvider>[0], "children"> & {
+  enabled: boolean;
+  children: ReactNode;
+}) => (enabled ? <CitationsProvider {...props}>{children}</CitationsProvider> : <>{children}</>);
 
 type MessageProps = {
   message: MessageType;
@@ -24,6 +57,12 @@ type MessageProps = {
   isLastMessage: boolean;
   scrollContainerRef?: React.RefObject<HTMLDivElement | null>;
   messageIndex?: number;
+  /** Collection labels for the knowledge base rows of the agent steps. */
+  collections?: CollectionCatalog | null;
+  /** Platform models, for the label of the model that answered. */
+  models?: ModelListResponse;
+  /** Opens the My collections panel from a private source chip. */
+  onOpenMyCollections?: () => void;
 };
 
 export const Message = ({
@@ -32,6 +71,9 @@ export const Message = ({
   isLastMessage,
   scrollContainerRef,
   messageIndex,
+  collections,
+  models,
+  onOpenMyCollections,
 }: MessageProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isOverflowing, setIsOverflowing] = useState(false);
@@ -54,10 +96,33 @@ export const Message = ({
 
   const isStreamingTarget = isSending && isLastMessage;
 
-  // Tool activity only renders on the active streaming target: once the turn
-  // is persisted the bar disappears (the trace footer takes over from there).
+  // Live tool activity of the active streaming target. FEATURE_AGENT_STEPS
+  // on: it drives the agent steps block, which reads the stored trace once
+  // the turn is persisted. Off: one chip per tool call while the turn streams.
   const toolActivity = message.tool_activity ?? [];
   const showToolActivity = isStreamingTarget && toolActivity.length > 0;
+  const showToolChips = !AGENT_STEPS_ENABLED && showToolActivity;
+  // A live agentic turn shows the steps block from the start: its header is
+  // the turn's one status line ("Thinking…", the running step, the timer), so
+  // the streamed status notices and the summarizing line stay out of the
+  // bubble. Classic turns keep their notices.
+  const stepsBlockLive =
+    AGENT_STEPS_ENABLED &&
+    isStreamingTarget &&
+    AGENTIC_CHAT_ENABLED &&
+    !message.stopped;
+
+  // A stopped turn says "stopped" once: with the steps block on screen its
+  // header does ("Stopped after 14s"), and the legacy line is kept for
+  // screen readers only. Flag off, the line shows as before.
+  const stepsShowStop = useMemo(
+    () =>
+      AGENT_STEPS_ENABLED &&
+      Boolean(message.stopped) &&
+      hasAgentStepRows(message.tool_activity, message.trace, true),
+    [message.stopped, message.tool_activity, message.trace],
+  );
+  const stoppedLineClass = stepsShowStop ? "sr-only" : undefined;
 
   // History compression is a real wait, not a status notice. It leaves as
   // soon as answer text exists, so a lost "finished" cannot sit beside tokens.
@@ -210,10 +275,37 @@ export const Message = ({
     setIsExpanded(next);
   };
 
+  // Inline citations: only turns whose backend sent the lists. The markers
+  // follow the shown text, so a marker appears once its `[n]` has streamed.
+  const withCitations =
+    INLINE_CITATIONS_ENABLED && hasInlineCitations(message.metadata);
+  const citations = useMemo(
+    () =>
+      withCitations
+        ? shareNumbersByDocument(normalizeCitations(message.metadata?.citations))
+        : [],
+    [withCitations, message.metadata?.citations],
+  );
+  const retrievedSources = useMemo(
+    () =>
+      withCitations
+        ? uncitedSources(normalizeRetrieved(message.metadata?.sources_retrieved), citations)
+        : [],
+    [withCitations, message.metadata?.sources_retrieved, citations],
+  );
+  // With the flag on every answer goes through markCitations (it also scrubs
+  // placeholder code points from the text), and the provider and the answer
+  // keep one shape, so the first citations frame mid-stream remounts nothing.
+  const marked = useMemo(
+    () => (INLINE_CITATIONS_ENABLED ? markCitations(displayOutput, citations) : null),
+    [displayOutput, citations],
+  );
+
   const isRequery = message.metadata?.prompts?.rag_decision_result?.use_rag;
   const requery = `**Searched for: ${
     message.metadata?.prompts?.rag_decision_result?.requery || message.input
   }**\n\n`;
+  const requeryText = INLINE_CITATIONS_ENABLED ? scrubPlaceholders(requery) : requery;
 
   return (
     <div
@@ -284,14 +376,52 @@ export const Message = ({
 
       {/* ASSISTANT BUBBLE. Dark: natural-900, the chat ground itself, so the
           block has no visible fill. Light mirrors that with the chat ground
-          (#F5F5F5) instead of the white natural-900. */}
-      <div className="bg-natural-900 in-data-[theme=light]:bg-(--color-chat-ground) rounded-tl-[20px] rounded-br-[20px] pb-4 pt-0 relative">
-        <div className="md:pt-8 pt-4 px-[1px]">
+          (#F5F5F5) instead of the white natural-900. With FEATURE_AGENT_STEPS
+          the turn (steps plus answer) sits in the A1 preview card: the
+          surface primary-600 `#001923` on the dark chat ground, ESA white
+          (natural-900 light) on the light one (BRAND.md: messages and cards
+          white), same radius, 16 px inside. */}
+      <div
+        data-testid="message-assistant-surface"
+        className={
+          AGENT_STEPS_ENABLED
+            ? "bg-primary-600 in-data-[theme=light]:bg-natural-900 rounded-tl-[20px] rounded-br-[20px] px-4 pb-4 pt-0 relative"
+            : "bg-natural-900 in-data-[theme=light]:bg-(--color-chat-ground) rounded-tl-[20px] rounded-br-[20px] pb-4 pt-0 relative"
+        }
+      >
+        {/* With citations the provider spans the steps block too: its source
+            chips open the same cards as the markers. */}
+        <CitationsScope
+          enabled={INLINE_CITATIONS_ENABLED}
+          markers={marked?.markers ?? NO_MARKERS}
+          citations={citations}
+          retrieved={retrievedSources}
+          scope={persistKey}
+          onOpenMyCollections={onOpenMyCollections}
+        >
+        <div className={AGENT_STEPS_ENABLED ? "md:pt-8 pt-4" : "md:pt-8 pt-4 px-[1px]"}>
+          {/* Above the answer so the steps stay visible while tokens stream;
+              it folds itself when the answer starts. */}
+          {AGENT_STEPS_ENABLED && (
+            <AgentSteps
+              activity={toolActivity}
+              trace={message.trace}
+              live={isStreamingTarget}
+              answerStarted={Boolean(effectiveOutput)}
+              stopped={Boolean(message.stopped)}
+              failed={Boolean(message.metadata?.error)}
+              agentic={stepsBlockLive}
+              summarizing={showSummarizing}
+              collections={collections}
+              modelLabel={answeredModelLabel(message, models)}
+              onOpenMyCollections={onOpenMyCollections}
+            />
+          )}
           {effectiveOutput ? (
             <>
               {/* Above the answer so the chips stay visible while tokens
                   stream, instead of vanishing at the first token. */}
-              {showToolActivity && (
+              {showToolChips && (
                 <div className="mb-3">
                   <ToolActivityBar activity={toolActivity} />
                 </div>
@@ -301,13 +431,25 @@ export const Message = ({
                 data-searched-for={isRequery ? "true" : "false"}
               >
                 <SmartText
-                  text={`${isRequery ? requery : ""}${displayOutput}`}
+                  text={`${isRequery ? requeryText : ""}${marked ? marked.text : displayOutput}`}
+                  markers={marked?.markers}
+                  // Read by Streamdown only: off, SmartText re-renders as before.
+                  isStreaming={STREAMDOWN_ENABLED && isStreamingTarget}
                 />
               </div>
+              {withCitations && (
+                <MessageSources
+                  citations={citations}
+                  retrieved={retrievedSources}
+                  answer={message.output || ""}
+                />
+              )}
               {message.stopped && (
                 <p
                   data-testid="message-stopped"
-                  className="mt-2 text-sm text-natural-500 italic"
+                  className={
+                    stoppedLineClass ?? "mt-2 text-sm text-natural-500 italic"
+                  }
                 >
                   Generation stopped
                 </p>
@@ -318,7 +460,7 @@ export const Message = ({
               data-testid="message-loading"
               className="flex flex-col gap-2 text-natural-600"
             >
-              {message.pre_answer_notices?.length ? (
+              {!stepsBlockLive && message.pre_answer_notices?.length ? (
                 <div className="mb-2 space-y-1">
                   {message.pre_answer_notices.map((notice, idx) => (
                     <div
@@ -330,9 +472,9 @@ export const Message = ({
                   ))}
                 </div>
               ) : null}
-              {showSummarizing && <SummarizingIndicator />}
-              {showToolActivity && <ToolActivityBar activity={toolActivity} />}
-              {!message.pre_answer_notices?.length &&
+              {showSummarizing && !stepsBlockLive && <SummarizingIndicator />}
+              {showToolChips && <ToolActivityBar activity={toolActivity} />}
+              {(stepsBlockLive || !message.pre_answer_notices?.length) &&
                 !showToolActivity &&
                 !showSummarizing && (
                   <>
@@ -347,7 +489,7 @@ export const Message = ({
           ) : message.stopped ? (
             <p
               data-testid="message-stopped"
-              className="text-sm text-natural-500 italic"
+              className={stoppedLineClass ?? "text-sm text-natural-500 italic"}
             >
               Generation stopped
             </p>
@@ -367,6 +509,7 @@ export const Message = ({
             </p>
           ) : null}
         </div>
+        </CitationsScope>
 
         {/* FOOTER SECTION */}
         {/* A turn that produced no output has nothing to attribute or
@@ -375,7 +518,7 @@ export const Message = ({
             under a stopped or failed message. */}
         {!showLoading && Boolean(message.output) && (
           <div className="pt-8">
-            <MessageFooter message={message} />
+            <MessageFooter message={message} hideSources={withCitations} />
           </div>
         )}
       </div>

@@ -81,8 +81,61 @@ export class MessagePanel {
     await this.last.getByTestId("message-thumb-down").click();
   }
 
+  /** MCP tool chips of the last turn; rendered only while that turn streams, FEATURE_AGENT_STEPS off. */
+  get lastToolChips(): Locator {
+    return this.last.getByTestId("tool-chip");
+  }
+
+  /**
+   * Footer Trace button of the last turn: rendered with FEATURE_AGENT_STEPS off, or on together
+   * with FEATURE_TRACE_SIDEBAR.
+   */
   hasTraceButton(): Promise<boolean> {
     return this.last.getByTestId("message-trace-button").isVisible();
+  }
+
+  /** The inline agent steps block of the last turn (agentic turns, FEATURE_AGENT_STEPS on). */
+  get lastAgentSteps(): Locator {
+    return this.last.getByTestId("agent-steps");
+  }
+
+  hasAgentSteps(): Promise<boolean> {
+    return this.lastAgentSteps.isVisible();
+  }
+
+  /**
+   * Whether the last turn shows what the agent did: the inline agent steps with
+   * FEATURE_AGENT_STEPS on, the footer Trace button with it off or with FEATURE_TRACE_SIDEBAR on.
+   */
+  hasTrace(agentSteps: boolean, sidebar: boolean): Promise<boolean> {
+    return !agentSteps || sidebar ? this.hasTraceButton() : this.hasAgentSteps();
+  }
+
+  /** Opens the agent steps block of the last turn when it folded itself after the answer. */
+  async openLastAgentSteps(): Promise<void> {
+    await expect(this.lastAgentSteps).toBeVisible();
+    if ((await this.lastAgentSteps.getAttribute("data-state")) !== "open") {
+      await this.last.getByTestId("agent-steps-toggle").click();
+    }
+    await expect(this.lastAgentSteps).toHaveAttribute("data-state", "open");
+  }
+
+  /**
+   * Tool steps of the last turn that are on screen: the tool name and the row label
+   * ("eve_retrieval Searched \"query\""). The block is open while the agent works and
+   * folds when the answer starts; `openLastAgentSteps` shows the rows again.
+   */
+  lastToolSteps(): Promise<{ tool: string; label: string }[]> {
+    return this.last
+      .locator('[data-testid="agent-step"][data-tool]')
+      .evaluateAll((rows) =>
+        rows.map((row) => ({
+          tool: row.getAttribute("data-tool") ?? "",
+          label: (
+            (row.querySelector('[data-testid="agent-step-toggle"]') as HTMLElement | null)?.innerText ?? ""
+          ).trim(),
+        })),
+      );
   }
 
   isStopped(): Promise<boolean> {
@@ -103,11 +156,6 @@ export class MessagePanel {
         () => false,
       );
     expect(appeared, "the last turn showed the error copy").toBe(false);
-  }
-
-  /** MCP tool chips of the last turn; rendered only while that turn streams. */
-  get lastToolChips(): Locator {
-    return this.last.getByTestId("tool-chip");
   }
 
   /** The skeleton or notices shown before the first token of the last turn. */

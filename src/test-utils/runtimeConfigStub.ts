@@ -27,6 +27,10 @@ const BUILD_TIME_ENV_KEYS = [
   "VITE_FEATURE_REPORT_BUG",
   "VITE_FEATURE_PROFILE_FIELDS",
   "VITE_FEATURE_THEME_SWITCH",
+  "VITE_FEATURE_STREAMDOWN",
+  "VITE_FEATURE_AGENT_STEPS",
+  "VITE_FEATURE_TRACE_SIDEBAR",
+  "VITE_FEATURE_INLINE_CITATIONS",
   // Not flags, same reasoning: AppVersion reads these at module scope and the
   // profile dialog renders it, so a developer's .env would otherwise decide
   // whether a version line appears in a test that never asked about one.
@@ -53,9 +57,19 @@ const BUILD_TIME_ENV_KEYS = [
 export const stubRuntimeConfig = (
   config: Partial<Record<ConfigKey, string>>,
 ) => {
+  blankBuildTimeEnv();
+  vi.stubGlobal("window", { __EVE_CONFIG__: config });
+};
+
+/**
+ * Blanks the build-time values and clears the module registry, without a
+ * window: for tests that render in plain Node and only need the machine's
+ * VITE_FEATURE_* out of the way (every flag at its code default). Undo with
+ * `vi.unstubAllEnvs()`.
+ */
+export const blankBuildTimeEnv = () => {
   vi.resetModules();
   for (const key of BUILD_TIME_ENV_KEYS) {
     vi.stubEnv(key, "");
   }
-  vi.stubGlobal("window", { __EVE_CONFIG__: config });
 };

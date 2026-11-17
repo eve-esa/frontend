@@ -124,3 +124,18 @@ describe("mcpServerForTool", () => {
     );
   });
 });
+
+describe("applyToolCall request collections", () => {
+  it("keeps the collections the request sent, which the backend forces on the retrieval call", () => {
+    const [entry] = applyToolCall([], { type: "tool_call", tool: "eve_retrieval_retrieve", args: { query: "q" } }, [], 0, {
+      public_collections: ["wiley"],
+      private_collections: [],
+    });
+    expect(entry.requestCollections).toEqual({ public_collections: ["wiley"], private_collections: [] });
+  });
+
+  it("leaves the entry shape alone without them", () => {
+    const [entry] = applyToolCall([], { type: "tool_call", tool: "eve_retrieval_retrieve" });
+    expect("requestCollections" in entry).toBe(false);
+  });
+});

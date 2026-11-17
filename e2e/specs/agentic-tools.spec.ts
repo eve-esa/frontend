@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { flagOn, type ChatPage } from "../pages";
+import { flagOn, flagOrEnvOn, type ChatPage } from "../pages";
 import { expect, test, type Api } from "../fixtures";
 import {
   answerStepIndex,
@@ -42,36 +42,54 @@ function retrievalSelected(page: Page, toolkitsOn: boolean): Promise<boolean> {
   }, SERVER);
 }
 
+type ToolStep = { tool: string; label: string };
+
 /**
- * Sends `question` in a new chat and samples the tool chips while the turn streams (they
- * vanish once it is persisted). Returns the conversation id and the longest chip list seen.
+ * Sends `question` in a new chat and samples the tool steps while the turn streams. With
+ * FEATURE_AGENT_STEPS on they are the rows of the inline agent steps block (it folds when the
+ * answer starts), read once more from the persisted trace with the block opened; off, they are
+ * the tool chips, which vanish once the turn is persisted (`tool` stays empty). Returns the
+ * conversation id and the longest list seen.
  */
-async function sendAndWatchChips(
+async function sendAndWatchSteps(
   chat: ChatPage,
   question: string,
-): Promise<{ conversationId: string; chips: string[] }> {
+  agentSteps: boolean,
+): Promise<{ conversationId: string; steps: ToolStep[] }> {
+  const read = async (): Promise<ToolStep[]> =>
+    agentSteps
+      ? chat.messages.lastToolSteps()
+      : (await chat.messages.lastToolChips.allInnerTexts()).map((t) => ({ tool: "", label: t.trim() }));
   await chat.newChat();
   await chat.composer.send(question);
-  let chips: string[] = [];
+  let steps: ToolStep[] = [];
   const deadline = Date.now() + 240_000;
   await expect(chat.composer.stopButton.or(chat.composer.lastTurnEnded).first()).toBeVisible({
     timeout: 60_000,
   });
   while (Date.now() < deadline) {
-    const seen = (await chat.messages.lastToolChips.allInnerTexts()).map((t) => t.trim());
-    if (seen.length > chips.length) chips = seen;
+    const seen = await read();
+    if (seen.length > steps.length) steps = seen;
     if (!(await chat.composer.isGenerating()) && (await chat.composer.lastTurnEnded.isVisible())) {
       break;
     }
     await chat.page.waitForTimeout(200);
   }
   await chat.composer.waitIdle();
-  return { conversationId: await chat.waitForConversationId(), chips };
+  if (agentSteps && (await chat.messages.hasAgentSteps())) {
+    await chat.messages.openLastAgentSteps();
+    const persisted = await chat.messages.lastToolSteps();
+    if (persisted.length > steps.length) steps = persisted;
+  }
+  return { conversationId: await chat.waitForConversationId(), steps };
 }
 
 test.describe("agentic tools @dev", () => {
+  let agentSteps = false;
+
   test.beforeEach(async ({ chat, api, authedPage }) => {
     const config = await chat.servedConfig();
+    agentSteps = flagOrEnvOn(config, "FEATURE_AGENT_STEPS", false);
     test.skip(
       !flagOn(config, "FEATURE_AGENTIC_CHAT", true),
       "FEATURE_AGENTIC_CHAT is off in the served config: turns take the classic route",
@@ -83,15 +101,21 @@ test.describe("agentic tools @dev", () => {
     );
   });
 
-  test("an explicit search shows one eve_retrieval chip and the trace runs the tool before the answer", async ({
+  test("an explicit search shows one eve_retrieval step and the trace runs the tool before the answer", async ({
     chat,
     api,
   }, testInfo) => {
     test.setTimeout(300_000);
-    const { conversationId, chips } = await sendAndWatchChips(chat, SEARCH_QUESTION);
+    const { conversationId, steps } = await sendAndWatchSteps(chat, SEARCH_QUESTION, agentSteps);
     try {
-      expect(chips).toHaveLength(1);
-      expect(chips[0]).toMatch(new RegExp(`^Calling MCP server: ${SERVER}: \\S`));
+      expect(steps).toHaveLength(1);
+      if (agentSteps) {
+        expect(steps[0].tool).toBe(TOOL);
+        // The knowledge base row: the server chip, the verb, the query.
+        expect(steps[0].label).toMatch(/^eve_retrieval\s+Searched\s+"\S/);
+      } else {
+        expect(steps[0].label).toMatch(new RegExp(`^Calling MCP server: ${SERVER}: \\S`));
+      }
 
       const trace = await lastPersistedTrace(api, conversationId);
       const tool = toolStepIndex(trace, TOOL);
@@ -116,9 +140,9 @@ test.describe("agentic tools @dev", () => {
 
   test("the same question with no RAG runs no tool", async ({ chat, api }) => {
     test.setTimeout(300_000);
-    const { conversationId, chips } = await sendAndWatchChips(chat, OPT_OUT_QUESTION);
+    const { conversationId, steps } = await sendAndWatchSteps(chat, OPT_OUT_QUESTION, agentSteps);
     try {
-      expect(chips).toEqual([]);
+      expect(steps).toEqual([]);
       const trace = await lastPersistedTrace(api, conversationId);
       expect(trace.length, "the agentic turn persisted no trace").toBeGreaterThan(0);
       expect(trace.filter((step) => step.role === "tool").map((step) => step.name)).toEqual([]);

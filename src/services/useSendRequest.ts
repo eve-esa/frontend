@@ -1,4 +1,5 @@
 import { useRef } from "react";
+import type { CitationMetadata } from "@/utilities/citations";
 import { useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { MUTATION_KEYS, QUERY_KEYS } from "./keys";
 import { toast } from "sonner";
@@ -31,7 +32,13 @@ import {
 } from "./agenticMessage";
 import { getSelectedMcpServerNames } from "@/utilities/mcpServers";
 import { getSelectedSkillNames } from "@/utilities/skills";
-import { applyToolCall, applyToolResult } from "@/utilities/toolActivity";
+import { swapTempForSaved } from "@/utilities/savedTurn";
+import {
+  applyCancelledCalls,
+  applyModelFallback,
+  applyToolCall,
+  applyToolResult,
+} from "@/utilities/toolActivity";
 import type { MessagePipeline } from "@/utilities/messageEndpoint";
 import { shouldToastStreamError } from "@/utilities/streamError";
 import {
@@ -40,6 +47,8 @@ import {
 } from "@/utilities/stoppedPartials";
 import {
   AGENTIC_CHAT_ENABLED,
+  AGENT_STEPS_ENABLED,
+  INLINE_CITATIONS_ENABLED,
   STREAMING_ENABLED,
   STREAM_STATUS_NOTICES_ENABLED,
 } from "@/utilities/features";
@@ -67,6 +76,21 @@ type SendRequestProps = {
   modelSelection?: ModelSelection;
   models?: ModelListResponse;
   attachments?: ImageAttachment[];
+};
+
+
+/**
+ * The citation lists a frame carries (`token.citations`, `final.citations`
+ * and `final.sources_retrieved`, the same two on `stopped`), or null. Read
+ * only with FEATURE_INLINE_CITATIONS on: off, the frames change nothing.
+ */
+const citationFields = (evt: unknown): CitationMetadata | null => {
+  if (!INLINE_CITATIONS_ENABLED || !evt || typeof evt !== "object") return null;
+  const { citations, sources_retrieved } = evt as CitationMetadata;
+  const out: CitationMetadata = {};
+  if (Array.isArray(citations)) out.citations = citations;
+  if (Array.isArray(sources_retrieved)) out.sources_retrieved = sources_retrieved;
+  return Object.keys(out).length ? out : null;
 };
 
 export const sendRequest = async ({
@@ -199,6 +223,19 @@ export const useSendRequest = (conversationId?: string) => {
 
         let finalAnswer: string | null = null;
         let finalArtifactIds: string[] | undefined;
+        // The citation lists of the turn (FEATURE_INLINE_CITATIONS): the
+        // latest token, final or stopped frame that carried them, kept on the
+        // saved row so the markers stay until the refetch.
+        const citationMeta: { current: CitationMetadata | null } = { current: null };
+        const withCitations = (msg: MessageType, evt: unknown): MessageType => {
+          const next = citationFields(evt);
+          if (!next) return msg;
+          citationMeta.current = { ...(citationMeta.current ?? {}), ...next };
+          return {
+            ...msg,
+            metadata: { ...(msg.metadata ?? {}), ...next } as MessageType["metadata"],
+          };
+        };
         // Holder object rather than a plain let: the assignment happens inside
         // the onEvent closure, and control-flow narrowing would otherwise
         // collapse the variable to null after the await.
@@ -231,10 +268,13 @@ export const useSendRequest = (conversationId?: string) => {
             } else if (type === "token" && typeof content === "string") {
               streamedOutput += content;
               updateTemp((msg) =>
-                clearSummarizing({
-                  ...msg,
-                  output: (msg.output || "") + content,
-                }),
+                withCitations(
+                  clearSummarizing({
+                    ...msg,
+                    output: (msg.output || "") + content,
+                  }),
+                  evt,
+                ),
               );
             } else if (type === "final" && typeof answer === "string") {
               finalAnswer = answer;
@@ -248,10 +288,30 @@ export const useSendRequest = (conversationId?: string) => {
               // its backend trace.
               rememberTraceFromFinalEvent(conversationId, evt);
               updateTemp((msg) =>
-                clearSummarizing({ ...msg, output: answer }),
+                withCitations(clearSummarizing({ ...msg, output: answer }), evt),
               );
             } else if (type === "stopped") {
-              updateTemp(clearSummarizing);
+              updateTemp((msg) => {
+                const next = withCitations(clearSummarizing(msg), evt);
+                return AGENT_STEPS_ENABLED &&
+                  Array.isArray((evt as Record<string, unknown>).cancelled_tool_calls)
+                  ? {
+                      ...next,
+                      tool_activity: applyCancelledCalls(
+                        next.tool_activity,
+                        evt as Record<string, unknown>,
+                      ),
+                    }
+                  : next;
+              });
+            } else if (AGENT_STEPS_ENABLED && type === "model_fallback") {
+              updateTemp((msg) => ({
+                ...msg,
+                tool_activity: applyModelFallback(
+                  msg.tool_activity,
+                  evt as Record<string, unknown>,
+                ),
+              }));
             } else if (
               typeof content === "string" &&
               shouldShowPreAnswerNotice(type, STREAM_STATUS_NOTICES_ENABLED)
@@ -267,6 +327,13 @@ export const useSendRequest = (conversationId?: string) => {
                   msg.tool_activity,
                   evt as Record<string, unknown>,
                   selectedMcpServers(),
+                  Date.now(),
+                  AGENT_STEPS_ENABLED
+                    ? {
+                        public_collections: payload.public_collections ?? [],
+                        private_collections: payload.private_collections ?? [],
+                      }
+                    : undefined,
                 ),
               }));
             } else if (type === "tool_result") {
@@ -275,6 +342,7 @@ export const useSendRequest = (conversationId?: string) => {
                 tool_activity: applyToolResult(
                   msg.tool_activity,
                   evt as Record<string, unknown>,
+                  Date.now(),
                 ),
               }));
             } else if (type === "summarizing") {
@@ -319,6 +387,9 @@ export const useSendRequest = (conversationId?: string) => {
           },
           attachments,
           artifact_ids: finalArtifactIds,
+          ...(citationMeta.current
+            ? { metadata: citationMeta.current as MessageType["metadata"] }
+            : {}),
         });
       } catch (e) {
         // Expected overload outcome, handled in onError: not an error to log.
@@ -529,13 +600,13 @@ export const useSendRequest = (conversationId?: string) => {
         (oldData) => {
           if (!oldData) return undefined;
 
-          const filteredMessages = (oldData.messages ?? []).filter(
-            (msg: MessageType) => !msg.id?.startsWith("temp-"),
-          );
-
           return {
             ...oldData,
-            messages: [...filteredMessages, mapToConversationMessage(data)],
+            messages: swapTempForSaved(
+              oldData.messages ?? [],
+              mapToConversationMessage(data),
+              AGENT_STEPS_ENABLED,
+            ),
           };
         },
       );

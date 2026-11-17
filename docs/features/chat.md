@@ -40,9 +40,28 @@ off, answers have no sources.
 ## Work with an answer
 
 - **Sources (n)**: the documents the answer used, with the cited passages.
-- **Trace (n)**: the steps EVE took: what it planned, each tool call with its input and
-  output, and the final answer. Recent answers show how long each step took. Older answers may
-  show "Not recorded for this answer" instead of the tool inputs.
+- **Inline citations** (flag `FEATURE_INLINE_CITATIONS`, default off): in an agentic answer a
+  small number follows each claim taken from a source. Click it (or press Enter on it) to open the
+  source card: the provider, the title, the passage, the page or section, **Open** and **Copy
+  citation**; Escape or a second click closes it. A file of yours shows its file icon and a lock,
+  a satellite scene its collection, acquisition time, cloud cover and item id. Under the answer
+  one line such as "Sources: 5 cited from 3 providers and your files" opens the list grouped by
+  provider, with "Also retrieved, not cited" folded at the end. These answers show the list in
+  place of the **Sources (n)** button; answers without citations keep the button.
+- **Agent steps** (flag `FEATURE_AGENT_STEPS`, default off): above an agentic answer, the steps
+  EVE took. The block is open while EVE works, its header shows "Thinking…" or the running step
+  with a timer ("Searching the knowledge base… 0:42"), then folds into one line such as "Worked
+  for 1m 32s, 5 steps, 2 tools" when the answer starts; it stays open when a step failed or you
+  pressed Stop, with only the failed step open. Each row names the tool (the knowledge base with
+  its book icon, MCP server tools with the server and its tier), a skill ("Used skill <name>"), a
+  subagent with its own steps, or the plan with its progress. Open a row for the result, then
+  **Details** for the full arguments and result with copy buttons; a result stored as a file has
+  **Open full result**. With the flag on, the streamed status notices and tool chips of an
+  agentic turn give way to the block.
+- **Trace (n)**: the same steps in the right panel, with the timeline and every model step. With
+  `FEATURE_AGENT_STEPS` on it shows only with `FEATURE_TRACE_SIDEBAR` (default off), as a
+  debugging view. Older answers may show "Not recorded for this answer" instead of the tool
+  inputs.
 - **Hallucination Detector**: checks the answer against its sources and, when it finds a
   problem, suggests an alternative answer.
 - **Report a bug**: describe what went wrong. EVE attaches the technical details of the
@@ -50,6 +69,10 @@ off, answers have no sources.
 - Thumbs up or down to rate the answer, and the copy icon to copy its text.
 
 If an answer fails, EVE says so and offers **Retry**.
+
+## Diagrams and formulas
+
+With `FEATURE_STREAMDOWN` on, answers are rendered by Streamdown: a fenced `mermaid` block becomes a diagram, formulas render with KaTeX, and unfinished markdown (an open bold span, a code fence still streaming) is shown closed while the answer arrives. A formula still streaming without its closing delimiter shows a placeholder bar until it closes, and an answer shows a skeleton, never its markdown source, while the renderer loads. Diagrams follow the app theme (dark, light, System) and redraw when it changes. Node labels a model left unquoted with brackets, braces, quotes, pipes or semicolons are quoted before drawing; a diagram that still cannot be drawn shows its source as code with the note "Diagram could not be drawn", never the parse error, and a diagram still streaming shows the placeholder. A link inside a diagram opens in a new tab. Invalid LaTeX shows in the danger colour of the theme. Images from other hosts wait for a click, as in the default renderer. Off, answers render as before.
 
 ## When EVE is busy
 

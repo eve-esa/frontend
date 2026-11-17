@@ -84,6 +84,9 @@
   --animate-fade-out: fadeOut 0.2s ease-in;
   --animate-collapsible-down: collapsibleDown 0.15s ease-out;
   --animate-collapsible-up: collapsibleUp 0.15s ease-in;
+  /* Inline agent steps block: height and opacity together, 200 ms. */
+  --animate-agent-steps-down: agentStepsDown 0.2s ease-out;
+  --animate-agent-steps-up: agentStepsUp 0.2s ease-in;
 
   /* Agent trace: one colour per step kind (timeline, card accent, badge) */
   --color-trace-agent: #5ea9dd;
@@ -418,6 +421,28 @@
   }
 }
 
+@keyframes agentStepsDown {
+  from {
+    height: 0;
+    opacity: 0;
+  }
+  to {
+    height: var(--radix-collapsible-content-height);
+    opacity: 1;
+  }
+}
+
+@keyframes agentStepsUp {
+  from {
+    height: var(--radix-collapsible-content-height);
+    opacity: 1;
+  }
+  to {
+    height: 0;
+    opacity: 0;
+  }
+}
+
 @keyframes collapsibleUp {
   from {
     height: var(--radix-collapsible-content-height);
@@ -512,6 +537,121 @@ body:has(.react-joyride__overlay) {
 .smarttext .katex-display > .katex > .katex-html > .katex-tag {
   position: relative !important;
   margin-left: 15px;
+}
+
+/* Streamdown (FEATURE_STREAMDOWN). Its code and diagram blocks carry shadcn
+   token names (border, muted, sidebar) this app does not define, so they
+   emit no colour; give them the fill of the SmartText code block instead:
+   primary-800 at 40 % in dark, natural-900 in light, text natural-200, the
+   same radius and no edge. Tokens only, no new value. */
+.smarttext.streamdown [data-streamdown="code-block"],
+.smarttext.streamdown [data-streamdown="mermaid-block"] {
+  margin: 1rem 0;
+  border: 0;
+  border-radius: 0.5rem;
+  background-color: color-mix(in srgb, var(--color-primary-800) 40%, transparent);
+  color: var(--color-natural-200);
+}
+:root[data-theme="light"] .smarttext.streamdown [data-streamdown="code-block"],
+:root[data-theme="light"] .smarttext.streamdown [data-streamdown="mermaid-block"] {
+  background-color: var(--color-natural-900);
+}
+.smarttext.streamdown [data-streamdown="code-block"] * {
+  background-color: transparent;
+  border-color: transparent;
+  color: inherit;
+}
+/* A diagram that could not be drawn shows its source (MermaidFallback):
+   the diagram frame drops its fill and edge, so the block reads as a code
+   block. */
+.smarttext.streamdown [data-streamdown="mermaid-block"] > div:has([data-testid="mermaid-fallback"]) {
+  background-color: transparent;
+  border-color: transparent;
+}
+.smarttext.streamdown [data-streamdown="code-block-body"] {
+  padding: 1rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Streamdown's own colour utilities name shadcn tokens (border, muted,
+   foreground, background, sidebar, primary). Tailwind never sees them (it
+   does not scan node_modules) and the app defines none of those names, so
+   each class is mapped here to an existing token by role, scoped to the
+   Streamdown root; both themes follow because the tokens flip. Alpha steps
+   use color-mix like Tailwind does. Inside a code block the rule above still
+   wins (higher specificity): the block keeps the SmartText look. Portalled
+   parts (fullscreen, link safety modal, download menu) are switched off in
+   StreamdownText. streamdownTokens.test.ts fails when Streamdown adds a
+   class this list does not map. */
+/* Edges and dividers: the card edge token. */
+.streamdown .border-border,
+.streamdown .divide-border > :not(:last-child) {
+  border-color: var(--color-primary-400);
+}
+.streamdown .border-muted-foreground\/30 {
+  border-color: color-mix(in oklab, var(--color-natural-200) 30%, transparent);
+}
+/* Text: body text and secondary text. Line numbers drop the 50 % alpha so
+   they keep 4.5:1. */
+.streamdown .text-foreground,
+.streamdown .hover\:text-foreground:hover,
+.streamdown .text-primary {
+  color: var(--color-natural-100);
+}
+.streamdown .text-muted-foreground,
+.streamdown .before\:text-muted-foreground\/50::before {
+  color: var(--color-natural-200);
+}
+/* Primary button: the CTA fill, its hover and the text on it. */
+.streamdown .bg-primary {
+  background-color: var(--color-cta);
+}
+.streamdown .hover\:bg-primary\/90:hover {
+  background-color: var(--color-cta-hover);
+}
+.streamdown .text-primary-foreground {
+  color: var(--color-on-accent);
+}
+/* Muted fills: the hover fill under text. */
+.streamdown .bg-muted,
+.streamdown .hover\:bg-muted:hover {
+  background-color: var(--color-highlight);
+}
+.streamdown .bg-muted\/80 {
+  background-color: color-mix(in oklab, var(--color-highlight) 80%, transparent);
+}
+.streamdown .hover\:bg-muted\/40:hover {
+  background-color: color-mix(in oklab, var(--color-highlight) 40%, transparent);
+}
+/* Background and sidebar surfaces (floating action bars, buttons over a
+   diagram): the surface token, white in light. */
+.streamdown .border-sidebar {
+  border-color: var(--color-natural-900);
+}
+.streamdown .bg-background,
+.streamdown .hover\:bg-background:hover,
+.streamdown .bg-sidebar {
+  background-color: var(--color-natural-900);
+}
+.streamdown .bg-background\/95 {
+  background-color: color-mix(in oklab, var(--color-natural-900) 95%, transparent);
+}
+.streamdown .bg-background\/90 {
+  background-color: color-mix(in oklab, var(--color-natural-900) 90%, transparent);
+}
+.streamdown .bg-background\/80,
+.streamdown .bg-sidebar\/80 {
+  background-color: color-mix(in oklab, var(--color-natural-900) 80%, transparent);
+}
+.streamdown .bg-background\/50 {
+  background-color: color-mix(in oklab, var(--color-natural-900) 50%, transparent);
+}
+@supports (backdrop-filter: blur(0)) {
+  .streamdown .supports-\[backdrop-filter\]\:bg-background\/70,
+  .streamdown .supports-\[backdrop-filter\]\:bg-sidebar\/70 {
+    background-color: color-mix(in oklab, var(--color-natural-900) 70%, transparent);
+  }
 }
 
 /* JSON tree (react-json-view-lite). The library only takes class names, and

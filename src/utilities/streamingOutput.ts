@@ -10,9 +10,11 @@ export function selectStreamingCandidate(
   output: string,
   isStreamingTarget: boolean,
 ): string {
-  if (smoothed.length >= output.length) return output;
-  if (smoothed.length > 0) return smoothed;
+  // Once the stream has ended the whole answer shows at once: the typewriter
+  // drains on timers that a hidden or busy tab starves, and a turn left
+  // half-typed read as a cut answer until a reload.
   if (!isStreamingTarget && output) return output;
+  if (smoothed.length >= output.length) return output;
   return smoothed;
 }
 

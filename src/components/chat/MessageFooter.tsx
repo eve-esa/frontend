@@ -15,8 +15,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Button } from "@/components/ui/Button";
 import SmartText from "@/components/ui/LazySmartText";
 import {
-  LLMType,
-  LLMTypeLabel,
   type ApiError,
   type ChaMessageType,
   type Document,
@@ -38,30 +36,18 @@ import { handleApiError } from "@/utilities/helpers";
 import { getRenderableDocuments } from "@/utilities/messageDocuments";
 import { useListModels } from "@/services/useListModels";
 import { resolveCustomModelDisplayName } from "@/utilities/modelSelection";
+import { resolveLlmTypeLabel } from "@/utilities/modelLabel";
 import { buildHallucinationCopyText } from "@/utilities/buildHallucinationCopyText";
-import { ANSWERED_BY_ENABLED, REPORT_BUG_ENABLED } from "@/utilities/features";
+import {
+  ANSWERED_BY_ENABLED,
+  REPORT_BUG_ENABLED,
+  TRACE_BUTTON_ENABLED,
+} from "@/utilities/features";
 import { isPersistedId } from "@/services/useReportBug";
 import { ReportBugDialog } from "./ReportBugDialog";
 import { openBugReport } from "@/observability/reportReplay";
 
 type Hallucination = NonNullable<MessageType["hallucination"]>;
-
-const LLM_TYPE_TO_LABEL: Record<string, string> = {
-  [LLMType.Main]: LLMTypeLabel.Main,
-  [LLMType.Mistral]: LLMTypeLabel.Mistral,
-  [LLMType.Satcom_Small]: LLMTypeLabel.Satcom_Small,
-  [LLMType.Satcom_Large]: LLMTypeLabel.Satcom_Large,
-  [LLMType.EVE_JSC]: LLMTypeLabel.EVE_JSC,
-  fallback: "Fallback",
-};
-
-function resolveLlmTypeLabel(
-  llmType: string,
-  models?: ModelListResponse,
-): string {
-  const platformModel = models?.platform.find((model) => model.llm_type === llmType);
-  return platformModel?.display_name || LLM_TYPE_TO_LABEL[llmType] || llmType;
-}
 
 function getSelectedModelLabel(
   message: MessageType,
@@ -125,9 +111,14 @@ function getAnsweredByLabel(
 
 type MessageFooterProps = {
   message: MessageType;
+  /**
+   * The answer shows its own sources list (FEATURE_INLINE_CITATIONS): no
+   * Sources button and no "without sources" line here.
+   */
+  hideSources?: boolean;
 };
 
-export const MessageFooter = ({ message }: MessageFooterProps) => {
+export const MessageFooter = ({ message, hideSources = false }: MessageFooterProps) => {
   const { conversationId } = useParams();
   const queryClient = useQueryClient();
   const { data: models } = useListModels();
@@ -421,7 +412,7 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
   const renderableDocuments = getRenderableDocuments(message?.documents);
   const renderableHallucinationSources =
     getRenderableDocuments(hallucinationSources);
-  const hasSources = renderableDocuments.length > 0;
+  const hasSources = !hideSources && renderableDocuments.length > 0;
   const hasTrace = message?.trace?.length;
   const generatedWithTools =
     !hasSources &&
@@ -462,7 +453,7 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
               sidebar) the labels used to break one word per line and the
               buttons overflowed into a horizontal scrollbar. */}
           <div className="flex flex-wrap items-center gap-2">
-            {hasSources ? (
+            {hideSources ? null : hasSources ? (
               <Button
                 variant="primary"
                 data-testid="message-sources-button"
@@ -489,7 +480,9 @@ export const MessageFooter = ({ message }: MessageFooterProps) => {
                 </span>
               </div>
             )}
-            {hasTrace ? (
+            {/* With FEATURE_AGENT_STEPS on the inline block replaces this
+                panel unless FEATURE_TRACE_SIDEBAR keeps it. */}
+            {TRACE_BUTTON_ENABLED && hasTrace ? (
               <Button
                 variant="primary"
                 data-testid="message-trace-button"
