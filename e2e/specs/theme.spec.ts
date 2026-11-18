@@ -317,7 +317,7 @@ test.describe("theme switch", () => {
     );
     await profile.open();
     await profile.fill({ firstName: `${(await profile.read()).firstName} e2e` });
-    await profile.save();
+    await profile.save({ answered: true });
     await readable("success toast", page.getByTestId("toast-profile-updated"));
 
     fail = true;
@@ -622,7 +622,7 @@ test.describe("theme switch", () => {
       await profile.lastName.focus();
       await read("Profile first name input", profile.firstName);
       await profile.fill({ firstName: `${(await profile.read()).firstName} e2e` });
-      await profile.save();
+      await profile.save({ answered: true });
       const toast = page.getByTestId("toast-profile-updated");
       await expect(toast).toBeVisible();
       await read("toast", toast);

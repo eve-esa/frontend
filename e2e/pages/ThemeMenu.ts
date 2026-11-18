@@ -70,6 +70,12 @@ export class ThemeMenu {
     await this.onSettingsPage(async () => {
       await this.page.getByTestId("settings-nav-appearance").click();
       await expect(this.page.getByTestId("settings-section-appearance")).toBeVisible();
+      // The radio of the stored (or default) choice is already checked and Playwright does not
+      // click a checked radio, so nothing would be written to storage: the menu always wrote
+      // the pick. Step through another choice first so the pick is a real change.
+      if (await this.radio(choice).isChecked()) {
+        await this.radio(choice === "system" ? "light" : "system").check();
+      }
       await this.radio(choice).check();
       await expect(this.radio(choice)).toBeChecked();
     });

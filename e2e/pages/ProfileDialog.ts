@@ -92,12 +92,26 @@ export class ProfileDialog {
     if (fields.institution != null) await this.institution.fill(fields.institution);
   }
 
-  async save(): Promise<void> {
+  /**
+   * Saves and waits for it to land. On the settings page the form stays open: the PATCH answer
+   * is awaited, then "Saved." is expected, except with `answered: true` (the test fulfils the
+   * PATCH itself, nothing is written, so the refetch returns the old profile and the form
+   * correctly stays dirty).
+   */
+  async save(options: { answered?: boolean } = {}): Promise<void> {
     await expect(this.saveButton).toBeEnabled();
-    await this.saveButton.click();
     if (await this.usesPage()) {
-      await expect(this.page.getByTestId("settings-profile-status")).toHaveText("Saved.");
+      const patched = this.page.waitForResponse(
+        (response) =>
+          response.request().method() === "PATCH" && new URL(response.url()).pathname.endsWith("/users"),
+      );
+      await this.saveButton.click();
+      expect((await patched).ok()).toBe(true);
+      if (!options.answered) {
+        await expect(this.page.getByTestId("settings-profile-status")).toHaveText("Saved.");
+      }
     } else {
+      await this.saveButton.click();
       await expect(this.root).toBeHidden();
     }
   }
