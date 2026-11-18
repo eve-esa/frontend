@@ -1265,3 +1265,10 @@ export const groupSourceChips = (chips: readonly SourceChip[]): SourceGroup[] =>
   }
   return groups;
 };
+
+/** Epoch ms of the send, read from the optimistic message id (`temp-<ms>`);
+ * null for a saved or streamed-back id. */
+export const sendTimeFromId = (id: string | null | undefined): number | null => {
+  const match = id ? /^temp-(\d{10,})$/.exec(id) : null;
+  return match ? Number(match[1]) : null;
+};
