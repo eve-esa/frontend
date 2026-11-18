@@ -787,6 +787,9 @@ const RowTitle = ({ row }: { row: AgentStepRow }) => {
           <TargetChip key={`${target.kind}:${target.label}`} target={target} />
         ))}
       </span>
+      {/* A row with no chip ("Wrote" + a path) has no chip margin to part the
+          verb from what follows, so the space is a real one. */}
+      {line.targets.length === 0 && (line.secondary || line.detail) ? " " : null}
       {line.secondary && (
         <>
           <span data-testid="agent-step-server" className={MUTED}>
@@ -915,6 +918,11 @@ type AgentStepsProps = {
   onOpenMyCollections?: () => void;
   /** The app's label of the model that answered ("EVE-Instruct (JSC)"). */
   modelLabel?: string | null;
+  /**
+   * Epoch ms of the send, when known. The clock counts from it, so a block
+   * that mounts or remounts after the send still shows the real turn time.
+   */
+  startedAt?: number | null;
 };
 
 const hasRows = (view: AgentStepsView) => view.rows.length > 0;
@@ -941,8 +949,15 @@ type RunClock = { start: number | null; end: number | null };
 export const LiveClock = ({ start }: { start: number }) => {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(timer);
+    const tick = () => setNow(Date.now());
+    tick();
+    const timer = window.setInterval(tick, 1000);
+    // A hidden tab throttles timers: read the real time as soon as it is seen again.
+    document.addEventListener("visibilitychange", tick);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", tick);
+    };
   }, []);
   return (
     <span data-testid="agent-steps-clock" aria-hidden className={cn("tabular-nums", MUTED)}>
@@ -968,8 +983,12 @@ const AgentStepsBlock = ({
   summarizing = false,
   collections = null,
   modelLabel = null,
+  startedAt = null,
 }: AgentStepsProps) => {
-  const [run, setRun] = useState<RunClock>(() => ({ start: live ? Date.now() : null, end: null }));
+  // The run starts at the send when the caller knows it (a remount mid-turn
+  // keeps the real time), else now.
+  const runStart = () => Math.min(startedAt ?? Date.now(), Date.now());
+  const [run, setRun] = useState<RunClock>(() => ({ start: live ? runStart() : null, end: null }));
   // The user's header toggle, until the next live run.
   const [toggle, setToggle] = useState<boolean | null>(null);
   const wasLive = useRef(live);
@@ -980,7 +999,7 @@ const AgentStepsBlock = ({
     const started = live && !wasLive.current;
     wasLive.current = live;
     if (started) {
-      setRun({ start: Date.now(), end: null });
+      setRun({ start: runStart(), end: null });
       setToggle(null);
     }
   }, [live]);
@@ -1013,7 +1032,9 @@ const AgentStepsBlock = ({
   const [rowsMounted, setRowsMounted] = useState(open);
   const rowsRef = useCallback((node: HTMLUListElement | null) => setRowsMounted(node !== null), []);
 
-  const totalS = view.totalS ?? runS;
+  // The trace total counts the steps only: the turn took at least as long as
+  // the wall clock from the send to the end of the work.
+  const totalS = view.totalS !== null && runS !== null ? Math.max(view.totalS, runS) : (view.totalS ?? runS);
   const context = useMemo<BlockContext>(
     () => ({ catalog: collections, modelLabel }),
     [collections, modelLabel],
