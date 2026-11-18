@@ -67,8 +67,12 @@ export const SidebarMenu = ({ isOpen }: SidebarMenuProps) => {
       type="button"
       data-testid="sidebar-api-keys"
       aria-label="API keys"
-      aria-haspopup="dialog"
-      onClick={() => setIsOpenApiKeysDialog(true)}
+      aria-haspopup={SETTINGS_PAGE_ENABLED ? undefined : "dialog"}
+      onClick={() =>
+        SETTINGS_PAGE_ENABLED
+          ? navigate(settingsPath("api-keys"))
+          : setIsOpenApiKeysDialog(true)
+      }
       className={`${baseStyles} ${layoutStyles} text-natural-50`}
     >
       <FontAwesomeIcon icon={faKey} className="w-4 h-4" />
@@ -145,7 +149,8 @@ export const SidebarMenu = ({ isOpen }: SidebarMenuProps) => {
         onOpenChange={setIsOpenCO2eqDialog}
       />
 
-      {API_KEYS_ENABLED && (
+      {/* The Settings page holds the API keys section when it is on. */}
+      {API_KEYS_ENABLED && !SETTINGS_PAGE_ENABLED && (
         <ApiKeysDialog
           isOpen={isOpenApiKeysDialog}
           onOpenChange={setIsOpenApiKeysDialog}

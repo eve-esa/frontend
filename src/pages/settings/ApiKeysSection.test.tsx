@@ -58,6 +58,13 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
+const rowOf = (id: string) =>
+  document.querySelector(`[data-key-id="${id}"]`) as HTMLElement;
+const findRow = async (id: string) => {
+  await waitFor(() => expect(rowOf(id)).toBeTruthy());
+  return rowOf(id);
+};
+
 const renderSection = async () => {
   const { ApiKeysSection } = await import("./ApiKeysSection");
   const client = new QueryClient({
@@ -73,8 +80,8 @@ const renderSection = async () => {
 describe("ApiKeysSection", () => {
   it("renders a row per key and the active count", async () => {
     await renderSection();
-    expect(await screen.findByTestId("settings-apikeys-row-key-1")).toBeTruthy();
-    expect(screen.getByTestId("settings-apikeys-row-key-2")).toBeTruthy();
+    expect(await findRow("key-1")).toBeTruthy();
+    expect(rowOf("key-2")).toBeTruthy();
     expect(screen.getByTestId("api-keys-count").textContent).toBe("2 of 10 active keys");
     expect(screen.getByTestId("api-keys-usage-snippet")).toBeTruthy();
   });
@@ -95,7 +102,7 @@ describe("ApiKeysSection", () => {
 
   it("asks for confirmation by name before deleting", async () => {
     await renderSection();
-    const row = await screen.findByTestId("settings-apikeys-row-key-2");
+    const row = await findRow("key-2");
     fireEvent.click(row.querySelector('[data-testid="api-key-delete"]') as HTMLElement);
 
     const target = await screen.findByTestId("api-key-delete-target");
@@ -109,5 +116,52 @@ describe("ApiKeysSection", () => {
     fireEvent.click(row.querySelector('[data-testid="api-key-delete"]') as HTMLElement);
     fireEvent.click(await screen.findByTestId("api-key-delete-confirm-submit"));
     await waitFor(() => expect(del).toHaveBeenCalledWith("/users/api-keys/key-2"));
+  });
+
+  it("returns focus to the delete button that opened the confirm on Cancel", async () => {
+    await renderSection();
+    const row = await findRow("key-2");
+    const button = row.querySelector('[data-testid="api-key-delete"]') as HTMLElement;
+    button.focus();
+    fireEvent.click(button);
+    fireEvent.click(await screen.findByTestId("api-key-delete-cancel"));
+    await waitFor(() => expect(screen.queryByTestId("api-key-delete-confirm")).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(button));
+  });
+
+  it("moves focus to the next row's delete button after a delete, else the heading", async () => {
+    await renderSection();
+    const first = await findRow("key-1");
+    fireEvent.click(first.querySelector('[data-testid="api-key-delete"]') as HTMLElement);
+    fireEvent.click(await screen.findByTestId("api-key-delete-confirm-submit"));
+    await waitFor(() => expect(screen.queryByTestId("api-key-delete-confirm")).toBeNull());
+    const second = rowOf("key-2");
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        second.querySelector('[data-testid="api-key-delete"]'),
+      ),
+    );
+
+    fireEvent.click(second.querySelector('[data-testid="api-key-delete"]') as HTMLElement);
+    fireEvent.click(await screen.findByTestId("api-key-delete-confirm-submit"));
+    await waitFor(() => expect(screen.queryByTestId("api-key-delete-confirm")).toBeNull());
+    await waitFor(() =>
+      expect(document.activeElement).toBe(document.getElementById("settings-api-keys-title")),
+    );
+  });
+
+  it("focuses the heading when Create key is disabled at the limit", async () => {
+    keys = Array.from({ length: 10 }, (_, i) =>
+      makeKey({ id: `k${i}`, name: `Key ${i}` }),
+    );
+    await renderSection();
+    await findRow("k0");
+    const create = screen.getByTestId("settings-apikeys-create") as HTMLButtonElement;
+    expect(create.disabled).toBe(true);
+    const row = rowOf("k9");
+    const button = row.querySelector('[data-testid="api-key-delete"]') as HTMLElement;
+    fireEvent.click(button);
+    fireEvent.click(await screen.findByTestId("api-key-delete-cancel"));
+    await waitFor(() => expect(document.activeElement).toBe(button));
   });
 });

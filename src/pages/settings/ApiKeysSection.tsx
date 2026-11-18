@@ -1,30 +1,17 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useIsMutating } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/Button";
-import { Spinner } from "@/components/ui/Spinner";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/Dialog";
+import { Dialog, DialogContent } from "@/components/ui/Dialog";
 import { ApiKeyCreateForm } from "@/components/api-keys/ApiKeyCreateForm";
-import { ApiKeyRow } from "@/components/api-keys/ApiKeyRow";
+import { ApiKeyDeleteConfirm } from "@/components/api-keys/ApiKeyDeleteConfirm";
+import { ApiKeysList } from "@/components/api-keys/ApiKeysList";
 import { ApiKeySecretReveal } from "@/components/api-keys/ApiKeySecretReveal";
 import { ApiKeyUsageSnippet } from "@/components/api-keys/ApiKeyUsageSnippet";
 import { useDeleteApiKey, useListApiKeys } from "@/services/useApiKeys";
 import { MUTATION_KEYS } from "@/services/keys";
-import { handleApiError } from "@/utilities/helpers";
-import {
-  cascadeWarning,
-  countActive,
-  countDescendants,
-  formatKeyMask,
-} from "@/utilities/apiKeys";
+import { countActive, countDescendants } from "@/utilities/apiKeys";
 import type { ApiError, ApiKey, CreatedApiKey } from "@/types";
-import { SettingsPanel, SettingsSection } from "./SettingsSection";
+import { SettingsPanel, SettingsSection, settingsTitleId } from "./SettingsSection";
 
 type CreateView = { kind: "create" } | { kind: "reveal"; key: CreatedApiKey };
 type DeleteTarget = { key: ApiKey; descendants: number };
@@ -36,10 +23,16 @@ type DeleteTarget = { key: ApiKey; descendants: number };
  */
 export const ApiKeysSection = () => {
   const createButtonRef = useRef<HTMLButtonElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  // Where focus goes when a dialog closes: the key whose delete button comes next, set by a
+  // delete that succeeded; unset means return to the control that opened the dialog.
+  const focusKeyIdRef = useRef<string | null>(null);
+  const openerKeyIdRef = useRef<string | null>(null);
+  const pendingCreateFocusRef = useRef(false);
   const [createView, setCreateView] = useState<CreateView | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 
-  const { data, isLoading, isError, refetch } = useListApiKeys(true);
+  const { data, isLoading, isError, isFetching, refetch } = useListApiKeys(true);
   const {
     mutate: deleteKey,
     isPending: isDeleting,
@@ -56,6 +49,34 @@ export const ApiKeysSection = () => {
   const activeCount = countActive(keys);
   const atLimit = limit !== undefined && activeCount >= limit;
 
+  const focusHeading = () =>
+    document.getElementById(settingsTitleId("api-keys"))?.focus();
+
+  const focusDeleteOf = (keyId: string) => {
+    const rows = listRef.current?.querySelectorAll<HTMLElement>("[data-key-id]");
+    const row = Array.from(rows ?? []).find((r) => r.dataset.keyId === keyId);
+    const button = row?.querySelector<HTMLButtonElement>(
+      '[data-testid="api-key-delete"]',
+    );
+    if (!button || button.disabled) return false;
+    button.focus();
+    return true;
+  };
+
+  // The refetch after a create can land after the dialog closed and disable Create key at the
+  // limit, which would drop focus to the body: move it to the heading instead.
+  useEffect(() => {
+    if (isFetching) return;
+    if (
+      pendingCreateFocusRef.current &&
+      atLimit &&
+      document.activeElement === document.body
+    ) {
+      focusHeading();
+    }
+    pendingCreateFocusRef.current = false;
+  }, [isFetching, atLimit]);
+
   const closeCreate = () => setCreateView(null);
   const closeDelete = () => {
     resetDelete();
@@ -64,27 +85,53 @@ export const ApiKeysSection = () => {
 
   const handleDeleteRequest = (key: ApiKey) => {
     resetDelete();
+    openerKeyIdRef.current = key.id;
+    focusKeyIdRef.current = null;
     setDeleteTarget({ key, descendants: countDescendants(keys, key.id) });
   };
 
   const handleConfirmDelete = () => {
     if (!deleteTarget) return;
-    deleteKey(deleteTarget.key.id, {
-      onSuccess: closeDelete,
+    const deletedId = deleteTarget.key.id;
+    const index = keys.findIndex((k) => k.id === deletedId);
+    const next = index >= 0 ? keys[index + 1] : undefined;
+    const done = () => {
+      // The deleted row is going away: next row's delete button, else the heading.
+      openerKeyIdRef.current = null;
+      focusKeyIdRef.current = next?.id ?? null;
+      closeDelete();
+    };
+    deleteKey(deletedId, {
+      onSuccess: done,
       onError: (error: ApiError) => {
         if (error?.response?.status === 404) {
           toast.error("That key was already deleted");
-          closeDelete();
+          done();
         }
         // Any other error stays visible inline so the person can retry.
       },
     });
   };
 
-  // The delete button is gone once its key is, so focus returns to Create key.
+  // Create key when it can take focus, else the heading; never the body.
   const refocusCreate = (event: Event) => {
     event.preventDefault();
-    createButtonRef.current?.focus();
+    const button = createButtonRef.current;
+    if (button && !button.disabled) {
+      button.focus();
+      pendingCreateFocusRef.current = true;
+    } else {
+      focusHeading();
+    }
+  };
+
+  const refocusAfterDelete = (event: Event) => {
+    event.preventDefault();
+    const target = focusKeyIdRef.current ?? openerKeyIdRef.current;
+    focusKeyIdRef.current = null;
+    openerKeyIdRef.current = null;
+    if (target && focusDeleteOf(target)) return;
+    focusHeading();
   };
 
   return (
@@ -95,121 +142,21 @@ export const ApiKeysSection = () => {
     >
       <div className="flex flex-col gap-4">
         <SettingsPanel>
-          {isLoading && (
-            <div
-              data-testid="api-keys-loading"
-              className="flex justify-center py-8"
-            >
-              <Spinner variant="primary" />
-            </div>
-          )}
-
-          {!isLoading && isError && (
-            <div
-              data-testid="api-keys-error"
-              className="flex flex-col items-center gap-2 py-8"
-            >
-              <p className="text-sm text-danger-400">
-                Could not load your API keys.
-              </p>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                data-testid="api-keys-retry"
-                onClick={() => void refetch()}
-              >
-                Retry
-              </Button>
-            </div>
-          )}
-
-          {!isLoading && !isError && (
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center justify-between gap-2">
-                <span
-                  data-testid="api-keys-count"
-                  className="text-sm text-primary-300"
-                >
-                  {activeCount} of {limit ?? "?"} active keys
-                </span>
-                <Button
-                  type="button"
-                  ref={createButtonRef}
-                  data-testid="settings-apikeys-create"
-                  onClick={() => setCreateView({ kind: "create" })}
-                  disabled={atLimit}
-                >
-                  Create key
-                </Button>
-              </div>
-
-              {atLimit && (
-                <p
-                  data-testid="api-keys-limit-notice"
-                  className="text-sm text-danger-100"
-                >
-                  You have reached the limit of {limit} active keys. Delete one
-                  to create another.
-                </p>
-              )}
-
-              {keys.length === 0 ? (
-                <p
-                  data-testid="api-keys-empty"
-                  className="text-sm text-primary-300"
-                >
-                  No API keys yet. Create one to call EVE from your own code.
-                </p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table
-                    data-testid="api-keys-list"
-                    className="w-full table-fixed text-left"
-                  >
-                    <thead>
-                      <tr className="text-sm font-medium text-primary-300">
-                        <th scope="col" className="pb-2 pr-3 font-medium">
-                          Name
-                        </th>
-                        <th
-                          scope="col"
-                          className="hidden w-28 pb-2 pr-3 font-medium sm:table-cell"
-                        >
-                          Key prefix
-                        </th>
-                        <th
-                          scope="col"
-                          className="hidden w-24 pb-2 pr-3 font-medium sm:table-cell"
-                        >
-                          Last used
-                        </th>
-                        <th
-                          scope="col"
-                          className="hidden w-24 pb-2 pr-2 font-medium sm:table-cell"
-                        >
-                          Expires
-                        </th>
-                        <th scope="col" className="w-10 pb-2">
-                          <span className="sr-only">Actions</span>
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {keys.map((key) => (
-                        <ApiKeyRow
-                          key={key.id}
-                          apiKey={key}
-                          testId={`settings-apikeys-row-${key.id}`}
-                          onDelete={handleDeleteRequest}
-                        />
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
+          <div ref={listRef}>
+            <ApiKeysList
+              keys={keys}
+              activeCount={activeCount}
+              limit={limit}
+              atLimit={atLimit}
+              isLoading={isLoading}
+              isError={isError}
+              onRetry={() => void refetch()}
+              onCreate={() => setCreateView({ kind: "create" })}
+              onDelete={handleDeleteRequest}
+              createButtonRef={createButtonRef}
+              createTestId="settings-apikeys-create"
+            />
+          </div>
         </SettingsPanel>
 
         <SettingsPanel>
@@ -262,76 +209,17 @@ export const ApiKeysSection = () => {
       >
         <DialogContent
           data-testid="settings-apikeys-delete-dialog"
-          onCloseAutoFocus={refocusCreate}
+          onCloseAutoFocus={refocusAfterDelete}
         >
           {deleteTarget && (
-            <div
-              data-testid="api-key-delete-confirm"
-              className="flex flex-col gap-4"
-            >
-              <DialogHeader>
-                <DialogTitle>Delete API key?</DialogTitle>
-                <DialogDescription>
-                  The key stops working right away. Any app or script that uses
-                  it gets a 401 error. You cannot undo this.
-                </DialogDescription>
-              </DialogHeader>
-
-              <div
-                data-testid="api-key-delete-target"
-                className="rounded-md border border-primary-400/60 px-3 py-2"
-              >
-                <div className="truncate text-sm font-medium text-natural-50">
-                  {deleteTarget.key.name}
-                </div>
-                <code className="font-mono text-xs text-primary-300">
-                  {formatKeyMask(deleteTarget.key.token_suffix)}
-                </code>
-              </div>
-
-              {deleteTarget.descendants > 0 && (
-                <p
-                  data-testid="api-key-delete-cascade-warning"
-                  className="rounded-md border border-danger-100/60 bg-danger-100/10 p-3 text-sm text-danger-100"
-                >
-                  {cascadeWarning(deleteTarget.descendants)}
-                </p>
-              )}
-
-              {deleteError && (
-                <p
-                  role="alert"
-                  data-testid="api-key-delete-error"
-                  className="text-sm text-danger-400"
-                >
-                  {handleApiError(deleteError)}
-                </p>
-              )}
-
-              <div className="flex justify-end gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  data-testid="api-key-delete-cancel"
-                  onClick={closeDelete}
-                  disabled={isDeleting}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  data-testid="api-key-delete-confirm-submit"
-                  onClick={handleConfirmDelete}
-                  disabled={isDeleting}
-                >
-                  {isDeleting ? <Spinner size="xs" /> : null}
-                  {deleteTarget.descendants > 0
-                    ? `Delete ${deleteTarget.descendants + 1} keys`
-                    : "Delete key"}
-                </Button>
-              </div>
-            </div>
+            <ApiKeyDeleteConfirm
+              target={deleteTarget.key}
+              descendants={deleteTarget.descendants}
+              error={deleteError}
+              isDeleting={isDeleting}
+              onCancel={closeDelete}
+              onConfirm={handleConfirmDelete}
+            />
           )}
         </DialogContent>
       </Dialog>

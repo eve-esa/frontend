@@ -2,7 +2,6 @@ import { useEffect, useRef, useState, type RefObject } from "react";
 import { useIsMutating } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
-import { Spinner } from "@/components/ui/Spinner";
 import {
   Dialog,
   DialogContent,
@@ -13,15 +12,10 @@ import {
 } from "@/components/ui/Dialog";
 import { useDeleteApiKey, useListApiKeys } from "@/services/useApiKeys";
 import { MUTATION_KEYS } from "@/services/keys";
-import { handleApiError } from "@/utilities/helpers";
-import {
-  cascadeWarning,
-  countActive,
-  countDescendants,
-  formatKeyMask,
-} from "@/utilities/apiKeys";
+import { countActive, countDescendants } from "@/utilities/apiKeys";
 import { ApiKeyCreateForm } from "./ApiKeyCreateForm";
-import { ApiKeyRow } from "./ApiKeyRow";
+import { ApiKeyDeleteConfirm } from "./ApiKeyDeleteConfirm";
+import { ApiKeysList } from "./ApiKeysList";
 import { ApiKeySecretReveal } from "./ApiKeySecretReveal";
 import { ApiKeyUsageSnippet } from "./ApiKeyUsageSnippet";
 import type { ApiError, ApiKey, CreatedApiKey } from "@/types";
@@ -149,93 +143,31 @@ export const ApiKeysDialog = ({
               </DialogDescription>
             </DialogHeader>
 
-            {isLoading && (
-              <div data-testid="api-keys-loading" className="flex justify-center py-8">
-                <Spinner variant="primary" />
-              </div>
-            )}
-
-            {!isLoading && isError && (
-              <div data-testid="api-keys-error" className="flex flex-col items-center gap-2 py-8">
-                <p className="text-sm text-danger-400">Could not load your API keys.</p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  data-testid="api-keys-retry"
-                  onClick={() => void refetch()}
+            <ApiKeysList
+              keys={keys}
+              activeCount={activeCount}
+              limit={limit}
+              atLimit={atLimit}
+              isLoading={isLoading}
+              isError={isError}
+              onRetry={() => void refetch()}
+              onCreate={() => setView({ kind: "create" })}
+              onDelete={handleDeleteRequest}
+              createButtonRef={createOpenRef}
+              createTestId="api-keys-create-open"
+            >
+              <details className="rounded-lg border border-primary-400/40">
+                <summary
+                  data-testid="api-keys-quickstart-toggle"
+                  className="cursor-pointer p-3 text-sm font-medium text-natural-100"
                 >
-                  Retry
-                </Button>
-              </div>
-            )}
-
-            {!isLoading && !isError && (
-              <div className="flex flex-col gap-4">
-                <div className="flex items-center justify-between gap-2">
-                  <span data-testid="api-keys-count" className="text-sm text-primary-300">
-                    {activeCount} of {limit ?? "?"} active keys
-                  </span>
-                  <Button
-                    type="button"
-                    ref={createOpenRef}
-                    data-testid="api-keys-create-open"
-                    onClick={() => setView({ kind: "create" })}
-                    disabled={atLimit}
-                  >
-                    Create key
-                  </Button>
+                  Quickstart
+                </summary>
+                <div className="px-3 pb-3">
+                  <ApiKeyUsageSnippet />
                 </div>
-
-                {atLimit && (
-                  <p data-testid="api-keys-limit-notice" className="text-sm text-danger-100">
-                    You have reached the limit of {limit} active keys. Delete one to
-                    create another.
-                  </p>
-                )}
-
-                {keys.length === 0 ? (
-                  <p data-testid="api-keys-empty" className="text-sm text-primary-300">
-                    No API keys yet. Create one to call EVE from your own code.
-                  </p>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table data-testid="api-keys-list" className="w-full table-fixed text-left">
-                      <thead>
-                        <tr className="text-sm font-medium text-primary-300">
-                          <th scope="col" className="pb-2 pr-3 font-medium">Name</th>
-                          <th scope="col" className="hidden w-28 pb-2 pr-3 font-medium sm:table-cell">Key</th>
-                          <th scope="col" className="hidden w-24 pb-2 pr-3 font-medium sm:table-cell">
-                            Last used
-                          </th>
-                          <th scope="col" className="hidden w-24 pb-2 pr-2 font-medium sm:table-cell">Expires</th>
-                          <th scope="col" className="w-10 pb-2">
-                            <span className="sr-only">Actions</span>
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {keys.map((key) => (
-                          <ApiKeyRow key={key.id} apiKey={key} onDelete={handleDeleteRequest} />
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-
-                <details className="rounded-lg border border-primary-400/40">
-                  <summary
-                    data-testid="api-keys-quickstart-toggle"
-                    className="cursor-pointer p-3 text-sm font-medium text-natural-100"
-                  >
-                    Quickstart
-                  </summary>
-                  <div className="px-3 pb-3">
-                    <ApiKeyUsageSnippet />
-                  </div>
-                </details>
-              </div>
-            )}
+              </details>
+            </ApiKeysList>
 
             <DialogFooter>
               <Button
@@ -262,70 +194,18 @@ export const ApiKeysDialog = ({
         )}
 
         {view.kind === "confirmDelete" && (
-          <div data-testid="api-key-delete-confirm" className="flex flex-col gap-4">
-            <DialogHeader>
-              <DialogTitle>Delete API key?</DialogTitle>
-              <DialogDescription>
-                The key stops working right away. Any app or script that uses
-                it gets a 401 error. You cannot undo this.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div
-              data-testid="api-key-delete-target"
-              className="rounded-md border border-primary-400/60 px-3 py-2"
-            >
-              <div className="truncate text-sm font-medium text-natural-50">
-                {view.key.name}
-              </div>
-              <code className="font-mono text-xs text-primary-300">
-                {formatKeyMask(view.key.token_suffix)}
-              </code>
-            </div>
-
-            {view.descendants > 0 && (
-              <p
-                data-testid="api-key-delete-cascade-warning"
-                className="rounded-md border border-danger-100/60 bg-danger-100/10 p-3 text-sm text-danger-100"
-              >
-                {cascadeWarning(view.descendants)}
-              </p>
-            )}
-
-            {deleteError && (
-              <p role="alert" data-testid="api-key-delete-error" className="text-sm text-danger-400">
-                {handleApiError(deleteError)}
-              </p>
-            )}
-
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                ref={deleteCancelRef}
-                variant="outline"
-                data-testid="api-key-delete-cancel"
-                onClick={() => {
-                  resetDelete();
-                  goToList();
-                }}
-                disabled={isDeleting}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                variant="destructive"
-                data-testid="api-key-delete-confirm-submit"
-                onClick={handleConfirmDelete}
-                disabled={isDeleting}
-              >
-                {isDeleting ? <Spinner size="xs" /> : null}
-                {view.descendants > 0
-                  ? `Delete ${view.descendants + 1} keys`
-                  : "Delete key"}
-              </Button>
-            </div>
-          </div>
+          <ApiKeyDeleteConfirm
+            target={view.key}
+            descendants={view.descendants}
+            error={deleteError}
+            isDeleting={isDeleting}
+            cancelRef={deleteCancelRef}
+            onCancel={() => {
+              resetDelete();
+              goToList();
+            }}
+            onConfirm={handleConfirmDelete}
+          />
         )}
       </DialogContent>
     </Dialog>

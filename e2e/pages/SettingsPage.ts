@@ -85,7 +85,7 @@ export class SettingsPage {
 
   /** The API key rows of the API keys section, one per key. */
   apiKeyRows(): Locator {
-    return this.page.getByTestId(/^settings-apikeys-row-/);
+    return this.page.getByTestId("settings-section-api-keys").getByTestId("api-key-row");
   }
 
   apiKeyRow(name: string): Locator {
