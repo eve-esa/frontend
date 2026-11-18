@@ -214,3 +214,13 @@ export const TRACE_BUTTON_ENABLED = !AGENT_STEPS_ENABLED || TRACE_SIDEBAR_ENABLE
  * Default off: a new capability ships off in production and on where an environment opts in.
  */
 export const INLINE_CITATIONS_ENABLED = isEnabled("FEATURE_INLINE_CITATIONS", false);
+
+/**
+ * The footer "Sandbox" button and its side panel: the conversation's sandbox status, the files in
+ * the live sandbox and the files saved for the conversation, each downloadable. A debugging view,
+ * read from `GET /conversations/{id}/sandbox`, `/sandbox/files` and `/files`, which answer 404
+ * unless the backend turns on its own `FEATURE_SANDBOX_API`.
+ *
+ * A diagnostic, so blank must not turn it on: default off, on only where an environment opts in.
+ */
+export const SANDBOX_EXPLORER_ENABLED = isEnabled("FEATURE_SANDBOX_EXPLORER", false);

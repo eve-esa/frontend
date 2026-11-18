@@ -466,3 +466,29 @@ export const ACCEPTED_UPLOAD_EXTENSIONS = [
 export const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 
 export const MAX_ATTACHMENTS_PER_MESSAGE = 4;
+
+/** `GET /conversations/{id}/sandbox`: the pool record, not a provider check. */
+export type SandboxStatus = "disabled" | "none" | "idle" | "busy";
+
+export type Sandbox = {
+  status: SandboxStatus;
+  provider: string | null;
+  sandbox_id: string | null;
+  inflight: number;
+  created_at: string | null;
+  expires_at: string | null;
+  idle_deadline: string | null;
+  skills_digest: string | null;
+};
+
+/** One row of `GET /conversations/{id}/files` or `/sandbox/files`. */
+export type FileEntry = {
+  path: string;
+  size: number;
+  modified_at: string | null;
+};
+
+export type FileListing = {
+  items: FileEntry[];
+  truncated: boolean;
+};

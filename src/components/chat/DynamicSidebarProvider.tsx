@@ -13,8 +13,10 @@ import { Sources } from "./Sources";
 import { SharedCollections } from "./SharedCollections";
 import { MyCollections } from "./MyCollections";
 import { SharedToolkits } from "./SharedToolkits";
+import { SandboxExplorer } from "./SandboxExplorer";
 import {
   PRIVATE_COLLECTIONS_ENABLED,
+  SANDBOX_EXPLORER_ENABLED,
   TOOLKITS_ENABLED,
 } from "@/utilities/features";
 
@@ -24,7 +26,8 @@ export type SidebarContentType =
   | "trace"
   | "shared-collections"
   | "my-collections"
-  | "toolkits";
+  | "toolkits"
+  | "sandbox";
 
 export type SidebarContent = {
   type: SidebarContentType;
@@ -34,6 +37,8 @@ export type SidebarContent = {
     // The user message a trace answered, for the trace panel header.
     question?: string;
     messageId?: string;
+    // The conversation whose sandbox and files the sandbox panel shows.
+    conversationId?: string;
   };
 };
 
@@ -42,12 +47,13 @@ const MESSAGE_SCOPED_SIDEBARS = new Set<SidebarContentType>([
   "trace",
 ]);
 
-// The two flagged panels render nothing when their feature is off, and the
+// The flagged panels render nothing when their feature is off, and the
 // close control lives inside the panel, so opening the shell on one would
 // leave a blank drawer with no way to dismiss it.
 const isPanelEnabled = (type: SidebarContentType): boolean => {
   if (type === "my-collections") return PRIVATE_COLLECTIONS_ENABLED;
   if (type === "toolkits") return TOOLKITS_ENABLED;
+  if (type === "sandbox") return SANDBOX_EXPLORER_ENABLED;
   return true;
 };
 
@@ -171,6 +177,14 @@ export const DynamicSidebarProvider = ({ children }: SidebarProviderProps) => {
       case "toolkits":
         return isPanelEnabled("toolkits") ? (
           <SharedToolkits onToggle={closeDynamicSidebar} />
+        ) : null;
+      case "sandbox":
+        return isPanelEnabled("sandbox") ? (
+          <SandboxExplorer
+            key={content.props?.conversationId}
+            onToggle={closeDynamicSidebar}
+            conversationId={content.props?.conversationId}
+          />
         ) : null;
       default:
         return null;

@@ -172,6 +172,7 @@ jobs:
               "FEATURE_AGENT_STEPS": "${{ vars.FEATURE_AGENT_STEPS }}",
               "FEATURE_TRACE_SIDEBAR": "${{ vars.FEATURE_TRACE_SIDEBAR }}",
               "FEATURE_INLINE_CITATIONS": "${{ vars.FEATURE_INLINE_CITATIONS }}",
+              "FEATURE_SANDBOX_EXPLORER": "${{ vars.FEATURE_SANDBOX_EXPLORER }}",
               "CONTACT_URL": "${{ vars.VITE_CONTACT_URL }}",
               "PRIVACY_POLICY_URL": "${{ vars.VITE_PRIVACY_POLICY_URL }}",
               "ABOUT_US_URL": "${{ vars.VITE_ABOUT_US_URL }}",

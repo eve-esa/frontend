@@ -34,4 +34,7 @@ export const QUERY_KEYS = {
   myImages: "myImages",
   apiKeys: "apiKeys",
   gatewayModels: "gatewayModels",
+  sandbox: "sandbox",
+  sandboxFiles: "sandboxFiles",
+  conversationFiles: "conversationFiles",
 };
