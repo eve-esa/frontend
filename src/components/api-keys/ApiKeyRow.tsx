@@ -18,6 +18,8 @@ type ApiKeyRowProps = {
   disabled?: boolean;
   /** Reference time for "Last used"; a prop so tests can pin it. */
   now?: number;
+  /** Replaces the row's test id; the settings page needs one per key. */
+  testId?: string;
 };
 
 /**
@@ -32,6 +34,7 @@ export const ApiKeyRow = ({
   onDelete,
   disabled,
   now = Date.now(),
+  testId = "api-key-row",
 }: ApiKeyRowProps) => {
   const mask = formatKeyMask(apiKey.token_suffix);
   const provenance = provenanceLabel(apiKey.created_by_key_id);
@@ -39,7 +42,7 @@ export const ApiKeyRow = ({
 
   return (
     <tr
-      data-testid="api-key-row"
+      data-testid={testId}
       data-key-id={apiKey.id}
       className="border-t border-primary-400/30 align-top"
     >
