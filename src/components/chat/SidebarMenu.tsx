@@ -70,11 +70,14 @@ export const SidebarMenu = ({ isOpen, onNavigate }: SidebarMenuProps) => {
       data-testid="sidebar-api-keys"
       aria-label="API keys"
       aria-haspopup={SETTINGS_PAGE_ENABLED ? undefined : "dialog"}
-      onClick={() =>
-        SETTINGS_PAGE_ENABLED
-          ? navigate(settingsPath("api-keys"))
-          : setIsOpenApiKeysDialog(true)
-      }
+      onClick={() => {
+        if (SETTINGS_PAGE_ENABLED) {
+          navigate(settingsPath("api-keys"));
+          onNavigate?.();
+        } else {
+          setIsOpenApiKeysDialog(true);
+        }
+      }}
       className={`${baseStyles} ${layoutStyles} text-natural-50`}
     >
       <FontAwesomeIcon icon={faKey} className="w-4 h-4" />
