@@ -923,7 +923,7 @@ type AgentStepsProps = {
    * that mounts or remounts after the send still shows the real turn time.
    */
   startedAt?: number | null;
-  /** Seconds from the send to the first answer token, as the backend stored them. */
+  /** Seconds the turn took as the backend stored them (`turnTimeS`), setup included. */
   workS?: number | null;
 };
 
@@ -1038,8 +1038,8 @@ const AgentStepsBlock = ({
 
   // The trace total counts the steps only, not the setup before the first one
   // (MCP loading, sandbox start): the turn took at least as long as the
-  // backend's time to the first answer token and the wall clock from the send.
-  // After a reload only the first two exist.
+  // backend's stored turn time and the wall clock from the send. After a
+  // reload only the first two exist.
   const timed = [view.totalS, stopped ? null : workS, runS].filter((n): n is number => n !== null);
   const totalS = timed.length > 0 ? Math.max(...timed) : null;
   const context = useMemo<BlockContext>(
