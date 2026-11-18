@@ -292,8 +292,10 @@ test.describe("theme switch", () => {
     await readable("composer input", chat.composer.input);
 
     await chat.userMenu.click();
-    await readable("menu item", page.getByTestId("user-menu-profile"));
-    await readable("theme option", theme.option("light"));
+    // With FEATURE_SETTINGS_PAGE on the menu has Settings in place of Profile and the theme group.
+    const themeInMenu = await theme.inUserMenu();
+    await readable("menu item", page.getByTestId(themeInMenu ? "user-menu-profile" : "user-menu-settings"));
+    if (themeInMenu) await readable("theme option", theme.option("light"));
     await page.keyboard.press("Escape");
 
     // Toasts from the profile save, answered here so nothing is written.
@@ -511,6 +513,8 @@ test.describe("theme switch", () => {
     });
 
     await test.step("dialog scrim is Deep Space at 40 %", async () => {
+      // The settings page has no profile dialog, so no scrim to read.
+      if (await profile.usesPage()) return;
       await profile.open();
       await expect(profile.firstName).toBeVisible();
       await expect
@@ -610,8 +614,11 @@ test.describe("theme switch", () => {
 
       await profile.open();
       await expect(profile.firstName).toBeVisible();
-      await read("dialog scrim", page.getByTestId("dialog-overlay"));
-      await read("Profile dialog", profile.root);
+      if (!(await profile.usesPage())) {
+        await read("dialog scrim", page.getByTestId("dialog-overlay"));
+      }
+      const onPage = await profile.usesPage();
+      await read(onPage ? "Profile section" : "Profile dialog", profile.root, "self", onPage);
       await profile.lastName.focus();
       await read("Profile first name input", profile.firstName);
       await profile.fill({ firstName: `${(await profile.read()).firstName} e2e` });
@@ -619,6 +626,8 @@ test.describe("theme switch", () => {
       const toast = page.getByTestId("toast-profile-updated");
       await expect(toast).toBeVisible();
       await read("toast", toast);
+      // On the settings page there is no dialog to close: go back to the chat for the next theme.
+      if (onPage) await profile.close();
       return { shapes, traceFill };
     };
 

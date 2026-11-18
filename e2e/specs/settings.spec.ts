@@ -5,6 +5,10 @@ type Me = { first_name?: string | null; last_name?: string | null };
 
 type ApiKeyRow = { id: string; name: string; status: string };
 
+type CustomModelRow = { id: string; display_name: string; has_api_key: boolean };
+
+type ModelList = { custom: CustomModelRow[] };
+
 type TokenUsage = { unlimited: boolean; used_tokens: number };
 
 // Staging reads replicas: a read right after a write can still answer the old value.
@@ -33,6 +37,7 @@ test.describe("settings page @dev", () => {
       const original = await settings.profileLastName.inputValue();
       const changed = `E2E${Date.now()}`;
       const lastName = async () => (await api.get<Me>("/users/me")).body.last_name ?? "";
+      const firstName = (await api.get<Me>("/users/me")).body.first_name ?? "";
       try {
         await settings.profileLastName.fill(changed);
         await expect(settings.profileStatus).toHaveText("You have unsaved changes.");
@@ -41,10 +46,10 @@ test.describe("settings page @dev", () => {
         await expect(settings.profileStatus).toHaveText("Saved.");
         await expect.poll(lastName, READ_BACK).toBe(changed);
       } finally {
-        // Leave the account as it was found.
+        // Leave the account as it was found. Through the API: the form refuses an empty last
+        // name, which is what an account without one has stored.
         if ((await lastName().catch(() => original)) !== original) {
-          await settings.profileLastName.fill(original);
-          if (await settings.profileSave.isEnabled()) await settings.profileSave.click();
+          await api.patch("/users", { first_name: firstName, last_name: original });
           await expect.poll(lastName, READ_BACK).toBe(original);
         }
       }
@@ -72,26 +77,74 @@ test.describe("settings page @dev", () => {
       }
     });
 
-    await test.step("models: the section renders with its add button", async () => {
+    await test.step("models: add one, read it back, delete it, read back that it is gone", async () => {
       if (!(await settings.offers("models"))) return;
       await settings.openSection("models");
-      // Nothing is created: the environment is shared.
-      await expect(page.getByTestId("settings-models-add")).toBeVisible();
+      const name = `e2e-settings-${Date.now()}`;
+      const findModel = async (): Promise<CustomModelRow | undefined> => {
+        const list = await api.get<ModelList>("/models");
+        expect(list.status).toBe(200);
+        return list.body.custom.find((model) => model.display_name === name);
+      };
+      try {
+        await page.getByTestId("settings-models-add").click();
+        await expect(page.getByTestId("settings-models-dialog")).toBeVisible();
+        await page.getByTestId("settings-models-name").fill(name);
+        // The backend does not check the key at create: a fake one is stored. Never printed.
+        await page.getByTestId("settings-models-api-key").fill(`e2e-fake-${Date.now()}`);
+        const created = page.waitForResponse(
+          (response) =>
+            response.request().method() === "POST" &&
+            /\/users\/custom-models$/.test(new URL(response.url()).pathname),
+        );
+        await page.getByTestId("settings-models-save").click();
+        expect((await created).status()).toBeLessThan(300);
+        await expect(page.getByTestId("settings-models-dialog")).toBeHidden();
+
+        await expect.poll(async () => (await findModel())?.has_api_key, READ_BACK).toBe(true);
+        const id = (await findModel())?.id as string;
+        const row = page.getByTestId(`settings-models-row-${id}`);
+        await expect(row).toContainText(name);
+
+        await page.getByTestId(`settings-models-delete-${id}`).click();
+        await expect(page.getByTestId("custom-model-delete-dialog")).toContainText(name);
+        const deleted = page.waitForResponse(
+          (response) =>
+            response.request().method() === "DELETE" &&
+            /\/users\/custom-models\/[^/]+$/.test(new URL(response.url()).pathname),
+        );
+        await page.getByTestId("custom-model-delete-confirm").click();
+        expect((await deleted).status()).toBeLessThan(300);
+        await expect(row).toHaveCount(0);
+        await expect.poll(async () => await findModel(), READ_BACK).toBeUndefined();
+      } finally {
+        // A failed run leaves no model behind.
+        const leftover = await findModel().catch(() => undefined);
+        if (leftover) await api.delete(`/users/custom-models/${leftover.id}`);
+      }
     });
 
     await test.step("usage: the figure matches the API, and CO2eq calculates", async () => {
       if (!(await settings.offers("usage"))) return;
+      // The API is read before and after the section loads: the figure on screen must be one of
+      // the two readings, so a token spent by another run in between does not fail the step.
+      const readUsage = async () => {
+        const usage = await api.get<TokenUsage>("/users/me/token-usage");
+        expect(usage.status).toBe(200);
+        return usage.body;
+      };
+      const before = await readUsage();
       await settings.openSection("usage");
-      const usage = await api.get<TokenUsage>("/users/me/token-usage");
-      expect(usage.status).toBe(200);
-      if (usage.body.unlimited) {
+      const used = page.getByTestId("settings-usage-used");
+      await expect(used).toBeVisible();
+      // Displayed grouped (12,345): drop every grouping mark and space, then parse.
+      const shown = Number((await used.innerText()).replace(/[\s,.\u00a0\u202f]/g, ""));
+      const after = await readUsage();
+      expect(Number.isInteger(shown), "the used figure parses as an integer").toBe(true);
+      expect(shown).toBeGreaterThanOrEqual(before.used_tokens);
+      expect(shown).toBeLessThanOrEqual(after.used_tokens);
+      if (after.unlimited) {
         await expect(page.getByTestId("settings-usage-unlimited")).toBeVisible();
-      } else {
-        const used = page.getByTestId("settings-usage-used");
-        await expect(used).toBeVisible();
-        // The figure may be grouped (12,345): compare the digits.
-        const digits = ((await used.innerText()).match(/\d/g) ?? []).join("");
-        expect(Number(digits)).toBeGreaterThanOrEqual(usage.body.used_tokens);
       }
       await page.getByTestId("settings-usage-calculate").click();
       await expect(page.getByTestId("settings-usage-co2eq")).toBeVisible({ timeout: 30_000 });

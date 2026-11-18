@@ -1,5 +1,5 @@
 import { expect, type Locator, type Page } from "@playwright/test";
-import type { ChatPage } from "./ChatPage";
+import { flagOrEnvOn, type ChatPage } from "./ChatPage";
 
 export const SETTINGS_SECTION_IDS = [
   "profile",
@@ -9,6 +9,18 @@ export const SETTINGS_SECTION_IDS = [
   "api-keys",
   "account",
 ] as const;
+
+/**
+ * Whether the target serves the settings page. With it on, the user menu has Settings and no
+ * Profile or Theme group: those controls live under `/settings/profile` and
+ * `/settings/appearance`. Locally `E2E_SETTINGS_PAGE=true` says the flag is on.
+ */
+export function settingsPageOn(config: Record<string, string>): boolean {
+  return flagOrEnvOn(config, "FEATURE_SETTINGS_PAGE", false);
+}
+
+/** Whether a URL is the settings page or one of its sections. */
+export const isSettingsUrl = (url: string): boolean => /\/settings(\/|$)/.test(new URL(url).pathname);
 
 export type SettingsSectionId = (typeof SETTINGS_SECTION_IDS)[number];
 

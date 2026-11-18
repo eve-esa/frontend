@@ -12,7 +12,13 @@ export { PendingApprovalPage } from "./PendingApprovalPage";
 export { ProfileDialog } from "./ProfileDialog";
 export { ProfileRequiredDialog } from "./ProfileRequiredDialog";
 export { SettingsPanel } from "./SettingsPanel";
-export { SETTINGS_SECTION_IDS, SettingsPage, type SettingsSectionId } from "./SettingsPage";
+export {
+  isSettingsUrl,
+  SETTINGS_SECTION_IDS,
+  SettingsPage,
+  settingsPageOn,
+  type SettingsSectionId,
+} from "./SettingsPage";
 export { SignedOutPage } from "./SignedOutPage";
 export { SignupPage, type NewAccount } from "./SignupPage";
 export { ThemeMenu, themeSwitchOn, type ThemeChoice } from "./ThemeMenu";
