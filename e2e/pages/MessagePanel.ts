@@ -35,34 +35,127 @@ export class MessagePanel {
     return flagged && (await answer.innerText()).includes("Searched for:");
   }
 
+  /** Footer "Sources (n)" button: the legacy surface, which opens the right sidebar panel. */
   get sourcesButton(): Locator {
     return this.last.getByTestId("message-sources-button");
   }
 
-  /** Number in the "Sources (n)" button of the last turn; 0 when there is none. */
-  async sourcesCount(): Promise<number> {
-    if (!(await this.sourcesButton.isVisible())) return 0;
-    const match = (await this.sourcesButton.innerText()).match(/\((\d+)\)/);
-    return match ? Number(match[1]) : 0;
-  }
-
-  async openSources(): Promise<number> {
-    await this.sourcesButton.click();
-    const titles = this.page.getByTestId("source-title");
-    await expect(titles.first()).toBeVisible();
-    return titles.count();
+  /**
+   * The sources list under an answer that carries citations (FEATURE_INLINE_CITATIONS on and the
+   * backend sent the lists); the footer button is not rendered for such a turn.
+   */
+  get inlineSources(): Locator {
+    return this.last.getByTestId("message-sources");
   }
 
   /**
-   * Clicks the source title at `index` in the open sources panel and returns
-   * the tab it opens, once that tab has left about:blank.
+   * Which surface lists the sources of the last turn, read from the markup and not from the
+   * flag: with the flag on, a turn without citation lists still falls back to the footer button.
+   */
+  async sourcesSurface(): Promise<"panel" | "inline" | "none"> {
+    if (await this.sourcesButton.isVisible()) return "panel";
+    if (await this.inlineSources.isVisible()) return "inline";
+    return "none";
+  }
+
+  /** Number in the "Retrieved, not cited: n" / "Also retrieved: n" toggle; 0 when it is not there. */
+  private async uncitedCount(): Promise<number> {
+    const toggle = this.last.getByTestId("message-sources-uncited-toggle");
+    if (!(await toggle.isVisible())) return 0;
+    const match = (await toggle.innerText()).match(/(\d+)\s*$/);
+    return match ? Number(match[1]) : 0;
+  }
+
+  /**
+   * Number of sources the last turn shows; 0 when there is none. Footer button: the number in
+   * "Sources (n)". Inline list: the cited count of "Sources: n cited from ..." plus the
+   * retrieved-but-not-cited count when that toggle is on screen (it is, alone, when nothing is
+   * cited, and next to the cited list once the list is open).
+   */
+  async sourcesCount(): Promise<number> {
+    const surface = await this.sourcesSurface();
+    if (surface === "panel") {
+      const match = (await this.sourcesButton.innerText()).match(/\((\d+)\)/);
+      return match ? Number(match[1]) : 0;
+    }
+    if (surface === "inline") {
+      const toggle = this.last.getByTestId("message-sources-toggle");
+      const cited = (await toggle.isVisible())
+        ? Number((await toggle.innerText()).match(/Sources:\s*(\d+)\s+cited/)?.[1] ?? 0)
+        : 0;
+      return cited + (await this.uncitedCount());
+    }
+    return 0;
+  }
+
+  /**
+   * Opens the sources of the last turn and returns how many entries the opened surface lists:
+   * the titles of the sidebar panel, or the cited items of the inline list (the retrieved items
+   * when nothing is cited).
+   */
+  async openSources(): Promise<number> {
+    if ((await this.sourcesSurface()) === "panel") {
+      await this.sourcesButton.click();
+      const titles = this.page.getByTestId("source-title");
+      await expect(titles.first()).toBeVisible();
+      return titles.count();
+    }
+    const toggle = this.last.getByTestId("message-sources-toggle");
+    if (await toggle.isVisible()) {
+      if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
+      const items = this.last.getByTestId("source-item");
+      await expect(items.first()).toBeVisible();
+      return items.count();
+    }
+    // Nothing cited: only the retrieved list exists.
+    const uncited = this.last.getByTestId("message-sources-uncited-toggle");
+    await expect(uncited).toBeVisible();
+    if ((await uncited.getAttribute("aria-expanded")) !== "true") await uncited.click();
+    const items = this.last.getByTestId("source-uncited-item");
+    await expect(items.first()).toBeVisible();
+    return items.count();
+  }
+
+  /** Titles of the sources listed by the surface `openSources` opened. */
+  async sourceTitles(): Promise<string[]> {
+    if ((await this.sourcesSurface()) === "panel") {
+      return this.page.getByTestId("source-title").allInnerTexts();
+    }
+    return this.last.getByTestId("source-item-title").allInnerTexts();
+  }
+
+  /**
+   * The source card of the first cited source of the open inline list: the card a marker opens,
+   * drawn with the same edge as the card of the sidebar panel. Inline surface only, after
+   * `openSources`.
+   */
+  async openFirstSourceCard(): Promise<Locator> {
+    await this.inlineSources.getByTestId("citation-marker").first().click();
+    const card = this.page.getByTestId("source-card").first();
+    await expect(card).toBeVisible();
+    return card;
+  }
+
+  /**
+   * Clicks the source title at `index` in the open sources surface and returns the tab it
+   * opens, once that tab has left about:blank. On the inline list `index` counts only the
+   * titles that are links.
    */
   async openSourceTab(index: number): Promise<Page> {
     const opened = this.page.context().waitForEvent("page");
-    await this.page.getByTestId("source-title").nth(index).click();
+    const title =
+      (await this.sourcesSurface()) === "panel"
+        ? this.page.getByTestId("source-title").nth(index)
+        : this.last.locator('a[data-testid="source-item-title"]').nth(index);
+    await title.click();
     const tab = await opened;
     await expect.poll(() => tab.url(), { timeout: 30_000 }).not.toBe("about:blank");
     return tab;
+  }
+
+  /** How many titles of the open inline list are links. */
+  inlineLinkedTitles(): Promise<number> {
+    return this.last.locator('a[data-testid="source-item-title"]').count();
   }
 
   /** Waits until the last turn carries its server id instead of the optimistic one. */

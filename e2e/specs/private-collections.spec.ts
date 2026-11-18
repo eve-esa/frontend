@@ -112,7 +112,7 @@ test.describe("private collections @dev", () => {
           let listed = false;
           if ((await chat.messages.sourcesCount()) > 0) {
             await chat.messages.openSources();
-            const titles = await chat.page.getByTestId("source-title").allInnerTexts();
+            const titles = await chat.messages.sourceTitles();
             listed = titles.some((title) => title.includes("private-fact"));
           }
           expect(quoted || listed, `answer neither quotes the fact nor lists ${FILE_NAME}`).toBe(

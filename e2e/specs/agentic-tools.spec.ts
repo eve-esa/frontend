@@ -79,7 +79,9 @@ async function sendAndWatchSteps(
   if (agentSteps && (await chat.messages.hasAgentSteps())) {
     await chat.messages.openLastAgentSteps();
     const persisted = await chat.messages.lastToolSteps();
-    if (persisted.length > steps.length) steps = persisted;
+    // The persisted rows carry the finished labels ("Searched"); the ones sampled while the turn
+    // streamed may still read "Searching".
+    if (persisted.length >= steps.length) steps = persisted;
   }
   return { conversationId: await chat.waitForConversationId(), steps };
 }
@@ -111,8 +113,9 @@ test.describe("agentic tools @dev", () => {
       expect(steps).toHaveLength(1);
       if (agentSteps) {
         expect(steps[0].tool).toBe(TOOL);
-        // The knowledge base row: the server chip, the verb, the query.
-        expect(steps[0].label).toMatch(/^eve_retrieval\s+Searched\s+"\S/);
+        // The knowledge base row once finished: the verb, the "EVE sources" chip, the query.
+        // The tool id is on the row (`data-tool`, checked above), not in its text.
+        expect(steps[0].label).toMatch(/^Searched\s+EVE sources\s*"\S/);
       } else {
         expect(steps[0].label).toMatch(new RegExp(`^Calling MCP server: ${SERVER}: \\S`));
       }
