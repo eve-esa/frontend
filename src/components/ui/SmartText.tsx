@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
@@ -15,15 +15,23 @@ import { prepareLatexContent } from "@/utilities/prepareLatexContent";
 import { stripArtifactMetadata } from "@/utilities/stripArtifactMetadata";
 import { AuthenticatedImage } from "./AuthenticatedImage";
 import { ImageLightbox } from "./ImageLightbox";
+import api from "@/services/axios";
+import { Spinner } from "./Spinner";
 import {
   ArtifactDownloadChip,
-  isArtifactDownloadLink,
+  downloadHrefForLink,
+  isTrustedAppHref,
+  isWorkspaceDownloadLink,
+  linkedImageSrc,
+  workspaceMarkdownHrefs,
 } from "./ArtifactDownloadChip";
 import "katex/dist/katex.min.css";
 
 type SmartTextProps = {
   text: string;
   className?: string;
+  // A workspace markdown file rendered inside this tree does not embed again.
+  embedFiles?: boolean;
 };
 
 // GitHub's default sanitize schema (GFM tables, lists, code blocks, images,
@@ -184,7 +192,45 @@ const extractGalleryImages = (
   return images.length >= 2 ? images : null;
 };
 
-const SmartText: React.FC<SmartTextProps> = ({ text, className }) => {
+const WorkspaceMarkdown = ({ href }: { href: string }) => {
+  const [text, setText] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isWorkspaceDownloadLink(href)) return;
+    let cancelled = false;
+    api
+      .get<string>(href, { responseType: "text" })
+      .then((response) => {
+        if (cancelled) return;
+        const body = response.data;
+        if (typeof body !== "string" || body.length > 1_000_000) {
+          setText("");
+          return;
+        }
+        setText(body);
+      })
+      .catch(() => {
+        if (!cancelled) setText("");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [href]);
+
+  if (!isWorkspaceDownloadLink(href) || text === "") return null;
+  if (text === null) return <Spinner size="xs" />;
+  return (
+    <div className="mt-4" data-testid="workspace-markdown">
+      <SmartText text={text} embedFiles={false} />
+    </div>
+  );
+};
+
+const SmartText: React.FC<SmartTextProps> = ({
+  text,
+  className,
+  embedFiles = true,
+}) => {
   const { copyToClipboard } = useClipboard();
   // useClipboard returns a fresh function each render; keep it behind a ref so
   // the memoized `components` below don't churn on every streamed frame.
@@ -210,12 +256,23 @@ const SmartText: React.FC<SmartTextProps> = ({ text, className }) => {
   // copied) and the theme-independent styles change it.
   const components: Components = useMemo(() => ({
     a: ({ href, children }) => {
-      if (isArtifactDownloadLink(href)) {
+      const imageSrc = linkedImageSrc(href);
+      if (imageSrc && isTrustedAppHref(imageSrc)) {
+        return (
+          <MarkdownImage
+            src={imageSrc}
+            alt={typeof children === "string" ? children : undefined}
+          />
+        );
+      }
+      const download = downloadHrefForLink(href);
+      if (download) {
         return (
           <ArtifactDownloadChip
-            href={href!}
+            href={download.href}
             filename={
-              typeof children === "string" ? children : undefined
+              download.filename ??
+              (typeof children === "string" ? children : undefined)
             }
           />
         );
@@ -235,7 +292,9 @@ const SmartText: React.FC<SmartTextProps> = ({ text, className }) => {
         </a>
       );
     },
-    img: ({ src, alt, node }) => (
+    img: ({ src, alt, node }) => {
+      const raw = typeof src === "string" ? src : undefined;
+      const imageSrc = (raw && linkedImageSrc(raw)) || raw;
       // Keyed by src: react-markdown reparses the whole tree on every
       // streamed token with no keys of its own, so React falls back to
       // positional reconciliation. If a sibling earlier in the paragraph
@@ -243,9 +302,10 @@ const SmartText: React.FC<SmartTextProps> = ({ text, className }) => {
       // more text streams in), an already-rendered image can get bumped to
       // a new position and remount, refetching its blob and flashing.
       // Keying by src lets React match it back up regardless of position.
+      return (
       <MarkdownImage
-        key={typeof src === "string" ? src : undefined}
-        src={typeof src === "string" ? src : undefined}
+        key={imageSrc}
+        src={imageSrc}
         alt={typeof alt === "string" ? alt : undefined}
         title={
           typeof node?.properties?.title === "string"
@@ -253,7 +313,8 @@ const SmartText: React.FC<SmartTextProps> = ({ text, className }) => {
             : undefined
         }
       />
-    ),
+      );
+    },
     em: ({ children }) => (
       <em className={cn(baseText, "italic")}>{children}</em>
     ),
@@ -433,6 +494,10 @@ const SmartText: React.FC<SmartTextProps> = ({ text, className }) => {
     () => prepareLatexContent(stripArtifactMetadata(text)),
     [text],
   );
+  const embeddedReports = useMemo(
+    () => (embedFiles ? workspaceMarkdownHrefs(preparedText) : []),
+    [embedFiles, preparedText],
+  );
 
   // The heavy bit: parsing markdown + GFM + KaTeX. Keyed on the text and the
   // component overrides, so a re-render that doesn't change either (e.g. a
@@ -457,6 +522,9 @@ const SmartText: React.FC<SmartTextProps> = ({ text, className }) => {
   return (
     <div className={cn(baseText, "smarttext", className)}>
       {markdown}
+      {embeddedReports.map((href) => (
+        <WorkspaceMarkdown key={href} href={href} />
+      ))}
       {galleryLightbox && (
         <ImageLightbox
           images={galleryLightbox.images}
