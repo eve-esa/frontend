@@ -264,10 +264,20 @@ test.describe("theme switch", () => {
     await ownTurn(chat);
     await readable("answer text", chat.messages.last.getByTestId("message-answer"));
     // Link text is Pure Teal +2 in light, never Pure Teal. Without a link in this answer, the
-    // same token on the trace's tool status.
+    // same token on the tool status: the inline agent steps, or the sidebar trace with
+    // FEATURE_TRACE_SIDEBAR on.
     const link = chat.messages.last.getByTestId("message-answer").getByTestId("smart-text-link");
     if ((await link.count()) > 0) {
       await readable("answer link", link.first());
+    } else if (await chat.messages.hasAgentSteps()) {
+      await chat.messages.openLastAgentSteps();
+      await readable(
+        "agent step status",
+        chat.messages.last
+          .locator('[data-testid="agent-step"][data-status="done"]')
+          .getByTestId("agent-step-status")
+          .first(),
+      );
     } else {
       const traceButton = chat.messages.last.getByTestId("message-trace-button");
       await expect(traceButton, "the answer has neither a link nor a trace").toBeVisible();

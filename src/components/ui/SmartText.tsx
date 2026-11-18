@@ -8,183 +8,45 @@ import { faCopy } from "@fortawesome/free-regular-svg-icons";
 import { faCheck } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import rehypeRaw from "rehype-raw";
-import rehypeSanitize, { defaultSchema, type Options as SanitizeSchema } from "rehype-sanitize";
-import type { Element as HastElement } from "hast";
+import rehypeSanitize from "rehype-sanitize";
+import { sanitizeSchema } from "@/utilities/markdownSanitize";
 import { cn } from "@/lib/utils";
 import { prepareLatexContent } from "@/utilities/prepareLatexContent";
 import { stripArtifactMetadata } from "@/utilities/stripArtifactMetadata";
-import { AuthenticatedImage } from "./AuthenticatedImage";
 import { ImageLightbox } from "./ImageLightbox";
+import { extractGalleryImages, MarkdownImage, type GalleryImage } from "./MarkdownImage";
 import {
   ArtifactDownloadChip,
   isArtifactDownloadLink,
 } from "./ArtifactDownloadChip";
 import "katex/dist/katex.min.css";
+import type { Pluggable } from "unified";
+import type { MarkerInstance } from "@/utilities/citations";
+import {
+  CiteOverride,
+  DivOverride,
+  citationRehypePlugin,
+} from "@/components/chat/citations/AnswerMarkers";
 
 type SmartTextProps = {
   text: string;
   className?: string;
+  /** Read by StreamdownText only; react-markdown renders the same either way. */
+  isStreaming?: boolean;
+  /**
+   * Inline citations (FEATURE_INLINE_CITATIONS): the markers `markCitations`
+   * put in `text` as placeholders. With them the placeholders render as
+   * source markers inside a `CitationsProvider`; without, nothing changes.
+   */
+  markers?: readonly MarkerInstance[];
 };
 
-// GitHub's default sanitize schema (GFM tables, lists, code blocks, images,
-// ...) with three changes:
-// - no inline `style` anywhere: CSS such as `background-image:url(...)` would
-//   load a foreign host with no click. KaTeX needs `style`, so rehype-katex
-//   runs after this sanitizer (see the plugin order below) and its own output
-//   is never filtered.
-// - no `picture` or `source`: `srcSet` has no protocol check.
-// - link protocols locked down to kill `javascript:`/`data:` hrefs (SEC-5).
-const sanitizeSchema: SanitizeSchema = {
-  ...defaultSchema,
-  tagNames: (defaultSchema.tagNames ?? []).filter(
-    (tag) => tag !== "picture" && tag !== "source",
-  ),
-  protocols: {
-    ...defaultSchema.protocols,
-    href: ["http", "https", "mailto"],
-  },
-};
-
-// Markdown title of the form "MCP: {server}/{tool}" (or just "MCP") marks a
-// stub image the backend generated from an MCP tool call, per the backend
-// contract, used to render the provenance pill below.
-const isMcpProvenance = (title: string | undefined): boolean =>
-  Boolean(title?.toLowerCase().startsWith("mcp"));
-
-// Small provenance pill, styled to match ArtifactCard's source label
-// (src/pages/artifacts/ArtifactCard.tsx). Shows "MCP"; the full title (e.g.
-// "MCP: filesystem/read_file") is available as a tooltip.
-const McpBadge = ({ title }: { title: string }) => (
-  <span
-    title={title}
-    className="absolute left-2 top-2 rounded-full border border-primary-400 bg-natural-1000/60 px-2 py-0.5 text-[10px] uppercase tracking-wide text-natural-50 in-data-[theme=light]:bg-primary-500"
-  >
-    MCP
-  </span>
-);
-
-// Renders both `![]()` markdown images and raw `<img>` (rehype-raw routes both
-// through the `img` override). Memoized on src+alt+title so it doesn't
-// re-render (and re-fetch its blob) on every streamed token. The `tile`
-// variant is used inside the gallery grid: uniform cropped thumbnails instead
-// of the free-flowing inline size.
-//
-// Clicking normally opens this image's own lightbox. When `onImageClick` is
-// passed (the gallery-grid case), it defers to the caller instead so a whole
-// paragraph of images can share one lightbox instance with next/prev nav.
-const MarkdownImage = React.memo(
-  ({
-    src,
-    alt,
-    title,
-    variant = "inline",
-    onImageClick,
-  }: {
-    src?: string;
-    alt?: string;
-    title?: string;
-    variant?: "inline" | "tile";
-    onImageClick?: () => void;
-  }) => {
-    const [isLightboxOpen, setIsLightboxOpen] = useState(false);
-    // The model's prose sometimes embeds invented image URLs that 404 (see
-    // AuthenticatedImage's onError). Collapse the whole wrapper (badge and
-    // lightbox trigger included) rather than leaving an empty husk behind.
-    const [hasError, setHasError] = useState(false);
-    if (!src || hasError) return null;
-    const showMcpBadge = isMcpProvenance(title);
-
-    return (
-      <>
-        {/* span, not div: inline images render inside a markdown <p>, where a
-            div would be invalid HTML and trigger React hydration warnings. */}
-        <span
-          className={cn(
-            "relative",
-            variant === "tile" ? "block w-full" : "inline-block",
-          )}
-        >
-          <AuthenticatedImage
-            src={src}
-            alt={alt}
-            onClick={onImageClick ?? (() => setIsLightboxOpen(true))}
-            onError={() => setHasError(true)}
-            data-testid="markdown-image"
-            className={
-              variant === "tile"
-                ? "aspect-[4/3] w-full rounded-lg object-cover cursor-zoom-in"
-                : "my-2 max-h-[400px] max-w-[480px] w-auto rounded-lg object-contain cursor-zoom-in"
-            }
-            // A gallery tile keeps its size while it is still a placeholder.
-            placeholderClassName={
-              variant === "tile"
-                ? "my-0 flex aspect-[4/3] w-full justify-center"
-                : undefined
-            }
-          />
-          {showMcpBadge && <McpBadge title={title!} />}
-        </span>
-        {!onImageClick && (
-          <ImageLightbox
-            images={[{ src, alt, title }]}
-            open={isLightboxOpen}
-            onOpenChange={setIsLightboxOpen}
-          />
-        )}
-      </>
-    );
-  },
-  (prev, next) =>
-    prev.src === next.src &&
-    prev.alt === next.alt &&
-    prev.title === next.title &&
-    prev.variant === next.variant,
-);
-MarkdownImage.displayName = "MarkdownImage";
-
-type GalleryImage = { src: string; alt?: string; title?: string };
-
-// When a paragraph contains only images (whitespace and <br> aside), returns
-// their src/alt so they can be laid out as a gallery grid. Any meaningful text
-// or fewer than two images returns null and the paragraph renders as usual.
-// Reading the hast node (rather than sniffing React children) keeps detection
-// stable while the answer streams in token by token.
-const extractGalleryImages = (
-  node: HastElement | undefined,
-): GalleryImage[] | null => {
-  if (!node) return null;
-  const images: GalleryImage[] = [];
-  for (const child of node.children) {
-    if (child.type === "text") {
-      if (child.value.trim() !== "") return null;
-      continue;
-    }
-    if (child.type === "element") {
-      if (child.tagName === "br") continue;
-      if (
-        child.tagName === "img" &&
-        typeof child.properties?.src === "string"
-      ) {
-        images.push({
-          src: child.properties.src,
-          alt:
-            typeof child.properties.alt === "string"
-              ? child.properties.alt
-              : undefined,
-          title:
-            typeof child.properties.title === "string"
-              ? child.properties.title
-              : undefined,
-        });
-        continue;
-      }
-      return null;
-    }
-  }
-  return images.length >= 2 ? images : null;
-};
-
-const SmartText: React.FC<SmartTextProps> = ({ text, className }) => {
+const SmartText: React.FC<SmartTextProps> = ({ text, className, markers }) => {
+  // Behind a ref: the rehype step below stays one stable plugin while the
+  // marker list grows with the stream.
+  const markersRef = useRef(markers);
+  markersRef.current = markers;
+  const withMarkers = markers !== undefined;
   const { copyToClipboard } = useClipboard();
   // useClipboard returns a fresh function each render; keep it behind a ref so
   // the memoized `components` below don't churn on every streamed frame.
@@ -261,6 +123,10 @@ const SmartText: React.FC<SmartTextProps> = ({ text, className }) => {
       <strong className={cn(baseText, "font-bold")}>{children}</strong>
     ),
     br: () => <br />,
+    // Source markers and the blocks that hold them (inline citations); a
+    // `cite` or `div` from the text itself renders as before.
+    cite: CiteOverride,
+    div: DivOverride,
     code: (props) => {
       const { className, children, ...rest } = props;
 
@@ -438,6 +304,18 @@ const SmartText: React.FC<SmartTextProps> = ({ text, className }) => {
   // component overrides, so a re-render that doesn't change either (e.g. a
   // parent re-render on a frame that appended nothing) reuses the same element
   // and React skips reconciling the whole tree.
+  // Inline citations add their step after the sanitizer, before KaTeX: the
+  // marker elements are ours, never the model's.
+  const rehypePlugins = useMemo<Pluggable[]>(
+    () => [
+      rehypeRaw,
+      [rehypeSanitize, sanitizeSchema],
+      ...(withMarkers ? [citationRehypePlugin(() => markersRef.current)] : []),
+      rehypeKatex,
+    ],
+    [withMarkers],
+  );
+
   const markdown = useMemo(
     () => (
       <ReactMarkdown
@@ -445,17 +323,17 @@ const SmartText: React.FC<SmartTextProps> = ({ text, className }) => {
         // Sanitize first, KaTeX last: the sanitizer keeps the
         // `language-math` class remark-math puts on formulas, and KaTeX's
         // generated markup (inline style included) is added after it.
-        rehypePlugins={[rehypeRaw, [rehypeSanitize, sanitizeSchema], rehypeKatex]}
+        rehypePlugins={rehypePlugins}
         components={components}
       >
         {preparedText}
       </ReactMarkdown>
     ),
-    [preparedText, components],
+    [preparedText, components, rehypePlugins],
   );
 
   return (
-    <div className={cn(baseText, "smarttext", className)}>
+    <div data-testid="smart-text" className={cn(baseText, "smarttext", className)}>
       {markdown}
       {galleryLightbox && (
         <ImageLightbox

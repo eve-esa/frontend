@@ -1,5 +1,13 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+// These cases are the react-markdown path: pinned off, so a machine or a run
+// with VITE_FEATURE_STREAMDOWN set does not switch the renderer under them.
+vi.mock("@/utilities/features", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/utilities/features")>()),
+  STREAMDOWN_ENABLED: false,
+}));
+
 import LazySmartText from "./LazySmartText";
 
 /**

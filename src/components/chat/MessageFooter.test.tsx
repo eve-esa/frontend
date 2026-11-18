@@ -45,8 +45,13 @@ const answer = (overrides: Partial<MessageType> = {}) =>
 const render = async (
   flag: string | undefined,
   message: MessageType = answer(),
+  // Other flags of the served config (the agent steps and the trace panel).
+  extra: Record<string, string> = {},
 ) => {
-  const config = flag === undefined ? {} : { FEATURE_REPORT_BUG: flag };
+  const config = {
+    ...(flag === undefined ? {} : { FEATURE_REPORT_BUG: flag }),
+    ...extra,
+  };
   stubRuntimeConfig(config);
   vi.stubGlobal("window", {
     __EVE_CONFIG__: config,
@@ -96,6 +101,32 @@ const reportButton = (html: string) =>
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
+});
+
+describe("MessageFooter trace button", () => {
+  it.each<Record<string, string>>([{}, { FEATURE_TRACE_SIDEBAR: "false" }, { FEATURE_AGENT_STEPS: "false" }])(
+    "is shown with FEATURE_AGENT_STEPS off, as before (%o)",
+    async (extra) => {
+      const html = await render(undefined, answer(), extra);
+      expect(html).toContain('data-testid="message-trace-button"');
+    },
+  );
+
+  it.each<Record<string, string>>([{}, { FEATURE_TRACE_SIDEBAR: "false" }])(
+    "is hidden with FEATURE_AGENT_STEPS on: the inline agent steps replace it (%o)",
+    async (extra) => {
+      const html = await render(undefined, answer(), { FEATURE_AGENT_STEPS: "true", ...extra });
+      expect(html).not.toContain('data-testid="message-trace-button"');
+    },
+  );
+
+  it("is shown next to the agent steps with FEATURE_TRACE_SIDEBAR true", async () => {
+    const html = await render(undefined, answer(), {
+      FEATURE_AGENT_STEPS: "true",
+      FEATURE_TRACE_SIDEBAR: "true",
+    });
+    expect(html).toContain('data-testid="message-trace-button"');
+  });
 });
 
 describe("MessageFooter report a bug entry", () => {

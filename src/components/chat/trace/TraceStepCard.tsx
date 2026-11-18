@@ -41,7 +41,7 @@ const Muted = ({ children }: { children: ReactNode }) => (
   <p className="text-xs italic text-primary-300">{children}</p>
 );
 
-const CodeBox = ({ children }: { children: ReactNode }) => (
+export const CodeBox = ({ children }: { children: ReactNode }) => (
   <div className="border border-primary-400/40 bg-primary-600 px-2.5 py-2">
     {children}
   </div>
@@ -75,7 +75,7 @@ const TraceSection = ({
   </section>
 );
 
-const MetaList = ({ items }: { items: [string, string | null][] }) => {
+export const MetaList = ({ items }: { items: [string, string | null][] }) => {
   const shown = items.filter((item): item is [string, string] => Boolean(item[1]));
   if (shown.length === 0) return null;
   return (
@@ -92,7 +92,7 @@ const MetaList = ({ items }: { items: [string, string | null][] }) => {
   );
 };
 
-const formatTokens = (step: AgentStepView): string | null => {
+export const formatTokens = (step: AgentStepView): string | null => {
   const parts = [
     step.inputTokens !== null ? `${formatTokenCount(step.inputTokens)} in` : null,
     step.outputTokens !== null ? `${formatTokenCount(step.outputTokens)} out` : null,
@@ -128,7 +128,7 @@ const AgentBody = ({ step }: { step: AgentStepView }) => (
   </>
 );
 
-const ToolOutputView = ({ step }: { step: ToolStepView }) => {
+export const ToolOutputView = ({ step }: { step: ToolStepView }) => {
   const { output } = step;
   const displayValue = useMemo(
     () => (output.kind === "json" ? truncateForDisplay(output.value) : null),

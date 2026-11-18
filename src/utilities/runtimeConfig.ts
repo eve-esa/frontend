@@ -56,6 +56,10 @@ export type ConfigKey =
   | "FEATURE_REPORT_BUG"
   | "FEATURE_PROFILE_FIELDS"
   | "FEATURE_THEME_SWITCH"
+  | "FEATURE_STREAMDOWN"
+  | "FEATURE_AGENT_STEPS"
+  | "FEATURE_TRACE_SIDEBAR"
+  | "FEATURE_INLINE_CITATIONS"
   // Not switches. They are here because they are per-environment values that a
   // promoted artifact cannot carry, which is the same problem the flags have.
   // They were build-time only, set on deploy-dev and on nothing else, so
@@ -118,6 +122,10 @@ const BUILD_TIME: Record<ConfigKey, string | undefined> = {
   FEATURE_REPORT_BUG: import.meta.env.VITE_FEATURE_REPORT_BUG,
   FEATURE_PROFILE_FIELDS: import.meta.env.VITE_FEATURE_PROFILE_FIELDS,
   FEATURE_THEME_SWITCH: import.meta.env.VITE_FEATURE_THEME_SWITCH,
+  FEATURE_STREAMDOWN: import.meta.env.VITE_FEATURE_STREAMDOWN,
+  FEATURE_AGENT_STEPS: import.meta.env.VITE_FEATURE_AGENT_STEPS,
+  FEATURE_TRACE_SIDEBAR: import.meta.env.VITE_FEATURE_TRACE_SIDEBAR,
+  FEATURE_INLINE_CITATIONS: import.meta.env.VITE_FEATURE_INLINE_CITATIONS,
   CONTACT_URL: import.meta.env.VITE_CONTACT_URL,
   PRIVACY_POLICY_URL: import.meta.env.VITE_PRIVACY_POLICY_URL,
   ABOUT_US_URL: import.meta.env.VITE_ABOUT_US_URL,

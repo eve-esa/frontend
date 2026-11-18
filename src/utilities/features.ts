@@ -170,3 +170,47 @@ export const PROFILE_FIELDS_ENABLED = isEnabled("FEATURE_PROFILE_FIELDS", false)
  * Default off: a new capability ships off in production and on where an environment opts in.
  */
 export const THEME_SWITCH_ENABLED = isEnabled("FEATURE_THEME_SWITCH", false);
+
+/**
+ * Answers rendered by Streamdown instead of react-markdown: Mermaid diagrams, KaTeX math and
+ * self-healing markdown while a turn streams. Mermaid and the math plugin load on demand. Off,
+ * `SmartText` renders exactly as before.
+ *
+ * Default off: a new capability ships off in production and on where an environment opts in.
+ */
+export const STREAMDOWN_ENABLED = isEnabled("FEATURE_STREAMDOWN", false);
+
+/**
+ * The inline agent steps block above each agentic answer: open while the agent works, with the
+ * running step and a timer as the turn's one status line, folded to a summary when the answer
+ * starts; each step shows its status, duration, result and the same detail as the trace panel.
+ * On, the streamed status notices and the tool chips of an agentic turn give way to the block,
+ * and the footer Trace button follows FEATURE_TRACE_SIDEBAR. Off, the chat is as before: notices,
+ * tool chips and the footer Trace button.
+ *
+ * Default off: a new capability ships off in production and on where an environment opts in.
+ */
+export const AGENT_STEPS_ENABLED = isEnabled("FEATURE_AGENT_STEPS", false);
+
+/**
+ * The footer "Trace" button and the agent trace side panel next to the inline agent steps, kept
+ * as a debugging view (timeline bars, every model step). Read only with FEATURE_AGENT_STEPS on:
+ * with it off the Trace button is always there.
+ *
+ * Default off: with the agent steps on, the inline block is the only view of the steps.
+ */
+export const TRACE_SIDEBAR_ENABLED = isEnabled("FEATURE_TRACE_SIDEBAR", false);
+
+/** The footer Trace button: always without the agent steps, on request next to them. */
+export const TRACE_BUTTON_ENABLED = !AGENT_STEPS_ENABLED || TRACE_SIDEBAR_ENABLED;
+
+/**
+ * Inline citations on agentic answers whose backend sends them: a numbered marker after each
+ * cited claim opens a source card on click (provider, title, passage, locator, Open and Copy
+ * citation), and the sources list under the answer, folded to one line, groups the cited sources
+ * by provider with the uncited ones folded last. Replaces the Sources button for those turns only;
+ * turns without citations keep it.
+ *
+ * Default off: a new capability ships off in production and on where an environment opts in.
+ */
+export const INLINE_CITATIONS_ENABLED = isEnabled("FEATURE_INLINE_CITATIONS", false);

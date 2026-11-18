@@ -13,6 +13,14 @@ describe("selectStreamingCandidate", () => {
     expect(selectStreamingCandidate("hel", "hello world", true)).toBe("hel");
   });
 
+  it("shows the full output as soon as the stream has ended, whatever the typewriter revealed", () => {
+    // The typewriter drains on timers; a hidden or busy tab starves them, and
+    // the end of the turn must not wait for it.
+    expect(selectStreamingCandidate("Sentinel-1 fl", "Sentinel-1 flood mapping [2].", false)).toBe(
+      "Sentinel-1 flood mapping [2].",
+    );
+  });
+
   it("shows the full output for a persisted (non-streaming) message", () => {
     expect(selectStreamingCandidate("", "final answer", false)).toBe(
       "final answer",

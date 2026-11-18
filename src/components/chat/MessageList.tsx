@@ -1,6 +1,10 @@
+import { useCallback } from "react";
 import type { MessageType } from "@/types";
 import { ErrorMessage } from "./ErrorMessage";
 import { Message } from "./Message";
+import { useSidebar } from "./DynamicSidebarProvider";
+import { useCollectionCatalog } from "@/services/useCollectionCatalog";
+import { useListModels } from "@/services/useListModels";
 
 type MessageListProps = {
   messages: MessageType[];
@@ -17,6 +21,16 @@ export const MessageList = ({
   onRetry,
   scrollContainerRef,
 }: MessageListProps) => {
+  // One read of the cached collection lists for every message: the agent
+  // steps name the collections a search covered.
+  const collections = useCollectionCatalog();
+  // Model labels for the agent steps Details (cached `/models`).
+  const { data: models } = useListModels();
+  const { openDynamicSidebar } = useSidebar();
+  const openMyCollections = useCallback(
+    () => openDynamicSidebar({ type: "my-collections" }),
+    [openDynamicSidebar],
+  );
   const lastMessage = messages?.length
     ? messages[messages.length - 1]
     : undefined;
@@ -40,6 +54,9 @@ export const MessageList = ({
             isLastMessage={isLastMessage}
             scrollContainerRef={scrollContainerRef}
             messageIndex={index}
+            collections={collections}
+            models={models}
+            onOpenMyCollections={openMyCollections}
           />
         );
       })}

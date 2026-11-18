@@ -61,6 +61,36 @@ export type ToolActivityEntry = {
   query?: string;
   server?: string;
   state: "running" | "done";
+  // Optional fields of newer frames (inline agent steps). Each is set only
+  // when the frame carries it, so older backends keep the shape above.
+  id?: string;
+  args?: unknown;
+  preview?: string;
+  status?: "ok" | "error" | "timeout" | "cancelled";
+  kind?: string;
+  /** Step id of the first attempt when this call retries a failed one. */
+  retryOf?: string;
+  errorCode?: string;
+  model?: string;
+  argsTruncated?: boolean;
+  subagentName?: string;
+  /** `model_fallback` frame: the chain moved to another model. */
+  modelFrom?: string;
+  modelTo?: string;
+  fallbackReason?: string;
+  tier?: string;
+  durationMs?: number;
+  attempt?: number;
+  skillName?: string;
+  modelFallback?: string;
+  subagentRunId?: string;
+  startedAtMs?: number;
+  endedAtMs?: number;
+  /**
+   * The collections the request sent. The backend forces them on a retrieval
+   * call over whatever the model wrote, so they name what it searches.
+   */
+  requestCollections?: { public_collections: string[]; private_collections: string[] };
 };
 
 export type Document = {
@@ -172,6 +202,16 @@ export type MessageType = {
       agentic_llm_resolved?: string | null;
       used_fallback_llm?: boolean | null;
     };
+    // The platform endpoint that answered (llm_type, e.g. "eve_jsc").
+    endpoint?: {
+      answered?: string | null;
+    } | null;
+    // Inline citations (backend FEATURE_INLINE_CITATIONS, agentic streamed
+    // turns): the cited Sources with their marker number and offsets, and
+    // the uncited rest. Read through `normalizeCitations` and
+    // `normalizeRetrieved` in utilities/citations.ts.
+    citations?: unknown;
+    sources_retrieved?: unknown;
     // Written by the backend when generation failed; its presence is the
     // frontend's signal that empty output means failure, not an empty answer.
     // Unknown codes must be treated as upstream_error.
