@@ -129,6 +129,31 @@ describe("MessageFooter trace button", () => {
   });
 });
 
+describe("MessageFooter sandbox button", () => {
+  it.each([undefined, "false"])("is absent with FEATURE_SANDBOX_EXPLORER %s", async (flag) => {
+    const html = await render(
+      undefined,
+      answer(),
+      flag === undefined ? {} : { FEATURE_SANDBOX_EXPLORER: flag },
+    );
+    expect(html).not.toContain('data-testid="message-sandbox-button"');
+  });
+
+  it("is a button named Sandbox right after Trace with FEATURE_SANDBOX_EXPLORER true", async () => {
+    const html = await render(undefined, answer(), { FEATURE_SANDBOX_EXPLORER: "true" });
+    const names = buttonNames(html);
+    expect(names[names.indexOf("Trace(2)") + 1]).toBe("Sandbox");
+    expect(html).toMatch(/<svg[^>]*data-icon="folder-tree"/);
+  });
+
+  it("is there without a trace: the sandbox belongs to the conversation", async () => {
+    const html = await render(undefined, answer({ trace: [] }), {
+      FEATURE_SANDBOX_EXPLORER: "true",
+    });
+    expect(html).toContain('data-testid="message-sandbox-button"');
+  });
+});
+
 describe("MessageFooter report a bug entry", () => {
   it.each([undefined, "false"])(
     "is absent with FEATURE_REPORT_BUG %s",

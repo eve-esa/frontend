@@ -31,6 +31,7 @@ const BUILD_TIME_ENV_KEYS = [
   "VITE_FEATURE_AGENT_STEPS",
   "VITE_FEATURE_TRACE_SIDEBAR",
   "VITE_FEATURE_INLINE_CITATIONS",
+  "VITE_FEATURE_SANDBOX_EXPLORER",
   // Not flags, same reasoning: AppVersion reads these at module scope and the
   // profile dialog renders it, so a developer's .env would otherwise decide
   // whether a version line appears in a test that never asked about one.

@@ -2,6 +2,7 @@ import {
   faBug,
   faBullseye,
   faCheck,
+  faFolderTree,
   faListUl,
   faThumbsDown as faThumbsDownSolid,
   faThumbsUp as faThumbsUpSolid,
@@ -41,6 +42,7 @@ import { buildHallucinationCopyText } from "@/utilities/buildHallucinationCopyTe
 import {
   ANSWERED_BY_ENABLED,
   REPORT_BUG_ENABLED,
+  SANDBOX_EXPLORER_ENABLED,
   TRACE_BUTTON_ENABLED,
 } from "@/utilities/features";
 import { isPersistedId } from "@/services/useReportBug";
@@ -436,6 +438,8 @@ export const MessageFooter = ({ message, hideSources = false }: MessageFooterPro
     openDynamicSidebar({ type: panelType, props });
   };
 
+  const sandboxConversationId = conversationId || message?.conversation_id;
+
   // Once, not twice: the label was computed again inside its own guard.
   const answeredByLabel = ANSWERED_BY_ENABLED
     ? getAnsweredByLabel(message, models)
@@ -499,6 +503,23 @@ export const MessageFooter = ({ message, hideSources = false }: MessageFooterPro
                 <span className="font-['NotesESA']">
                   ({message?.trace?.length})
                 </span>
+              </Button>
+            ) : null}
+            {/* The sandbox and its files belong to the conversation, so every
+                answer opens the same panel. */}
+            {SANDBOX_EXPLORER_ENABLED && sandboxConversationId ? (
+              <Button
+                variant="primary"
+                data-testid="message-sandbox-button"
+                onClick={() =>
+                  openDynamicSidebar({
+                    type: "sandbox",
+                    props: { conversationId: sandboxConversationId },
+                  })
+                }
+              >
+                <FontAwesomeIcon icon={faFolderTree} className="size-4" />
+                <span className="font-['NotesESA']">Sandbox</span>
               </Button>
             ) : null}
             {/* The report names this answer, so whoever triages it lands on

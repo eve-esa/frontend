@@ -283,3 +283,24 @@ describe("FEATURE_STREAM_STATUS_NOTICES", () => {
     expect(STREAM_STATUS_NOTICES_ENABLED).toBe(true);
   });
 });
+
+describe("FEATURE_SANDBOX_EXPLORER", () => {
+  it("is off when nothing sets it", async () => {
+    const { SANDBOX_EXPLORER_ENABLED } = await loadFeatures({});
+    expect(SANDBOX_EXPLORER_ENABLED).toBe(false);
+  });
+
+  it("is off when the injected value is blank, which is what an unset GitHub variable sends", async () => {
+    const { SANDBOX_EXPLORER_ENABLED } = await loadFeatures({
+      FEATURE_SANDBOX_EXPLORER: "",
+    });
+    expect(SANDBOX_EXPLORER_ENABLED).toBe(false);
+  });
+
+  it("is on only when an environment opts in", async () => {
+    const { SANDBOX_EXPLORER_ENABLED } = await loadFeatures({
+      FEATURE_SANDBOX_EXPLORER: "true",
+    });
+    expect(SANDBOX_EXPLORER_ENABLED).toBe(true);
+  });
+});
