@@ -3,6 +3,7 @@ import type { UseFormRegister } from "react-hook-form";
 import { describe, expect, it } from "vitest";
 import { countryNames } from "@/utilities/countries";
 import { ProfileExtraFields } from "./ProfileExtraFields";
+import { FIELD_ERROR_CLASS } from "./fieldError";
 
 type Values = { country?: string | null; institution?: string | null };
 
@@ -46,5 +47,23 @@ describe("ProfileExtraFields country picker", () => {
 
   it("does not repeat a stored country that is in the list", () => {
     expect(optionValues(render("Germany"))).toEqual(countryNames());
+  });
+});
+
+describe("ProfileExtraFields error text", () => {
+  it("renders each field error with that class", () => {
+    const html = renderToStaticMarkup(
+      <ProfileExtraFields
+        idPrefix="profile"
+        register={register}
+        errors={{
+          country: { type: "required", message: "Country is required" },
+          institution: { type: "required", message: "Institution is required" },
+        }}
+      />,
+    );
+    for (const id of ["profile-country-error", "profile-institution-error"]) {
+      expect(html).toContain(`<p id="${id}" class="${FIELD_ERROR_CLASS}">`);
+    }
   });
 });

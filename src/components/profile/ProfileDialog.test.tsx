@@ -78,3 +78,61 @@ describe("ProfileDialog country and institution", () => {
     expect(html).not.toMatch(/name="(country|institution)"[^>]*required/);
   });
 });
+
+describe("ProfileDialog keyboard order", () => {
+  const tagOf = (html: string, testId: string) =>
+    html.match(new RegExp(`<[a-z]+ [^>]*data-testid="${testId}"[^>]*>`))?.[0];
+
+  it("lets the keyboard reach Cancel and Save, after the fields", async () => {
+    const html = await render("true");
+    const cancel = tagOf(html, "profile-cancel");
+    const save = tagOf(html, "profile-save");
+    expect(cancel).toBeDefined();
+    expect(save).toBeDefined();
+    expect(cancel).not.toMatch(/tabindex/i);
+    expect(save).not.toMatch(/tabindex/i);
+
+    // DOM order is tab order when no tabindex is set.
+    const order = [
+      "profile-first-name",
+      "profile-last-name",
+      "profile-country",
+      "profile-institution",
+      "profile-cancel",
+      "profile-save",
+    ].map((id) => html.indexOf(`data-testid="${id}"`));
+    expect(order.every((i) => i >= 0)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+  });
+});
+
+describe("ProfileDialog labels", () => {
+  // No DOM here, so no getByLabelText: check the same association by hand.
+  // Every label's `for` must name the id of a form control, which is what
+  // gives the field its accessible name and makes the label clickable.
+  it.each([undefined, "true"])(
+    "point every label at a control with that id (FEATURE_PROFILE_FIELDS %s)",
+    async (flag) => {
+      const html = await render(flag);
+      const targets = [...html.matchAll(/<label for="([^"]+)"/g)].map((m) => m[1]);
+      expect(targets).toEqual(
+        expect.arrayContaining(["profile-email", "profile-first-name", "profile-last-name"]),
+      );
+      for (const id of targets) {
+        expect(html).toMatch(new RegExp(`<(input|select|textarea) [^>]*id="${id}"`));
+      }
+    },
+  );
+
+  it("keeps label text in phrasing content, not a paragraph", async () => {
+    const html = await render("true");
+    expect(html).not.toMatch(/<label[^>]*>\s*<p/);
+  });
+
+  it("marks the name fields valid when there is no error", async () => {
+    const html = await render();
+    for (const id of ["profile-first-name", "profile-last-name"]) {
+      expect(html).toMatch(new RegExp(`<input [^>]*id="${id}"[^>]*aria-invalid="false"`));
+    }
+  });
+});

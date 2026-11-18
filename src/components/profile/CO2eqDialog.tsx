@@ -86,7 +86,6 @@ export const CO2eqDialog = ({ isOpen, onOpenChange }: CO2eqDialogProps) => {
 
           <div className="flex gap-2 justify-end">
             <Button
-              tabIndex={-1}
               variant="ghost"
               size="md"
               onClick={() => onOpenChange(false)}
@@ -94,7 +93,6 @@ export const CO2eqDialog = ({ isOpen, onOpenChange }: CO2eqDialogProps) => {
               Close
             </Button>
             <Button
-              tabIndex={-1}
               size="md"
               onClick={onCalculate}
               disabled={isFetching}

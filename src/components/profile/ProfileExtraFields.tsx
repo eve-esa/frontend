@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/Input";
 import { PROFILE_INSTITUTION_MAX } from "@/services/useMe";
 import { countryOptions } from "@/utilities/countries";
 import { cn } from "@/lib/utils";
+import { FIELD_ERROR_CLASS } from "./fieldError";
 
 type ProfileExtraFieldValues = {
   country?: string | null;
@@ -39,7 +40,7 @@ export const ProfileExtraFields = <T extends ProfileExtraFieldValues>({
 
       <div className="flex w-full justify-center flex-col gap-2">
         <label htmlFor={countryId} className="flex items-center gap-1">
-          <p className="font-['NotesESA'] text-sm">Country*</p>
+          <span className="font-['NotesESA'] text-sm">Country*</span>
         </label>
         <div className="flex flex-col gap-2">
           {/* A native select: the browser's own type-to-search works over the
@@ -67,7 +68,7 @@ export const ProfileExtraFields = <T extends ProfileExtraFieldValues>({
             ))}
           </select>
           {fieldErrors?.country && (
-            <p id={`${countryId}-error`} className="text-sm text-red-500">
+            <p id={`${countryId}-error`} className={FIELD_ERROR_CLASS}>
               {fieldErrors.country.message}
             </p>
           )}
@@ -78,7 +79,7 @@ export const ProfileExtraFields = <T extends ProfileExtraFieldValues>({
 
       <div className="flex w-full justify-center flex-col gap-2">
         <label htmlFor={institutionId} className="flex items-center gap-1">
-          <p className="font-['NotesESA'] text-sm">Institution*</p>
+          <span className="font-['NotesESA'] text-sm">Institution*</span>
         </label>
         <div className="flex flex-col gap-2">
           <Input
@@ -94,7 +95,7 @@ export const ProfileExtraFields = <T extends ProfileExtraFieldValues>({
             type="text"
           />
           {fieldErrors?.institution && (
-            <p id={`${institutionId}-error`} className="text-sm text-red-500">
+            <p id={`${institutionId}-error`} className={FIELD_ERROR_CLASS}>
               {fieldErrors.institution.message}
             </p>
           )}
