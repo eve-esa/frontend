@@ -923,6 +923,8 @@ type AgentStepsProps = {
    * that mounts or remounts after the send still shows the real turn time.
    */
   startedAt?: number | null;
+  /** Seconds from the send to the first answer token, as the backend stored them. */
+  workS?: number | null;
 };
 
 const hasRows = (view: AgentStepsView) => view.rows.length > 0;
@@ -947,10 +949,9 @@ type RunClock = { start: number | null; end: number | null };
  * agent works.
  */
 export const LiveClock = ({ start }: { start: number }) => {
-  const [now, setNow] = useState(() => Date.now());
+  const [, setTick] = useState(0);
   useEffect(() => {
-    const tick = () => setNow(Date.now());
-    tick();
+    const tick = () => setTick((n) => n + 1);
     const timer = window.setInterval(tick, 1000);
     // A hidden tab throttles timers: read the real time as soon as it is seen again.
     document.addEventListener("visibilitychange", tick);
@@ -959,9 +960,11 @@ export const LiveClock = ({ start }: { start: number }) => {
       document.removeEventListener("visibilitychange", tick);
     };
   }, []);
+  // The time is read at render, so any render (a stream frame, a tick, the tab
+  // coming back) shows the real value, never one kept from an earlier render.
   return (
     <span data-testid="agent-steps-clock" aria-hidden className={cn("tabular-nums", MUTED)}>
-      {formatClock(Math.max(0, now - start) / 1000)}
+      {formatClock(Math.max(0, Date.now() - start) / 1000)}
     </span>
   );
 };
@@ -984,6 +987,7 @@ const AgentStepsBlock = ({
   collections = null,
   modelLabel = null,
   startedAt = null,
+  workS = null,
 }: AgentStepsProps) => {
   // The run starts at the send when the caller knows it (a remount mid-turn
   // keeps the real time), else now.
@@ -1032,9 +1036,12 @@ const AgentStepsBlock = ({
   const [rowsMounted, setRowsMounted] = useState(open);
   const rowsRef = useCallback((node: HTMLUListElement | null) => setRowsMounted(node !== null), []);
 
-  // The trace total counts the steps only: the turn took at least as long as
-  // the wall clock from the send to the end of the work.
-  const totalS = view.totalS !== null && runS !== null ? Math.max(view.totalS, runS) : (view.totalS ?? runS);
+  // The trace total counts the steps only, not the setup before the first one
+  // (MCP loading, sandbox start): the turn took at least as long as the
+  // backend's time to the first answer token and the wall clock from the send.
+  // After a reload only the first two exist.
+  const timed = [view.totalS, stopped ? null : workS, runS].filter((n): n is number => n !== null);
+  const totalS = timed.length > 0 ? Math.max(...timed) : null;
   const context = useMemo<BlockContext>(
     () => ({ catalog: collections, modelLabel }),
     [collections, modelLabel],
@@ -1054,7 +1061,7 @@ const AgentStepsBlock = ({
   const headerSplit = runningRow ? stepLine(runningRow, collections) : null;
   const label = headerActivity
     ? null
-    : summaryParts(view, { stopped, stoppedAfterS: stopped ? totalS : null });
+    : summaryParts({ ...view, totalS }, { stopped, stoppedAfterS: stopped ? totalS : null });
   // The failures of the run in the danger token, apart from the muted counts.
   const failedPart = label ? /, (\d+ failed)$/.exec(`, ${label.rest}`)?.[1] ?? null : null;
   const restPart = label && failedPart ? label.rest.replace(new RegExp(`(, )?${failedPart}$`), "") : label?.rest;

@@ -1272,3 +1272,11 @@ export const sendTimeFromId = (id: string | null | undefined): number | null => 
   const match = id ? /^temp-(\d{10,})$/.exec(id) : null;
   return match ? Number(match[1]) : null;
 };
+
+/** Seconds from the send to the first answer token, as the backend stored them
+ * (`metadata.latencies.first_token_latency`, setup included); null when absent. */
+export const firstTokenS = (metadata: unknown): number | null => {
+  if (!isRecord(metadata) || !isRecord(metadata.latencies)) return null;
+  const value = num(metadata.latencies.first_token_latency);
+  return value !== null && value > 0 ? value : null;
+};

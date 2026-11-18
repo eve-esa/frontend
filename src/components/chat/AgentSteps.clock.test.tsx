@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ToolActivityEntry } from "@/types";
+import type { AgenticTraceStep, ToolActivityEntry } from "@/types";
 import { AgentSteps } from "./AgentSteps";
-import { sendTimeFromId } from "@/utilities/agentSteps";
+import { firstTokenS, sendTimeFromId } from "@/utilities/agentSteps";
 
 const SENT = new Date("2026-11-18T18:57:10Z").getTime();
 const clock = () => screen.getByTestId("agent-steps-clock").textContent;
@@ -81,5 +81,57 @@ describe("the turn clock", () => {
     expect(sendTimeFromId("srv-1763492230000")).toBeNull();
     expect(sendTimeFromId("6a1b2c3d4e5f60718293a4b5")).toBeNull();
     expect(sendTimeFromId(undefined)).toBeNull();
+  });
+});
+
+// Measured on dev (geocode MCP turn, 2026-11-18): the turn took 21.7 s, the header
+// read "Worked for 21s" while it streamed and "Worked for 16s" once the saved turn
+// replaced it. The trace starts after the setup (MCP loading, sandbox start), so its
+// steps end at 16 s; the backend stores the time to the first answer token apart.
+const SAVED_TRACE: AgenticTraceStep[] = [
+  { role: "assistant", content: "", tool_calls: [{ name: "geocode_search", args: { q: "Colosseum" }, id: "c1" }], started_at_s: 0, latency_s: 2 },
+  { role: "tool", name: "geocode_search", tool_call_id: "c1", content: "{}", started_at_s: 2, latency_s: 12 },
+  { role: "assistant", content: "Done.", started_at_s: 14, latency_s: 2 },
+];
+
+describe("the header of a saved turn", () => {
+  const saved = (extra: Partial<Parameters<typeof AgentSteps>[0]> = {}) =>
+    render(<AgentSteps activity={[]} trace={SAVED_TRACE} live={false} answerStarted agentic={false} {...extra} />);
+
+  it("reads the trace total alone when the backend stored no first token time", () => {
+    saved();
+    expect(head()).toBe("Worked for 16s");
+  });
+
+  it("counts the setup before the first step: the time to the first answer token", () => {
+    saved({ workS: 21.4 });
+    expect(head()).toBe("Worked for 21s");
+  });
+
+  it("never shortens the trace total", () => {
+    saved({ workS: 9 });
+    expect(head()).toBe("Worked for 16s");
+  });
+
+  it("leaves a Stop at the time of the Stop", () => {
+    saved({ workS: 21.4, stopped: true });
+    expect(head()).not.toContain("21s");
+  });
+
+  it("reads the stored first token time, and only a real one", () => {
+    expect(firstTokenS({ latencies: { first_token_latency: 7.33 } })).toBe(7.33);
+    expect(firstTokenS({ latencies: { first_token_latency: null } })).toBeNull();
+    expect(firstTokenS({ latencies: { first_token_latency: 0 } })).toBeNull();
+    expect(firstTokenS(undefined)).toBeNull();
+  });
+});
+
+describe("the live clock without a tick", () => {
+  it("shows the real time when a stream frame re-renders the block", () => {
+    const { rerender } = render(<AgentSteps activity={[]} live answerStarted={false} agentic startedAt={SENT} />);
+    // Timers stop (a hidden tab, a busy page): no interval callback runs.
+    vi.setSystemTime(SENT + 11_000);
+    rerender(<AgentSteps activity={[mcpRunning]} live answerStarted={false} agentic startedAt={SENT} />);
+    expect(clock()).toBe("0:11");
   });
 });
