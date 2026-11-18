@@ -1,3 +1,4 @@
+import { groupCitedSources, normalizeCitations, shareNumbersByDocument } from "@/utilities/citations";
 import { getRenderableDocuments, groupSourcesByDocument } from "@/utilities/messageDocuments";
 import { expect, test } from "../fixtures";
 import { QUESTION, persistedMessage } from "./conversation";
@@ -25,19 +26,33 @@ test.describe("answer actions @dev", () => {
 
     await test.step("a source title opens its link and logs the click", async (step) => {
       expect(await chat.messages.sourcesCount()).toBeGreaterThan(0);
-      const titles = await chat.messages.openSources();
-      // The panel lists one title per document group and opens the link of the
-      // group's first source; the same helpers rebuild that list from the API.
-      const groups = groupSourcesByDocument(getRenderableDocuments((await read())?.documents));
-      expect(groups.length).toBe(titles);
-      const linked = groups.findIndex(({ sources: [first] }) =>
-        Boolean(first?.metadata?.additionalMetadata?.link ?? first?.payload?.url),
-      );
+      const surface = await chat.messages.sourcesSurface();
+      const listed = await chat.messages.openSources();
+      let linked: number;
+      if (surface === "panel") {
+        // The panel lists one title per document group and opens the link of the
+        // group's first source; the same helpers rebuild that list from the API.
+        const groups = groupSourcesByDocument(getRenderableDocuments((await read())?.documents));
+        expect(groups.length).toBe(listed);
+        linked = groups.findIndex(({ sources: [first] }) =>
+          Boolean(first?.metadata?.additionalMetadata?.link ?? first?.payload?.url),
+        );
+      } else {
+        // Inline citations: the list under the answer shows one item per cited document; the
+        // same helpers rebuild that count from the persisted citations.
+        const cited = groupCitedSources(
+          shareNumbersByDocument(normalizeCitations((await read())?.metadata?.citations)),
+        ).reduce((sum, group) => sum + group.items.length, 0);
+        if (cited > 0) expect(listed).toBe(cited);
+        linked = (await chat.messages.inlineLinkedTitles()) > 0 ? 0 : -1;
+      }
       step.skip(linked < 0, "no source of this answer has a link, so no title opens a tab");
 
       const tab = await chat.messages.openSourceTab(linked);
       expect(tab.url()).toMatch(/^https?:\/\//);
       await tab.close();
+      // Only the sidebar panel logs the click (useLogSourceClick); the inline list links out.
+      step.skip(surface !== "panel", "the inline sources list does not log source clicks");
       // The click is appended to metadata.source_logs on the message.
       await expect
         .poll(async () => (await read())?.metadata?.source_logs?.at(-1)?.source_url ?? "", {

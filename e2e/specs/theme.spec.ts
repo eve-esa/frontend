@@ -263,19 +263,19 @@ test.describe("theme switch", () => {
 
     await ownTurn(chat);
     await readable("answer text", chat.messages.last.getByTestId("message-answer"));
-    // Link text is Pure Teal +2 in light, never Pure Teal. Without a link in this answer, the
-    // same token on the tool status: the inline agent steps, or the sidebar trace with
-    // FEATURE_TRACE_SIDEBAR on.
+    // Link text is Pure Teal +2 in light, never Pure Teal. Without a link in this answer, text
+    // on the tool status: the verb of a finished inline agent step (a done row has no status
+    // mark, the verb carries the state), or the sidebar trace with FEATURE_TRACE_SIDEBAR on.
     const link = chat.messages.last.getByTestId("message-answer").getByTestId("smart-text-link");
     if ((await link.count()) > 0) {
       await readable("answer link", link.first());
     } else if (await chat.messages.hasAgentSteps()) {
       await chat.messages.openLastAgentSteps();
       await readable(
-        "agent step status",
+        "agent step verb",
         chat.messages.last
           .locator('[data-testid="agent-step"][data-status="done"]')
-          .getByTestId("agent-step-status")
+          .getByTestId("agent-step-verb")
           .first(),
       );
     } else {
@@ -723,8 +723,19 @@ test.describe("theme switch", () => {
       })
       .toBeGreaterThan(0);
     await chat.messages.openSources();
-    const card = page.getByTestId("source-content").first();
-    await expect(card).toBeVisible();
+    // The sidebar panel draws its card as `source-content`; the inline list (inline citations)
+    // opens the same card from a marker as `source-card`. Both carry the Silver card edge.
+    let card;
+    if ((await chat.messages.sourcesSurface()) === "panel") {
+      card = page.getByTestId("source-content").first();
+      await expect(card).toBeVisible();
+    } else {
+      await expect(
+        chat.messages.inlineSources.getByTestId("citation-marker").first(),
+        "the answer cites no source, so there is no source card to measure",
+      ).toBeVisible();
+      card = await chat.messages.openFirstSourceCard();
+    }
     expect(await style(card, "borderLeftColor")).toBe(CARD_EDGE);
   });
 });

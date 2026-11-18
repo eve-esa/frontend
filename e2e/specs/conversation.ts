@@ -58,7 +58,7 @@ export type PersistedMessage = {
   feedback?: string | null;
   was_copied?: boolean;
   documents?: unknown[];
-  metadata?: { source_logs?: { source_url?: string }[] } | null;
+  metadata?: { source_logs?: { source_url?: string }[]; citations?: unknown } | null;
 };
 
 /** The message with this id in the conversation, or null when it is not there (yet). */
