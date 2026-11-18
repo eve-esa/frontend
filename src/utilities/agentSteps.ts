@@ -1273,10 +1273,14 @@ export const sendTimeFromId = (id: string | null | undefined): number | null => 
   return match ? Number(match[1]) : null;
 };
 
-/** Seconds from the send to the first answer token, as the backend stored them
- * (`metadata.latencies.first_token_latency`, setup included); null when absent. */
-export const firstTokenS = (metadata: unknown): number | null => {
+/** Seconds the turn took, as the backend stored them, setup included:
+ * `metadata.latencies.total_latency`, else `first_token_latency` (which in a
+ * turn with tool steps comes before the tools); null when neither is a real time. */
+export const turnTimeS = (metadata: unknown): number | null => {
   if (!isRecord(metadata) || !isRecord(metadata.latencies)) return null;
-  const value = num(metadata.latencies.first_token_latency);
-  return value !== null && value > 0 ? value : null;
+  for (const key of ["total_latency", "first_token_latency"]) {
+    const value = num(metadata.latencies[key]);
+    if (value !== null && value > 0) return value;
+  }
+  return null;
 };

@@ -3,7 +3,7 @@ import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AgenticTraceStep, ToolActivityEntry } from "@/types";
 import { AgentSteps } from "./AgentSteps";
-import { firstTokenS, sendTimeFromId } from "@/utilities/agentSteps";
+import { turnTimeS, sendTimeFromId } from "@/utilities/agentSteps";
 
 const SENT = new Date("2026-11-18T18:57:10Z").getTime();
 const clock = () => screen.getByTestId("agent-steps-clock").textContent;
@@ -98,13 +98,20 @@ describe("the header of a saved turn", () => {
   const saved = (extra: Partial<Parameters<typeof AgentSteps>[0]> = {}) =>
     render(<AgentSteps activity={[]} trace={SAVED_TRACE} live={false} answerStarted agentic={false} {...extra} />);
 
-  it("reads the trace total alone when the backend stored no first token time", () => {
+  it("reads the trace total alone when the backend stored no turn time", () => {
     saved();
     expect(head()).toBe("Worked for 16s");
   });
 
   it("counts the setup before the first step: the time to the first answer token", () => {
     saved({ workS: 21.4 });
+    expect(head()).toBe("Worked for 21s");
+  });
+
+  it("reads the stored total latency of a turn with tool steps (dev, 2026-11-18)", () => {
+    // 22 s turn, 6 steps, trace total 16 s; first_token_latency came before the tools.
+    const stored = { latencies: { first_token_latency: 9.48, generation_latency: 15.92, total_latency: 21.47 } };
+    saved({ workS: turnTimeS(stored) });
     expect(head()).toBe("Worked for 21s");
   });
 
@@ -118,11 +125,11 @@ describe("the header of a saved turn", () => {
     expect(head()).not.toContain("21s");
   });
 
-  it("reads the stored first token time, and only a real one", () => {
-    expect(firstTokenS({ latencies: { first_token_latency: 7.33 } })).toBe(7.33);
-    expect(firstTokenS({ latencies: { first_token_latency: null } })).toBeNull();
-    expect(firstTokenS({ latencies: { first_token_latency: 0 } })).toBeNull();
-    expect(firstTokenS(undefined)).toBeNull();
+  it("prefers the total latency, then the first token time, and only a real one", () => {
+    expect(turnTimeS({ latencies: { first_token_latency: 9.48, total_latency: 21.47 } })).toBe(21.47);
+    expect(turnTimeS({ latencies: { first_token_latency: 7.33, total_latency: null } })).toBe(7.33);
+    expect(turnTimeS({ latencies: { first_token_latency: 0, total_latency: 0 } })).toBeNull();
+    expect(turnTimeS(undefined)).toBeNull();
   });
 });
 
