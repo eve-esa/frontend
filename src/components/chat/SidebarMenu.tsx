@@ -14,8 +14,10 @@ import { routes } from "@/utilities/routes";
 import {
   API_KEYS_ENABLED,
   ARTIFACTS_ENABLED,
+  SETTINGS_PAGE_ENABLED,
   TOOLKITS_ENABLED,
 } from "@/utilities/features";
+import { settingsPath } from "@/pages/settings/sections";
 import { ApiKeysDialog } from "@/components/api-keys/ApiKeysDialog";
 
 type SidebarMenuProps = {
@@ -118,6 +120,7 @@ export const SidebarMenu = ({ isOpen }: SidebarMenuProps) => {
         isLoadingProfile={isLoadingProfile}
         email={email}
         onProfileClick={() => setIsOpenProfileDialog(true)}
+        onSettingsClick={() => navigate(settingsPath("profile"))}
         onCO2eqClick={() => setIsOpenCO2eqDialog(true)}
         onLogoutClick={() => setIsOpenLogoutDialog(true)}
         className={`${baseStyles} ${layoutStyles} text-natural-50`}
@@ -129,10 +132,13 @@ export const SidebarMenu = ({ isOpen }: SidebarMenuProps) => {
         onOpenChange={setIsOpenLogoutDialog}
       />
 
-      <ProfileDialog
-        isOpen={isOpenProfileDialog}
-        onOpenChange={setIsOpenProfileDialog}
-      />
+      {/* The Settings page holds the profile form when it is on. */}
+      {!SETTINGS_PAGE_ENABLED && (
+        <ProfileDialog
+          isOpen={isOpenProfileDialog}
+          onOpenChange={setIsOpenProfileDialog}
+        />
+      )}
 
       <CO2eqDialog
         isOpen={isOpenCO2eqDialog}

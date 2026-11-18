@@ -224,3 +224,22 @@ export const INLINE_CITATIONS_ENABLED = isEnabled("FEATURE_INLINE_CITATIONS", fa
  * A diagnostic, so blank must not turn it on: default off, on only where an environment opts in.
  */
 export const SANDBOX_EXPLORER_ENABLED = isEnabled("FEATURE_SANDBOX_EXPLORER", false);
+
+/**
+ * The Settings page at `/settings/<section>`, inside the chat layout: Profile, Appearance, Models,
+ * Usage, API keys and Account, each listed only when its own feature is on. On, the user menu
+ * holds Settings, About us, Contact us, Privacy policy and Log out, and Profile and the Theme
+ * group leave it. Off, the route does not exist and the user menu and its dialogs are as before.
+ *
+ * Default off: a new capability ships off in production and on where an environment opts in.
+ */
+export const SETTINGS_PAGE_ENABLED = isEnabled("FEATURE_SETTINGS_PAGE", false);
+
+/**
+ * The Usage section of the Settings page: the token budget of the period and the message and
+ * CO2eq totals. Read only with the Settings page on. Off, the section is not listed and CO2eq
+ * stays in the user menu.
+ *
+ * Default off: a new capability ships off in production and on where an environment opts in.
+ */
+export const SETTINGS_USAGE_ENABLED = isEnabled("FEATURE_SETTINGS_USAGE", false);

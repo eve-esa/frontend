@@ -123,6 +123,8 @@ jobs:
               "FEATURE_TRACE_SIDEBAR": "${{ vars.FEATURE_TRACE_SIDEBAR }}",
               "FEATURE_INLINE_CITATIONS": "${{ vars.FEATURE_INLINE_CITATIONS }}",
               "FEATURE_SANDBOX_EXPLORER": "${{ vars.FEATURE_SANDBOX_EXPLORER }}",
+              "FEATURE_SETTINGS_PAGE": "${{ vars.FEATURE_SETTINGS_PAGE }}",
+              "FEATURE_SETTINGS_USAGE": "${{ vars.FEATURE_SETTINGS_USAGE }}",
               "CONTACT_URL": "${{ vars.VITE_CONTACT_URL }}",
               "PRIVACY_POLICY_URL": "${{ vars.VITE_PRIVACY_POLICY_URL }}",
               "ABOUT_US_URL": "${{ vars.VITE_ABOUT_US_URL }}",

@@ -16,6 +16,10 @@ import { Tooltip } from "../ui/Tooltip";
 import { configValue, type ConfigKey } from "@/utilities/runtimeConfig";
 import { useTheme } from "@/hooks/useTheme";
 import { parseThemeChoice, type ThemeChoice } from "@/utilities/theme";
+import {
+  SETTINGS_PAGE_ENABLED,
+  SETTINGS_USAGE_ENABLED,
+} from "@/utilities/features";
 
 const THEME_OPTIONS: { value: ThemeChoice; label: string }[] = [
   { value: "system", label: "System" },
@@ -28,6 +32,8 @@ type ProfileMenubarProps = {
   className?: string;
   isOpen: boolean;
   onProfileClick: () => void;
+  /** Opens the Settings page; used with FEATURE_SETTINGS_PAGE on. */
+  onSettingsClick?: () => void;
   onCO2eqClick: () => void;
   onLogoutClick: () => void;
   isLoadingProfile: boolean;
@@ -38,11 +44,18 @@ export const ProfileMenubar = ({
   className = "",
   isOpen,
   onProfileClick,
+  onSettingsClick,
   onCO2eqClick,
   onLogoutClick,
   isLoadingProfile,
 }: ProfileMenubarProps) => {
   const theme = useTheme();
+
+  // FEATURE_SETTINGS_PAGE on: Settings replaces Profile and the Theme group, and CO2eq moves to
+  // the Usage section when FEATURE_SETTINGS_USAGE is on. Off, the menu is the one it always was.
+  const showProfile = !SETTINGS_PAGE_ENABLED;
+  const showCO2eq = !SETTINGS_PAGE_ENABLED || !SETTINGS_USAGE_ENABLED;
+  const showTheme = !SETTINGS_PAGE_ENABLED && theme.enabled;
 
   // openLink rather than window.open directly: an unconfigured URL used to open
   // about:blank, which looks like a broken app rather than a missing setting.
@@ -100,22 +113,39 @@ export const ProfileMenubar = ({
           triggerContent
         )}
         <MenubarContent side="bottom">
-          <MenubarItem data-testid="user-menu-profile" onClick={onProfileClick}>
-            <span>Profile</span>
-          </MenubarItem>
-          <MenubarItem onClick={onCO2eqClick}>
-            <span>CO2eq</span>
-          </MenubarItem>
+          {SETTINGS_PAGE_ENABLED && (
+            <MenubarItem
+              data-testid="user-menu-settings"
+              onClick={onSettingsClick}
+            >
+              <span>Settings</span>
+            </MenubarItem>
+          )}
+          {showProfile && (
+            <MenubarItem
+              data-testid="user-menu-profile"
+              onClick={onProfileClick}
+            >
+              <span>Profile</span>
+            </MenubarItem>
+          )}
+          {showCO2eq && (
+            <MenubarItem onClick={onCO2eqClick}>
+              <span>CO2eq</span>
+            </MenubarItem>
+          )}
           <MenubarItem data-testid="user-menu-about" onClick={onAboutUsClick}>
-            <span>About Us</span>
+            <span>{SETTINGS_PAGE_ENABLED ? "About us" : "About Us"}</span>
           </MenubarItem>
           <MenubarItem data-testid="user-menu-contact" onClick={onContactClick}>
-            <span>Contact Us</span>
+            <span>{SETTINGS_PAGE_ENABLED ? "Contact us" : "Contact Us"}</span>
           </MenubarItem>
           <MenubarItem data-testid="user-menu-privacy" onClick={onPrivacyPolicyClick}>
-            <span>Privacy Policy</span>
+            <span>
+              {SETTINGS_PAGE_ENABLED ? "Privacy policy" : "Privacy Policy"}
+            </span>
           </MenubarItem>
-          {theme.enabled && (
+          {showTheme && (
             <>
               <MenubarSeparator />
               <MenubarLabel>Theme</MenubarLabel>
@@ -141,7 +171,9 @@ export const ProfileMenubar = ({
             </>
           )}
           <MenubarItem data-testid="user-menu-logout" onClick={onLogoutClick}>
-            <span className="text-danger-300">Logout</span>
+            <span className="text-danger-300">
+              {SETTINGS_PAGE_ENABLED ? "Log out" : "Logout"}
+            </span>
           </MenubarItem>
         </MenubarContent>
       </MenubarMenu>
