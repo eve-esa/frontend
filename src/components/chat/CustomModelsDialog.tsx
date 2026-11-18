@@ -6,26 +6,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/Dialog";
-import { Input } from "@/components/ui/Input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/Select";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useListModels } from "@/services/useListModels";
-import {
-  useCreateCustomModel,
-  useUpdateCustomModel,
-} from "@/services/useCustomModels";
+import { CustomModelFields } from "./CustomModelFields";
 import { DeleteCustomModelDialog } from "./DeleteCustomModelDialog";
-import {
-  buildUpdatePayload,
-  emptyCustomModelForm,
-  type CustomModelFormState,
-} from "@/utilities/customModelForm";
+import { useCustomModelForm } from "./useCustomModelForm";
 import type { CustomModel } from "@/types";
 
 type CustomModelsDialogProps = {
@@ -38,66 +23,13 @@ export const CustomModelsDialog = ({
   onOpenChange,
 }: CustomModelsDialogProps) => {
   const { data: models } = useListModels();
-  const [editing, setEditing] = useState<CustomModel | null>(null);
-  const [form, setForm] = useState<CustomModelFormState>(emptyCustomModelForm);
-  const [providerSelectOpen, setProviderSelectOpen] = useState(false);
-  const [catalogSelectOpen, setCatalogSelectOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<CustomModel | null>(null);
   // After a delete the row and its trigger are gone: focus goes to the name
   // field instead of falling back to the dialog container.
   const nameInputRef = useRef<HTMLInputElement>(null);
-  const isSelectOpen = providerSelectOpen || catalogSelectOpen;
 
-  const providers = models?.providers ?? [];
-
-  const selectedProvider = useMemo(
-    () => providers.find((provider) => provider.id === form.provider_id),
-    [providers, form.provider_id],
-  );
-
-  useEffect(() => {
-    if (!form.provider_id && providers.length > 0 && !editing) {
-      const firstProvider = providers[0];
-      setForm((prev) => ({
-        ...prev,
-        provider_id: firstProvider.id,
-        catalog_model_id: firstProvider.models[0]?.id ?? "",
-      }));
-    }
-  }, [providers, form.provider_id, editing]);
-
-  const resetForm = () => {
-    setEditing(null);
-    setForm(emptyCustomModelForm());
-  };
-
-  const { mutate: createModel, isPending: isCreating } = useCreateCustomModel(
-    resetForm,
-  );
-  const { mutate: updateModel, isPending: isUpdating } = useUpdateCustomModel(
-    resetForm,
-  );
-
-  const handleSubmit = (event: React.FormEvent) => {
-    event.preventDefault();
-    if (editing) {
-      updateModel(buildUpdatePayload(editing.id, form));
-      return;
-    }
-    createModel(form);
-  };
-
-  const startEdit = (model: CustomModel) => {
-    setEditing(model);
-    setForm({
-      display_name: model.display_name,
-      provider_id: model.provider_id,
-      catalog_model_id: model.catalog_model_id,
-      api_key: "",
-    });
-  };
-
-  const isPending = isCreating || isUpdating;
+  const modelForm = useCustomModelForm({ providers: models?.providers ?? [] });
+  const { editing, isPending, isSelectOpen, reset: resetForm } = modelForm;
 
   return (
     <Dialog
@@ -144,7 +76,7 @@ export const CustomModelsDialog = ({
                       variant="outline"
                       size="sm"
                       aria-label={`Edit ${model.display_name}`}
-                      onClick={() => startEdit(model)}
+                      onClick={() => modelForm.startEdit(model)}
                       disabled={isPending}
                     >
                       Edit
@@ -168,99 +100,11 @@ export const CustomModelsDialog = ({
             <p className="text-sm text-natural-400">No custom models yet.</p>
           )}
 
-          <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          <form onSubmit={modelForm.submit} className="flex flex-col gap-3">
             <p className="text-sm font-medium">
               {editing ? "Edit model" : "Add model"}
             </p>
-            <Input
-              ref={nameInputRef}
-              name="eve-custom-model-name"
-              autoComplete="off"
-              data-1p-ignore="true"
-              data-lpignore="true"
-              className="placeholder:text-natural-200"
-              placeholder="Display name"
-              value={form.display_name}
-              onChange={(e) =>
-                setForm((prev) => ({ ...prev, display_name: e.target.value }))
-              }
-              required
-            />
-            <Select
-              open={providerSelectOpen}
-              onOpenChange={setProviderSelectOpen}
-              value={form.provider_id}
-              onValueChange={(providerId) => {
-                // Radix's hidden native select emits "" on remount; no item
-                // carries that value, so persisting it would blank the field.
-                if (!providerId) return;
-                const provider = providers.find((item) => item.id === providerId);
-                setForm((prev) => ({
-                  ...prev,
-                  provider_id: providerId,
-                  catalog_model_id: provider?.models[0]?.id ?? "",
-                }));
-              }}
-              disabled={Boolean(editing)}
-            >
-              {/* Styled like the Input fields beside it: in light it keeps
-                  their white fill, edge and placeholder grey, not the
-                  trigger's highlight fill. */}
-              <SelectTrigger className="h-12 bg-primary-200 border border-control shadow-xs in-data-[theme=light]:shadow-none text-natural-100 data-[placeholder]:text-natural-200 in-data-[theme=light]:bg-primary-200 in-data-[theme=light]:[--color-placeholder:inherit]">
-                <SelectValue placeholder="Provider" />
-              </SelectTrigger>
-              <SelectContent portalled={false}>
-                {providers.map((provider) => (
-                  <SelectItem key={provider.id} value={provider.id}>
-                    {provider.display_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select
-              open={catalogSelectOpen}
-              onOpenChange={setCatalogSelectOpen}
-              value={form.catalog_model_id}
-              onValueChange={(catalogModelId) => {
-                // Radix's hidden native select emits "" on remount; ignoring it
-                // keeps the current model instead of blanking the dropdown and
-                // sending an empty catalog_model_id the backend rejects.
-                if (!catalogModelId) return;
-                setForm((prev) => ({
-                  ...prev,
-                  catalog_model_id: catalogModelId,
-                }));
-              }}
-            >
-              <SelectTrigger className="h-12 bg-primary-200 border border-control shadow-xs in-data-[theme=light]:shadow-none text-natural-100 data-[placeholder]:text-natural-200 in-data-[theme=light]:bg-primary-200 in-data-[theme=light]:[--color-placeholder:inherit]">
-                <SelectValue placeholder="Model" />
-              </SelectTrigger>
-              <SelectContent portalled={false}>
-                {(selectedProvider?.models ?? []).map((model) => (
-                  <SelectItem key={model.id} value={model.id}>
-                    {model.display_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Input
-              type="password"
-              name="eve-custom-model-api-key"
-              autoComplete="new-password"
-              data-1p-ignore="true"
-              data-lpignore="true"
-              className="placeholder:text-natural-200"
-              placeholder={
-                editing
-                  ? "New API key (leave blank to keep current)"
-                  : "API key"
-              }
-              value={form.api_key}
-              onChange={(e) =>
-                setForm((prev) => ({ ...prev, api_key: e.target.value }))
-              }
-              required={!editing}
-            />
+            <CustomModelFields model={modelForm} nameRef={nameInputRef} />
             <div className="flex gap-2 justify-end">
               {editing ? (
                 <Button type="button" variant="outline" onClick={resetForm}>
