@@ -1,7 +1,20 @@
-import { flagOrEnvOn, SettingsPage } from "../pages";
-import { expect, test } from "../fixtures";
+import { ChatPage, flagOrEnvOn, LoginPage, LogoutDialog, SettingsPage, SignedOutPage } from "../pages";
+import { pickCountry } from "../pages/ProfileDialog";
+import {
+  canWrite,
+  expect,
+  freshContext,
+  signIn,
+  skipOnboarding,
+  test,
+} from "../fixtures";
 
-type Me = { first_name?: string | null; last_name?: string | null };
+type Me = {
+  first_name?: string | null;
+  last_name?: string | null;
+  country?: string | null;
+  institution?: string | null;
+};
 
 type ApiKeyRow = { id: string; name: string; status: string };
 
@@ -13,6 +26,14 @@ type TokenUsage = { unlimited: boolean; used_tokens: number };
 
 // Staging reads replicas: a read right after a write can still answer the old value.
 const READ_BACK = { timeout: 10_000 };
+
+/** Skips the test when the target does not serve the settings page. */
+async function requireSettingsPage(chat: ChatPage): Promise<void> {
+  test.skip(
+    !flagOrEnvOn(await chat.servedConfig(), "FEATURE_SETTINGS_PAGE", false),
+    "FEATURE_SETTINGS_PAGE is off in the served config",
+  );
+}
 
 test.describe("settings page @dev", () => {
   test("every section, with a read back through the API", async ({
@@ -207,5 +228,112 @@ test.describe("settings page @dev", () => {
       await expect(page).toHaveURL(/\/settings\/profile$/);
       await expect(settings.section("profile")).toBeVisible();
     });
+  });
+
+  test("profile: country, institution and last name save and read back", async ({
+    chat,
+    authedPage: page,
+    api,
+  }) => {
+    await requireSettingsPage(chat);
+    const settings = new SettingsPage(page, chat);
+    await settings.openFromUserMenu();
+    await expect(settings.profileLastName).toBeVisible();
+    await expect(settings.profileSave).toBeDisabled();
+    await expect(settings.profileStatus).toHaveText("No changes to save.");
+
+    // Country and institution exist only with FEATURE_PROFILE_FIELDS on.
+    const withFields = await settings.profileCountry.isVisible();
+    const readMe = async () => (await api.get<Me>("/users/me")).body;
+    const original = await readMe();
+    const stamp = Date.now();
+    const next = {
+      lastName: `E2E${stamp}`,
+      country: original.country === "Italy" ? "France" : "Italy",
+      institution: `EVE e2e ${stamp}`,
+    };
+    try {
+      await settings.profileLastName.fill(next.lastName);
+      if (withFields) {
+        await pickCountry(settings.profileCountry, next.country);
+        await settings.profileInstitution.fill(next.institution);
+      }
+      await expect(settings.profileStatus).toHaveText("You have unsaved changes.");
+      await expect(settings.profileSave).toBeEnabled();
+      await settings.profileSave.click();
+      await expect(settings.profileStatus).toHaveText("Saved.");
+      await expect(settings.profileSave).toBeDisabled();
+
+      await expect.poll(async () => (await readMe()).last_name, READ_BACK).toBe(next.lastName);
+      if (withFields) {
+        const me = await readMe();
+        expect(me.country).toBe(next.country);
+        expect(me.institution).toBe(next.institution);
+      }
+    } finally {
+      // Leave the account as it was found, through the API: the form refuses an empty value.
+      const restore: Me = {
+        first_name: original.first_name ?? "",
+        last_name: original.last_name ?? "",
+      };
+      if (withFields) {
+        restore.country = original.country ?? "";
+        restore.institution = original.institution ?? "";
+      }
+      const now = await readMe().catch(() => original);
+      const changed =
+        (now.last_name ?? "") !== (original.last_name ?? "") ||
+        (withFields &&
+          ((now.country ?? "") !== (original.country ?? "") ||
+            (now.institution ?? "") !== (original.institution ?? "")));
+      if (changed) {
+        await api.patch("/users", restore);
+        await expect.poll(async () => (await readMe()).last_name ?? "", READ_BACK).toBe(
+          original.last_name ?? "",
+        );
+      }
+    }
+  });
+
+  // Its own hosted login in a fresh context: the sign-out revokes that session's refresh token
+  // only, never the one in the worker's stored auth state the other specs reuse.
+  test("account: Log out asks to confirm, signs out and signs the other tab out", async ({
+    chat,
+    browser,
+    baseURL,
+  }, testInfo) => {
+    await requireSettingsPage(chat);
+    const origin = new URL(baseURL as string).origin;
+    const context = await freshContext(browser, baseURL);
+    try {
+      await skipOnboarding(context, origin);
+      const first = await context.newPage();
+      await signIn(first, origin, canWrite(origin, testInfo.project.name));
+      const second = await context.newPage();
+      await second.goto("/");
+      await new ChatPage(second).composer.waitReady();
+
+      const firstChat = new ChatPage(first);
+      const settings = new SettingsPage(first, firstChat);
+      await settings.openFromUserMenu();
+      await settings.openSection("account");
+
+      // Cancelling the dialog keeps the session.
+      const logout = new LogoutDialog(first, firstChat);
+      await settings.logout.click();
+      await expect(logout.root).toBeVisible();
+      await first.keyboard.press("Escape");
+      await expect(logout.root).toBeHidden();
+      await expect(settings.section("account")).toBeVisible();
+
+      await settings.logout.click();
+      await expect(logout.root).toBeVisible();
+      await logout.confirm();
+      // This tab goes to the identity provider; the other tab of the browser shows the signed-out view.
+      await new LoginPage(first).expectForm(origin);
+      await expect(new SignedOutPage(second).root).toBeVisible();
+    } finally {
+      await context.close();
+    }
   });
 });

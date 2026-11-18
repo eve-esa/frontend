@@ -52,7 +52,7 @@ test.describe("api keys @dev", () => {
         new Date(created?.expires_at ?? 0).getTime() - new Date(created?.created_at ?? 0).getTime();
       expect(Math.abs(lifetime - 30 * DAY_MS)).toBeLessThan(3_600_000);
 
-      // The list view keeps the Quickstart, with coloured commands.
+      // The list view keeps the Quickstart (collapsed until its toggle is clicked), with coloured commands.
       await apiKeys.secretDone.click();
       await expect(apiKeys.row(name)).toHaveCount(1);
       await apiKeys.expandQuickstart();

@@ -32,6 +32,8 @@ export class SettingsPage {
   readonly root: Locator;
   readonly logout: Locator;
   readonly profileLastName: Locator;
+  readonly profileCountry: Locator;
+  readonly profileInstitution: Locator;
   readonly profileSave: Locator;
   readonly profileStatus: Locator;
 
@@ -42,6 +44,8 @@ export class SettingsPage {
     this.root = page.getByTestId("settings-page");
     this.logout = page.getByTestId("settings-logout");
     this.profileLastName = page.getByTestId("profile-last-name");
+    this.profileCountry = page.getByTestId("profile-country");
+    this.profileInstitution = page.getByTestId("profile-institution");
     this.profileSave = page.getByTestId("settings-profile-save");
     this.profileStatus = page.getByTestId("settings-profile-status");
   }

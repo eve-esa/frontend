@@ -86,6 +86,16 @@ describe("ApiKeysSection", () => {
     expect(screen.getByTestId("api-keys-usage-snippet")).toBeTruthy();
   });
 
+  it("starts with the Quickstart closed and opens it on click", async () => {
+    await renderSection();
+    await findRow("key-1");
+    const toggle = screen.getByTestId("api-keys-quickstart-toggle");
+    const details = toggle.closest("details") as HTMLDetailsElement;
+    expect(details.open).toBe(false);
+    fireEvent.click(toggle);
+    await waitFor(() => expect(details.open).toBe(true));
+  });
+
   it("shows the created key once and drops it when done", async () => {
     await renderSection();
     fireEvent.click(await screen.findByTestId("settings-apikeys-create"));
