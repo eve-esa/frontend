@@ -160,7 +160,7 @@ export const ApiKeysSection = () => {
         </SettingsPanel>
 
         <SettingsPanel>
-          <details open>
+          <details>
             <summary
               data-testid="api-keys-quickstart-toggle"
               className="cursor-pointer text-sm font-medium text-natural-100"
