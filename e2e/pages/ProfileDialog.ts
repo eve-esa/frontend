@@ -1,5 +1,6 @@
 import { expect, type Locator, type Page } from "@playwright/test";
 import type { ChatPage } from "./ChatPage";
+import { isSettingsUrl, settingsPageOn } from "./SettingsPage";
 
 export type ProfileFields = {
   email: string;
@@ -17,7 +18,11 @@ export const pickCountry = async (select: Locator, country: string): Promise<voi
   await select.selectOption(country === "" ? { value: "" } : { label: country });
 };
 
-/** Profile dialog, opened from the user menu. */
+/**
+ * The profile form. With FEATURE_SETTINGS_PAGE off it is the dialog opened from the user menu;
+ * with it on, the Profile section of the settings page (same `profile-*` field testids, Save
+ * is `settings-profile-save`, there is no Cancel). `close` leaves either one.
+ */
 export class ProfileDialog {
   readonly root: Locator;
   readonly email: Locator;
@@ -28,19 +33,42 @@ export class ProfileDialog {
   readonly saveButton: Locator;
   readonly cancelButton: Locator;
 
-  constructor(page: Page, private readonly chat: ChatPage) {
-    this.root = page.getByTestId("profile-dialog");
+  /** Where the test was before `open` went to the settings page, so `close` can return. */
+  private returnTo: string | null = null;
+
+  constructor(
+    private readonly page: Page,
+    private readonly chat: ChatPage,
+  ) {
+    this.root = page.getByTestId("profile-dialog").or(page.getByTestId("settings-section-profile"));
     this.email = page.getByTestId("profile-email");
     this.firstName = page.getByTestId("profile-first-name");
     this.lastName = page.getByTestId("profile-last-name");
     this.country = page.getByTestId("profile-country");
     this.institution = page.getByTestId("profile-institution");
-    this.saveButton = page.getByTestId("profile-save");
+    this.saveButton = page.getByTestId("profile-save").or(page.getByTestId("settings-profile-save"));
     this.cancelButton = page.getByTestId("profile-cancel");
   }
 
+  /** True when the form is a settings page section, false when it is the dialog. */
+  async usesPage(): Promise<boolean> {
+    return settingsPageOn(await this.chat.servedConfig());
+  }
+
   async open(): Promise<void> {
-    await this.chat.openUserMenuItem("user-menu-profile");
+    if (await this.usesPage()) {
+      if (!/\/settings\/profile$/.test(new URL(this.page.url()).pathname)) {
+        if (isSettingsUrl(this.page.url())) {
+          await this.page.getByTestId("settings-nav-profile").click();
+        } else {
+          this.returnTo = this.page.url();
+          await this.chat.openUserMenuItem("user-menu-settings");
+        }
+        await expect(this.page).toHaveURL(/\/settings\/profile$/);
+      }
+    } else {
+      await this.chat.openUserMenuItem("user-menu-profile");
+    }
     await expect(this.root).toBeVisible();
     await expect(this.email).not.toHaveValue("");
   }
@@ -64,13 +92,41 @@ export class ProfileDialog {
     if (fields.institution != null) await this.institution.fill(fields.institution);
   }
 
-  async save(): Promise<void> {
+  /**
+   * Saves and waits for it to land. On the settings page the form stays open: the PATCH answer
+   * is awaited, then "Saved." is expected, except with `answered: true` (the test fulfils the
+   * PATCH itself, nothing is written, so the refetch returns the old profile and the form
+   * correctly stays dirty).
+   */
+  async save(options: { answered?: boolean } = {}): Promise<void> {
     await expect(this.saveButton).toBeEnabled();
-    await this.saveButton.click();
-    await expect(this.root).toBeHidden();
+    if (await this.usesPage()) {
+      const patched = this.page.waitForResponse(
+        (response) =>
+          response.request().method() === "PATCH" && new URL(response.url()).pathname.endsWith("/users"),
+      );
+      await this.saveButton.click();
+      expect((await patched).ok()).toBe(true);
+      if (!options.answered) {
+        await expect(this.page.getByTestId("settings-profile-status")).toHaveText("Saved.");
+      }
+    } else {
+      await this.saveButton.click();
+      await expect(this.root).toBeHidden();
+    }
   }
 
+  /** Cancels the dialog, or leaves the settings page for the page the test came from. */
   async close(): Promise<void> {
+    if (await this.usesPage()) {
+      if (this.returnTo !== null) {
+        const back = this.returnTo;
+        this.returnTo = null;
+        await this.page.goto(back);
+        await this.chat.composer.waitReady();
+      }
+      return;
+    }
     await this.cancelButton.click();
     await expect(this.root).toBeHidden();
   }

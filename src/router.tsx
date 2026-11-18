@@ -6,7 +6,7 @@ import {
 import { routes } from "./utilities/routes";
 import { PrivateRoute } from "./route-guards/private-route/PrivateRoute";
 import { ChatLayout } from "./layouts/chat-layout/ChatLayout";
-import { ARTIFACTS_ENABLED } from "./utilities/features";
+import { ARTIFACTS_ENABLED, SETTINGS_PAGE_ENABLED } from "./utilities/features";
 
 export const router = createBrowserRouter(
   createRoutesFromElements(
@@ -20,6 +20,13 @@ export const router = createBrowserRouter(
               API, not this route, so they keep working. */}
           {ARTIFACTS_ENABLED && <Route {...routes.ARTIFACTS} />}
           <Route {...routes.ONBOARDING} />
+          {/* Off, /settings falls through to Not found. */}
+          {SETTINGS_PAGE_ENABLED && (
+            <>
+              <Route {...routes.SETTINGS_INDEX} />
+              <Route {...routes.SETTINGS} />
+            </>
+          )}
         </Route>
       </Route>
       {/* Outside PrivateRoute: the guard must never start a second sign-in

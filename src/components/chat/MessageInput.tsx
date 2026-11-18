@@ -45,6 +45,7 @@ import {
   ATTACHMENTS_ENABLED,
   CUSTOM_MODELS_ENABLED,
   MODEL_PICKER_ENABLED,
+  SETTINGS_PAGE_ENABLED,
 } from "@/utilities/features";
 import {
   ACCEPTED_UPLOAD_EXTENSIONS,
@@ -710,7 +711,8 @@ export const MessageInput = ({
                       </Select>
                     </div>
                 )}
-                {CUSTOM_MODELS_ENABLED && (
+                {/* With the Settings page on, custom models live in Settings, Models. */}
+                {CUSTOM_MODELS_ENABLED && !SETTINGS_PAGE_ENABLED && (
                   <>
                     <Tooltip
                       content={<>Manage custom models</>}

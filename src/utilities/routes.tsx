@@ -4,7 +4,10 @@ import { Callback } from "@/pages/callback/Callback";
 import { EmptyChat } from "@/pages/empty-chat/EmptyChat";
 import { OnboardingPage } from "@/pages/onboarding/OnboardingPage";
 import { ArtifactsPage } from "@/pages/artifacts/ArtifactsPage";
+import { SettingsPage } from "@/pages/settings/SettingsPage";
+import { SETTINGS_PATH, settingsPath } from "@/pages/settings/sections";
 import { CALLBACK_PATH } from "@/services/oidc";
+import { Navigate } from "react-router-dom";
 
 export const routes = {
   CALLBACK: {
@@ -26,6 +29,15 @@ export const routes = {
   ONBOARDING: {
     path: "/onboarding",
     element: <OnboardingPage />,
+  },
+  // Both only with FEATURE_SETTINGS_PAGE on (router.tsx).
+  SETTINGS_INDEX: {
+    path: SETTINGS_PATH,
+    element: <Navigate to={settingsPath("profile")} replace />,
+  },
+  SETTINGS: {
+    path: `${SETTINGS_PATH}/:section`,
+    element: <SettingsPage />,
   },
   NOT_FOUND: {
     path: "*",

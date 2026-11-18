@@ -1,5 +1,6 @@
 import { expect, type Locator, type Page } from "@playwright/test";
 import { flagOn, type ChatPage } from "./ChatPage";
+import { isSettingsUrl, settingsPageOn } from "./SettingsPage";
 
 export type ThemeChoice = "system" | "light" | "dark";
 
@@ -21,19 +22,75 @@ export class ThemeMenu {
     private readonly chat: ChatPage,
   ) {}
 
+  /** The theme option inside the user menu. Only there with FEATURE_SETTINGS_PAGE off. */
   option(choice: ThemeChoice): Locator {
     return this.page.getByTestId(`theme-option-${choice}`);
   }
 
-  /** Opens the user menu and picks a theme; the menu closes on the pick. */
-  async pick(choice: ThemeChoice): Promise<void> {
-    await this.chat.userMenu.click();
-    await this.option(choice).click();
-    await expect(this.option(choice)).toBeHidden();
+  /** The theme radio of `/settings/appearance`. Only there with FEATURE_SETTINGS_PAGE on. */
+  radio(choice: ThemeChoice): Locator {
+    return this.page.getByTestId(`settings-theme-${choice}`);
   }
 
-  /** Whether the user menu offers the theme group. Leaves the menu closed. */
+  /** True when the theme is chosen in the user menu, false when through the settings page. */
+  async inUserMenu(): Promise<boolean> {
+    return !settingsPageOn(await this.chat.servedConfig());
+  }
+
+  /**
+   * Runs `work` on the settings page, reached from the user menu, then returns to the page the
+   * test was on: the specs go on from the chat after a pick.
+   */
+  private async onSettingsPage<T>(work: () => Promise<T>): Promise<T> {
+    const back = this.page.url();
+    const alreadyThere = isSettingsUrl(back);
+    if (!alreadyThere) await this.chat.openUserMenuItem("user-menu-settings");
+    await expect(this.page.getByTestId("settings-page")).toBeVisible();
+    try {
+      return await work();
+    } finally {
+      if (!alreadyThere) {
+        await this.page.goto(back);
+        await this.chat.composer.waitReady();
+      }
+    }
+  }
+
+  /**
+   * Picks a theme. With the settings page off: opens the user menu, which closes on the pick.
+   * With it on: the radio of Appearance, then back to the page the test was on.
+   */
+  async pick(choice: ThemeChoice): Promise<void> {
+    if (await this.inUserMenu()) {
+      await this.chat.userMenu.click();
+      await this.option(choice).click();
+      await expect(this.option(choice)).toBeHidden();
+      return;
+    }
+    await this.onSettingsPage(async () => {
+      await this.page.getByTestId("settings-nav-appearance").click();
+      await expect(this.page.getByTestId("settings-section-appearance")).toBeVisible();
+      // The radio of the stored (or default) choice is already checked and Playwright does not
+      // click a checked radio, so nothing would be written to storage: the menu always wrote
+      // the pick. Step through another choice first so the pick is a real change.
+      if (await this.radio(choice).isChecked()) {
+        await this.radio(choice === "system" ? "light" : "system").check();
+      }
+      await this.radio(choice).check();
+      await expect(this.radio(choice)).toBeChecked();
+    });
+  }
+
+  /**
+   * Whether the target offers a theme choice: the group in the user menu, or the Appearance
+   * section of the settings page. Leaves the page as it found it.
+   */
   async isOffered(): Promise<boolean> {
+    if (!(await this.inUserMenu())) {
+      return this.onSettingsPage(
+        async () => (await this.page.getByTestId("settings-nav-appearance").count()) > 0,
+      );
+    }
     await this.chat.userMenu.click();
     await expect(this.page.getByTestId("user-menu-profile")).toBeVisible();
     const offered = (await this.option("system").count()) > 0;

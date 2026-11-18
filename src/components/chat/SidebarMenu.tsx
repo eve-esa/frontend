@@ -14,15 +14,19 @@ import { routes } from "@/utilities/routes";
 import {
   API_KEYS_ENABLED,
   ARTIFACTS_ENABLED,
+  SETTINGS_PAGE_ENABLED,
   TOOLKITS_ENABLED,
 } from "@/utilities/features";
+import { settingsPath } from "@/pages/settings/sections";
 import { ApiKeysDialog } from "@/components/api-keys/ApiKeysDialog";
 
 type SidebarMenuProps = {
   isOpen: boolean;
+  /** Runs after the menu navigates to a page, so a phone drawer can close behind the user. */
+  onNavigate?: () => void;
 };
 
-export const SidebarMenu = ({ isOpen }: SidebarMenuProps) => {
+export const SidebarMenu = ({ isOpen, onNavigate }: SidebarMenuProps) => {
   const [isOpenLogoutDialog, setIsOpenLogoutDialog] = useState(false);
   const [isOpenProfileDialog, setIsOpenProfileDialog] = useState(false);
   const [isOpenCO2eqDialog, setIsOpenCO2eqDialog] = useState(false);
@@ -65,8 +69,15 @@ export const SidebarMenu = ({ isOpen }: SidebarMenuProps) => {
       type="button"
       data-testid="sidebar-api-keys"
       aria-label="API keys"
-      aria-haspopup="dialog"
-      onClick={() => setIsOpenApiKeysDialog(true)}
+      aria-haspopup={SETTINGS_PAGE_ENABLED ? undefined : "dialog"}
+      onClick={() => {
+        if (SETTINGS_PAGE_ENABLED) {
+          navigate(settingsPath("api-keys"));
+          onNavigate?.();
+        } else {
+          setIsOpenApiKeysDialog(true);
+        }
+      }}
       className={`${baseStyles} ${layoutStyles} text-natural-50`}
     >
       <FontAwesomeIcon icon={faKey} className="w-4 h-4" />
@@ -118,6 +129,10 @@ export const SidebarMenu = ({ isOpen }: SidebarMenuProps) => {
         isLoadingProfile={isLoadingProfile}
         email={email}
         onProfileClick={() => setIsOpenProfileDialog(true)}
+        onSettingsClick={() => {
+          navigate(settingsPath("profile"));
+          onNavigate?.();
+        }}
         onCO2eqClick={() => setIsOpenCO2eqDialog(true)}
         onLogoutClick={() => setIsOpenLogoutDialog(true)}
         className={`${baseStyles} ${layoutStyles} text-natural-50`}
@@ -129,17 +144,21 @@ export const SidebarMenu = ({ isOpen }: SidebarMenuProps) => {
         onOpenChange={setIsOpenLogoutDialog}
       />
 
-      <ProfileDialog
-        isOpen={isOpenProfileDialog}
-        onOpenChange={setIsOpenProfileDialog}
-      />
+      {/* The Settings page holds the profile form when it is on. */}
+      {!SETTINGS_PAGE_ENABLED && (
+        <ProfileDialog
+          isOpen={isOpenProfileDialog}
+          onOpenChange={setIsOpenProfileDialog}
+        />
+      )}
 
       <CO2eqDialog
         isOpen={isOpenCO2eqDialog}
         onOpenChange={setIsOpenCO2eqDialog}
       />
 
-      {API_KEYS_ENABLED && (
+      {/* The Settings page holds the API keys section when it is on. */}
+      {API_KEYS_ENABLED && !SETTINGS_PAGE_ENABLED && (
         <ApiKeysDialog
           isOpen={isOpenApiKeysDialog}
           onOpenChange={setIsOpenApiKeysDialog}

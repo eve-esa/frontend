@@ -5,7 +5,11 @@ import { MessagePanel } from "./MessagePanel";
 /** User menu entries that open an external page in a new tab. */
 export type UserMenuLink = "user-menu-about" | "user-menu-contact" | "user-menu-privacy";
 
-type UserMenuItem = "user-menu-profile" | "user-menu-logout" | UserMenuLink;
+type UserMenuItem =
+  | "user-menu-profile"
+  | "user-menu-settings"
+  | "user-menu-logout"
+  | UserMenuLink;
 
 /** The chat layout: conversations sidebar, user menu, composer and messages. */
 export class ChatPage {
