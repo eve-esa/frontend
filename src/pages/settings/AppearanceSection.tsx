@@ -13,6 +13,68 @@ const THEME_OPTIONS: {
   { value: "dark", label: "Dark", description: "Deep Space panels on a dark ground." },
 ];
 
+type MiniVariant = "light" | "dark";
+
+// Constant tokens only (on-accent, cta, composer-edge and the two preview
+// grounds), so a card looks the same whichever theme is active.
+const MINI_STYLES: Record<
+  MiniVariant,
+  { ground: string; strip: string; bars: [string, string, string] }
+> = {
+  light: {
+    ground: "bg-preview-light-ground",
+    strip: "bg-on-accent",
+    bars: [
+      "bg-cta",
+      "bg-on-accent border border-composer-edge/40",
+      "bg-composer-edge",
+    ],
+  },
+  dark: {
+    ground: "bg-preview-dark-ground",
+    strip: "bg-cta",
+    bars: [
+      "bg-on-accent",
+      "bg-cta border border-composer-edge",
+      "bg-on-accent/80",
+    ],
+  },
+};
+
+const BAR_WIDTHS = ["w-[55%]", "w-[80%]", "w-[40%]"];
+
+/** One mini screen: sidebar strip, two bars and a composer bar. */
+const Mini = ({ variant, className = "" }: { variant: MiniVariant; className?: string }) => {
+  const style = MINI_STYLES[variant];
+  return (
+    <span className={`flex size-full overflow-hidden rounded ${style.ground} ${className}`}>
+      <span className={`w-4 shrink-0 ${style.strip}`} />
+      <span className="flex flex-1 flex-col gap-1.5 p-2">
+        {style.bars.map((bar, index) => (
+          <span key={index} className={`block h-2 rounded-xs ${BAR_WIDTHS[index]} ${bar}`} />
+        ))}
+      </span>
+    </span>
+  );
+};
+
+/** Decorative picture of a theme. System: left half light, right half dark. */
+const ThemePreview = ({ value }: { value: ThemeChoice }) => (
+  <span aria-hidden="true" className="relative mb-2 block h-16 w-full">
+    {value === "system" ? (
+      <>
+        <Mini variant="light" />
+        <Mini
+          variant="dark"
+          className="absolute inset-0 [clip-path:inset(0_0_0_50%)]"
+        />
+      </>
+    ) : (
+      <Mini variant={value === "dark" ? "dark" : "light"} />
+    )}
+  </span>
+);
+
 /** System, Light and Dark. The choice applies at once and lives in this browser's localStorage. */
 export const AppearanceSection = () => {
   const theme = useTheme();
@@ -47,7 +109,8 @@ export const AppearanceSection = () => {
                 }}
                 className="mt-1 size-4 accent-focus"
               />
-              <span className="flex flex-col gap-1">
+              <span className="flex flex-1 flex-col gap-1">
+                <ThemePreview value={option.value} />
                 <span className="font-['NotesESA'] text-lg text-natural-50">
                   {option.label}
                 </span>
