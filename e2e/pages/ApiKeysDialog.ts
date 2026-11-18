@@ -76,10 +76,10 @@ export class ApiKeysDialog {
     return (await this.usesPage()) ? this.page.getByTestId("settings-apikeys-create-dialog").getByTestId("api-keys-usage-snippet") : this.usageSnippet;
   }
 
-  /** Opens the Quickstart when it is closed: the settings page shows it open, the dialog closed. */
+  /** Opens the Quickstart: it starts collapsed in the dialog and in the settings section alike. */
   async expandQuickstart(): Promise<void> {
-    if (await this.usesPage()) return;
     await this.quickstartToggle.click();
+    await expect(this.usageSnippet).toBeVisible();
   }
 
   keyNames(): Promise<string[]> {
