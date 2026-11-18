@@ -40,7 +40,7 @@ test.describe("api keys @dev", () => {
       // The secret is checked as a boolean so a failure never prints it.
       const secret = await apiKeys.secret.inputValue();
       expect(/^eve_[0-9a-f]+$/.test(secret), "the secret has the eve_ shape").toBe(true);
-      await expect(apiKeys.usageSnippet).toHaveCount(0);
+      await expect(await apiKeys.snippetBesideReveal()).toHaveCount(0);
       await expect(apiKeys.reveal).not.toContainText("Quickstart");
 
       // The POST answered 201; a replica may still lag behind the primary.
@@ -55,7 +55,7 @@ test.describe("api keys @dev", () => {
       // The list view keeps the Quickstart, with coloured commands.
       await apiKeys.secretDone.click();
       await expect(apiKeys.row(name)).toHaveCount(1);
-      await apiKeys.quickstartToggle.click();
+      await apiKeys.expandQuickstart();
       const step1 = apiKeys.quickstartStep(1);
       await expect(step1).toContainText('export EVE_API_KEY="<your API key>"');
       await expect(step1.locator("span.text-json-key").first()).toBeVisible();

@@ -1,9 +1,16 @@
 import { expect, type Locator, type Page, type Response } from "@playwright/test";
 import type { ChatPage } from "./ChatPage";
+import { settingsPageOn } from "./SettingsPage";
 
 export type ApiKeyExpiry = "30" | "90" | "365" | "never";
 
-/** API keys dialog, opened from the sidebar entry (FEATURE_API_KEYS). */
+/**
+ * API keys, opened from the sidebar entry (FEATURE_API_KEYS). With FEATURE_SETTINGS_PAGE off it
+ * is the dialog. With it on the entry goes to `/settings/api-keys`: the list is the page section
+ * (`root`), Create key is `settings-apikeys-create` and opens a dialog with the same form and
+ * reveal, the list shares the dialog's `api-key-*` and `api-keys-*` testids, and there is no
+ * Close button.
+ */
 export class ApiKeysDialog {
   readonly root: Locator;
   readonly rows: Locator;
@@ -22,12 +29,15 @@ export class ApiKeysDialog {
   readonly deleteTarget: Locator;
   readonly deleteSubmit: Locator;
 
+  /** Where the test was before `open` went to the settings page, so `close` can return. */
+  private returnTo: string | null = null;
+
   constructor(private readonly page: Page, private readonly chat: ChatPage) {
-    this.root = page.getByTestId("api-keys-dialog");
+    this.root = page.getByTestId("api-keys-dialog").or(page.getByTestId("settings-section-api-keys"));
     this.rows = page.getByTestId("api-key-row");
     this.count = page.getByTestId("api-keys-count");
     this.closeButton = page.getByTestId("api-keys-close");
-    this.createOpen = page.getByTestId("api-keys-create-open");
+    this.createOpen = page.getByTestId("api-keys-create-open").or(page.getByTestId("settings-apikeys-create"));
     this.nameInput = page.getByTestId("api-key-name-input");
     this.createSubmit = page.getByTestId("api-key-create-submit");
     this.createCancel = page.getByTestId("api-key-create-cancel");
@@ -45,9 +55,31 @@ export class ApiKeysDialog {
     return this.chat.apiKeysEntry.isVisible();
   }
 
+  /** True when the entry leads to the settings page, false when it opens the dialog. */
+  async usesPage(): Promise<boolean> {
+    return settingsPageOn(await this.chat.servedConfig());
+  }
+
   async open(): Promise<void> {
+    const onPage = await this.usesPage();
+    if (onPage) this.returnTo = this.page.url();
     await this.chat.apiKeysEntry.click();
+    if (onPage) await expect(this.page).toHaveURL(/\/settings\/api-keys$/);
     await expect(this.root).toBeVisible();
+  }
+
+  /**
+   * The Quickstart snippet that must not show beside the one-time secret. On the settings page the
+   * Quickstart stays on the page behind the create dialog, so only that dialog is read.
+   */
+  async snippetBesideReveal(): Promise<Locator> {
+    return (await this.usesPage()) ? this.page.getByTestId("settings-apikeys-create-dialog").getByTestId("api-keys-usage-snippet") : this.usageSnippet;
+  }
+
+  /** Opens the Quickstart when it is closed: the settings page shows it open, the dialog closed. */
+  async expandQuickstart(): Promise<void> {
+    if (await this.usesPage()) return;
+    await this.quickstartToggle.click();
   }
 
   keyNames(): Promise<string[]> {
@@ -84,6 +116,7 @@ export class ApiKeysDialog {
   async cancelCreateForm(): Promise<void> {
     await this.createCancel.click();
     await expect(this.createOpen).toBeVisible();
+    await expect(this.createSubmit).toBeHidden();
   }
 
   /** The next response to `method` on the API keys route, armed before the click that sends it. */
@@ -125,7 +158,17 @@ export class ApiKeysDialog {
     await expect(this.row(name)).toHaveCount(0);
   }
 
+  /** Closes the dialog, or leaves the settings page for the page the test came from. */
   async close(): Promise<void> {
+    if (await this.usesPage()) {
+      if (this.returnTo !== null) {
+        const back = this.returnTo;
+        this.returnTo = null;
+        await this.page.goto(back);
+        await this.chat.composer.waitReady();
+      }
+      return;
+    }
     await this.closeButton.click();
     await expect(this.root).toBeHidden();
   }

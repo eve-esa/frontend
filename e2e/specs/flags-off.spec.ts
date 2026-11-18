@@ -1,4 +1,4 @@
-import { flagOn, flagOrEnvOn, ThemeMenu, themeSwitchOn } from "../pages";
+import { flagOn, flagOrEnvOn, settingsPageOn, ThemeMenu, themeSwitchOn } from "../pages";
 import { expect, test } from "../fixtures";
 
 test.describe("flags as served @prod", () => {
@@ -8,8 +8,10 @@ test.describe("flags as served @prod", () => {
     // Same reading as src/utilities/features.ts: custom models ride on agentic chat.
     const customModels = agentic && flagOn(config, "FEATURE_CUSTOM_MODELS", true);
     const apiKeysOn = flagOn(config, "FEATURE_API_KEYS", true);
+    // With the settings page on, the composer "+" entry is gone: models are managed at /settings/models.
+    const composerEntry = customModels && !settingsPageOn(config);
 
-    await expect(chat.composer.manageModelsButton).toHaveCount(customModels ? 1 : 0);
+    await expect(chat.composer.manageModelsButton).toHaveCount(composerEntry ? 1 : 0);
     expect(await apiKeys.isEntryVisible()).toBe(apiKeysOn);
   });
 
