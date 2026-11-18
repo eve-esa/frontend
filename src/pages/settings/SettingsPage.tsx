@@ -1,7 +1,6 @@
 import { useEffect, useRef, type ComponentType } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { ChatHeader } from "@/components/chat/ChatHeader";
-import { useSidebar } from "@/components/chat/DynamicSidebarProvider";
 import { cn } from "@/lib/utils";
 import { AccountSection } from "./AccountSection";
 import { ApiKeysSection } from "./ApiKeysSection";
@@ -39,18 +38,6 @@ export const SettingsPage = () => {
   const section = resolveSection(param, flags);
   const sections = visibleSections(flags);
   const Section = SECTION_COMPONENTS[section];
-
-  const { isMobile, isOpenConversationsSidebar, toggleConversationsSidebar } =
-    useSidebar();
-
-  // The drawer that led here closes behind the user on a phone.
-  const closeDrawer = useRef<() => void>(() => undefined);
-  closeDrawer.current = () => {
-    if (isMobile && isOpenConversationsSidebar) toggleConversationsSidebar();
-  };
-  useEffect(() => {
-    closeDrawer.current();
-  }, []);
 
   // Moving to another section puts focus on its heading, so a screen reader announces it.
   const firstRender = useRef(true);

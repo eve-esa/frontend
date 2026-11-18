@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTheme } from "@/hooks/useTheme";
-import { parseThemeChoice, type ThemeChoice } from "@/utilities/theme";
+import type { ThemeChoice } from "@/utilities/theme";
 import { SettingsPanel, SettingsSection } from "./SettingsSection";
 
 const THEME_OPTIONS: {
@@ -104,10 +104,10 @@ export const AppearanceSection = () => {
                 data-testid={`settings-theme-${option.value}`}
                 checked={theme.choice === option.value}
                 onChange={() => {
-                  theme.setChoice(parseThemeChoice(option.value));
+                  theme.setChoice(option.value);
                   setSaved(true);
                 }}
-                className="mt-1 size-4 accent-focus"
+                className="mt-1 size-4 shrink-0 cursor-pointer appearance-none rounded-full border-2 border-natural-200 checked:border-natural-50 checked:bg-natural-50 checked:shadow-[inset_0_0_0_2px_var(--color-highlight)] focus-visible:outline-none"
               />
               <span className="flex flex-1 flex-col gap-1">
                 <ThemePreview value={option.value} />
@@ -124,11 +124,10 @@ export const AppearanceSection = () => {
         <p
           role="status"
           data-testid="settings-appearance-status"
-          className="mt-4 min-h-5 text-sm text-natural-200"
+          className="mt-4 text-sm text-natural-200"
         >
-          {saved ? "Saved." : ""}
+          {saved ? "Saved on this browser only." : "The choice is saved on this browser only."}
         </p>
-        <p className="text-sm text-natural-200">Saved on this browser only.</p>
       </SettingsPanel>
     </SettingsSection>
   );

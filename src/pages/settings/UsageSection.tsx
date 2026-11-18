@@ -1,18 +1,37 @@
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
+import dayjs from "dayjs";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { FIELD_ERROR_CLASS } from "@/components/profile/fieldError";
 import { useGetUserMessageStats } from "@/services/useGetUserMessageStats";
 import { useTokenUsage, type TokenUsageResponse } from "@/services/useTokenUsage";
-import { formatApiDate } from "@/utilities/dayjs";
+import "@/utilities/dayjs";
 import { SettingsPanel, SettingsSection } from "./SettingsSection";
 
 const NUMBER = new Intl.NumberFormat("en-US");
 
-const CO2EQ = new Intl.NumberFormat("en-US", {
-  style: "decimal",
-  maximumFractionDigits: 2,
+const GRAMS = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 });
+const KILOGRAMS = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
+const KILOGRAMS_LARGE = new Intl.NumberFormat("en-US", {
+  maximumFractionDigits: 0,
 });
+
+/** Grams below 1 kg, so a small footprint does not read as 0. */
+const formatCo2eq = (kg: number): string => {
+  if (kg <= 0) return "0 g";
+  if (kg < 1) {
+    const grams = kg * 1000;
+    return grams < 0.1 ? "Under 0.1 g" : `${GRAMS.format(grams)} g`;
+  }
+  return `${(kg < 100 ? KILOGRAMS : KILOGRAMS_LARGE).format(kg)} kg`;
+};
+
+/** The backend sends UTC without an offset; the budget window is a UTC window. */
+const formatPeriodDate = (value: string | null | undefined): string | null => {
+  if (!value) return null;
+  const date = dayjs.utc(value);
+  return date.isValid() ? `${date.format("D MMMM YYYY")} UTC` : null;
+};
 
 const BIG_CLASS = "text-[28px] leading-9 font-bold text-natural-50";
 const BIG_UNIT_CLASS = "ml-1.5 text-sm font-normal text-natural-200";
@@ -39,12 +58,26 @@ const Fact = ({
 
 const FACTS_CLASS = "m-0 grid grid-cols-2 gap-4 md:grid-cols-4";
 
-/** Used share as a whole percentage, from the API ratio or from the two counts. */
+/** Used share as a whole percentage rounded down, so 99.5% never reads as full. */
 const usedPercent = (usage: TokenUsageResponse): number => {
   const ratio =
     usage.used_ratio ??
     (usage.max_tokens ? usage.used_tokens / usage.max_tokens : 0);
-  return Math.min(100, Math.max(0, Math.round(ratio * 100)));
+  return Math.min(100, Math.max(0, Math.floor(ratio * 100)));
+};
+
+/** The two period rows, left out when the API gives no period. */
+const PeriodFacts = ({ usage }: { usage: TokenUsageResponse }) => {
+  const start = formatPeriodDate(usage.period_start);
+  const end = formatPeriodDate(usage.period_end);
+  return (
+    <>
+      {start && <Fact label="Period started" value={start} />}
+      {end && (
+        <Fact label="Resets" value={end} testId="settings-usage-reset" />
+      )}
+    </>
+  );
 };
 
 const TokenBudget = () => {
@@ -81,15 +114,7 @@ const TokenBudget = () => {
             value={NUMBER.format(usage.used_tokens)}
             testId="settings-usage-used"
           />
-          <Fact
-            label="Period started"
-            value={formatApiDate(usage.period_start) ?? "Not available"}
-          />
-          <Fact
-            label="Resets"
-            value={formatApiDate(usage.period_end) ?? "Not available"}
-            testId="settings-usage-reset"
-          />
+          <PeriodFacts usage={usage} />
         </dl>
       </>
     );
@@ -135,16 +160,13 @@ const TokenBudget = () => {
             }
             testId="settings-usage-remaining"
           />
-          <Fact label="Used" value={`${percent}%`} />
           <Fact
-            label="Period started"
-            value={formatApiDate(usage.period_start) ?? "Not available"}
+            label="Used"
+            value={
+              percent === 0 && usage.used_tokens > 0 ? "Under 1%" : `${percent}%`
+            }
           />
-          <Fact
-            label="Resets"
-            value={formatApiDate(usage.period_end) ?? "Not available"}
-            testId="settings-usage-reset"
-          />
+          <PeriodFacts usage={usage} />
         </dl>
       </>
     );
@@ -162,15 +184,9 @@ const TokenBudget = () => {
 };
 
 const Activity = () => {
-  // Nothing is fetched until the first Calculate, as in the CO2eq dialog.
-  const [shouldFetch, setShouldFetch] = useState(false);
-  const { data, isFetching, isError, refetch } =
-    useGetUserMessageStats(shouldFetch);
-
-  const onCalculate = async () => {
-    if (!shouldFetch) setShouldFetch(true);
-    else await refetch();
-  };
+  // Nothing is fetched until a Calculate click, as in the CO2eq dialog. Totals
+  // cached by an earlier visit show at once, and every click fetches again.
+  const { data, isFetching, isError, refetch } = useGetUserMessageStats(false);
 
   return (
     <SettingsPanel className="mt-4">
@@ -180,9 +196,9 @@ const Activity = () => {
         ask for them.
       </p>
 
-      {shouldFetch && isFetching && !data ? (
+      {isFetching && !data ? (
         <Skeleton className="h-[120px] w-full" />
-      ) : shouldFetch && data ? (
+      ) : data ? (
         <div data-testid="settings-usage-stats">
           <dl className={FACTS_CLASS}>
             <Fact label="Messages" value={NUMBER.format(data.message_count)} />
@@ -201,7 +217,7 @@ const Activity = () => {
           </dl>
           <p className={`${BIG_CLASS} mt-4`}>
             <span data-testid="settings-usage-co2eq">
-              {CO2EQ.format(data.co2eq_kg)} kg
+              {formatCo2eq(data.co2eq_kg)}
             </span>
             <small className={BIG_UNIT_CLASS}>CO2eq</small>
           </p>
@@ -212,18 +228,18 @@ const Activity = () => {
         </div>
       ) : null}
 
-      {shouldFetch && isError && !isFetching && (
+      {isError && !isFetching && (
         <p role="alert" className={`${FIELD_ERROR_CLASS} mb-3`}>
           Could not calculate your activity.
         </p>
       )}
 
-      <div className={shouldFetch && data ? "mt-4" : undefined}>
+      <div className={data ? "mt-4" : undefined}>
         <Button
           variant="outline"
           size="md"
           data-testid="settings-usage-calculate"
-          onClick={() => void onCalculate()}
+          onClick={() => void refetch()}
           disabled={isFetching}
         >
           {isFetching ? "Calculating..." : data ? "Recalculate" : "Calculate"}
@@ -238,7 +254,7 @@ export const UsageSection = () => (
   <SettingsSection
     id="usage"
     title="Usage"
-    lead="What your account has used in the current period."
+    lead="Your token budget for this period and your activity since you joined."
   >
     <TokenBudget />
     <Activity />

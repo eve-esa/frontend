@@ -137,7 +137,12 @@ export const ConversationsMenuSidebar = () => {
         <div className="flex-none px-6 pb-6 pt-8 sticky bottom-[-2px] left-0 right-0 z-10 bg-primary-900 in-data-[theme=light]:bg-(--color-sidebar) ">
           <div className="absolute top-[-10px] left-0 right-0 h-3 bg-gradient-to-t from-primary-900 in-data-[theme=light]:from-(--color-sidebar) to-transparent pointer-events-none z-10" />
           <div className="border-t-2 border-primary-500 pb-6 bg-primary-900 in-data-[theme=light]:bg-(--color-sidebar)" />
-          <SidebarMenu isOpen={isOpenConversationsSidebar} />
+          <SidebarMenu
+            isOpen={isOpenConversationsSidebar}
+            onNavigate={() => {
+              if (isMobile) toggleConversationsSidebar();
+            }}
+          />
         </div>
 
         <Dialog

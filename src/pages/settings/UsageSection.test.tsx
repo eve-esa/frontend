@@ -71,10 +71,10 @@ describe("UsageSection token budget", () => {
       "371,600"
     );
     expect(screen.getByTestId("settings-usage-reset").textContent).toMatch(
-      /Dec(ember)? 2026|2026/
+      /1 December 2026 UTC/
     );
     const bar = screen.getByRole("progressbar");
-    expect(bar.getAttribute("aria-valuenow")).toBe("26");
+    expect(bar.getAttribute("aria-valuenow")).toBe("25");
     expect(screen.queryByTestId("settings-usage-unlimited")).toBeNull();
   });
 
@@ -99,18 +99,105 @@ describe("UsageSection token budget", () => {
   });
 });
 
-describe("UsageSection activity", () => {
-  it("fetches the stats only after Calculate", () => {
+describe("UsageSection token budget edges", () => {
+  it("hides the period rows when the API returns no period", () => {
+    tokenUsage.mockReturnValue(
+      ok({
+        ...limited,
+        unlimited: true,
+        max_tokens: null,
+        remaining_tokens: null,
+        used_ratio: null,
+        remaining_ratio: null,
+        period_start: null,
+        period_end: null,
+      })
+    );
     render(<UsageSection />);
-    expect(messageStats).toHaveBeenLastCalledWith(false);
+    expect(screen.queryByText("Period started")).toBeNull();
+    expect(screen.queryByText("Resets")).toBeNull();
+    expect(screen.queryByText("Not available")).toBeNull();
+  });
+
+  it("never rounds a nearly used budget up to full", () => {
+    tokenUsage.mockReturnValue(
+      ok({ ...limited, used_tokens: 497500, used_ratio: 0.995 })
+    );
+    render(<UsageSection />);
+    expect(screen.getByRole("progressbar").getAttribute("aria-valuenow")).toBe(
+      "99"
+    );
+  });
+
+  it("says Under 1% for a small real use", () => {
+    tokenUsage.mockReturnValue(
+      ok({ ...limited, used_tokens: 1200, used_ratio: 0.0024 })
+    );
+    render(<UsageSection />);
+    expect(screen.getByText("Under 1%")).toBeTruthy();
+  });
+});
+
+describe("UsageSection activity", () => {
+  it("fetches the stats only after Calculate and shows grams below 1 kg", () => {
+    const refetch = vi.fn();
+    let loaded = false;
+    messageStats.mockImplementation(() => ({
+      data: loaded ? stats : undefined,
+      isFetching: false,
+      isError: false,
+      refetch: () => {
+        loaded = true;
+        refetch();
+      },
+    }));
+    const view = render(<UsageSection />);
     expect(screen.queryByTestId("settings-usage-co2eq")).toBeNull();
 
     fireEvent.click(screen.getByTestId("settings-usage-calculate"));
+    expect(refetch).toHaveBeenCalledTimes(1);
+    view.rerender(<UsageSection />);
 
-    expect(messageStats).toHaveBeenLastCalledWith(true);
     expect(screen.getByTestId("settings-usage-co2eq").textContent).toBe(
-      "0.04 kg"
+      "41.2 g"
     );
     expect(screen.getByText(/Estimate, not yet verified/)).toBeTruthy();
+  });
+
+  it("shows cached totals on arrival, with the button reading Recalculate", () => {
+    messageStats.mockImplementation(() => ({
+      data: stats,
+      isFetching: false,
+      isError: false,
+      refetch: vi.fn(),
+    }));
+    render(<UsageSection />);
+    expect(screen.getByTestId("settings-usage-co2eq")).toBeTruthy();
+    expect(screen.getByTestId("settings-usage-calculate").textContent).toBe(
+      "Recalculate"
+    );
+  });
+
+  it("formats a small footprint in grams and a large one in kilograms", () => {
+    messageStats.mockImplementation(() => ({
+      data: { ...stats, co2eq_kg: 0.0035 },
+      isFetching: false,
+      isError: false,
+      refetch: vi.fn(),
+    }));
+    const view = render(<UsageSection />);
+    expect(screen.getByTestId("settings-usage-co2eq").textContent).toBe(
+      "3.5 g"
+    );
+    messageStats.mockImplementation(() => ({
+      data: { ...stats, co2eq_kg: 12.346 },
+      isFetching: false,
+      isError: false,
+      refetch: vi.fn(),
+    }));
+    view.rerender(<UsageSection />);
+    expect(screen.getByTestId("settings-usage-co2eq").textContent).toBe(
+      "12.35 kg"
+    );
   });
 });

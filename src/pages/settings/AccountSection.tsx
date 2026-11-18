@@ -17,13 +17,16 @@ export const AccountSection = () => {
       lead="Session and account actions."
     >
       <SettingsPanel>
-        <h2 className="font-['NotesESA'] text-lg text-natural-50">Session</h2>
-        {profile?.email && (
-          <p className="mt-1 text-md text-natural-200">
-            Signed in as {profile.email}.
-          </p>
-        )}
-        <AppVersion className="mt-1 text-left" />
+        <div className="flex flex-col gap-1">
+          <h2 className="font-['NotesESA'] text-lg text-natural-50">Session</h2>
+          {profile?.email && (
+            <p className="text-md text-natural-200">
+              Signed in as {profile.email}.
+            </p>
+          )}
+          {/* Renders nothing without a build version (local development). */}
+          <AppVersion className="text-left" />
+        </div>
         <Button
           variant="outline"
           size="md"

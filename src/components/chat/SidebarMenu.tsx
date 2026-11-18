@@ -22,9 +22,11 @@ import { ApiKeysDialog } from "@/components/api-keys/ApiKeysDialog";
 
 type SidebarMenuProps = {
   isOpen: boolean;
+  /** Runs after the menu navigates to a page, so a phone drawer can close behind the user. */
+  onNavigate?: () => void;
 };
 
-export const SidebarMenu = ({ isOpen }: SidebarMenuProps) => {
+export const SidebarMenu = ({ isOpen, onNavigate }: SidebarMenuProps) => {
   const [isOpenLogoutDialog, setIsOpenLogoutDialog] = useState(false);
   const [isOpenProfileDialog, setIsOpenProfileDialog] = useState(false);
   const [isOpenCO2eqDialog, setIsOpenCO2eqDialog] = useState(false);
@@ -124,7 +126,10 @@ export const SidebarMenu = ({ isOpen }: SidebarMenuProps) => {
         isLoadingProfile={isLoadingProfile}
         email={email}
         onProfileClick={() => setIsOpenProfileDialog(true)}
-        onSettingsClick={() => navigate(settingsPath("profile"))}
+        onSettingsClick={() => {
+          navigate(settingsPath("profile"));
+          onNavigate?.();
+        }}
         onCO2eqClick={() => setIsOpenCO2eqDialog(true)}
         onLogoutClick={() => setIsOpenLogoutDialog(true)}
         className={`${baseStyles} ${layoutStyles} text-natural-50`}
