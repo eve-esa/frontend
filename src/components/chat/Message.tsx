@@ -36,7 +36,7 @@ import {
 } from "@/utilities/citations";
 import { CitationsProvider } from "./citations/CitationsContext";
 import { MessageSources } from "./citations/MessageSources";
-import { hasAgentStepRows, sendTimeFromId, type CollectionCatalog } from "@/utilities/agentSteps";
+import { firstTokenS, hasAgentStepRows, sendTimeFromId, type CollectionCatalog } from "@/utilities/agentSteps";
 import { answeredModelLabel } from "@/utilities/modelLabel";
 
 const NO_MARKERS: readonly MarkerInstance[] = [];
@@ -415,6 +415,7 @@ export const Message = ({
               collections={collections}
               modelLabel={answeredModelLabel(message, models)}
               startedAt={isStreamingTarget ? sendTimeFromId(message.id) : null}
+              workS={firstTokenS(message.metadata)}
               onOpenMyCollections={onOpenMyCollections}
             />
           )}
