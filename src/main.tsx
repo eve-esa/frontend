@@ -9,6 +9,7 @@ import { userManager } from "./services/oidc";
 import "./index.css";
 import { setupGlobalErrorHandlers } from "./utils/globalErrorHandler";
 import { initTelemetry } from "./observability/telemetry";
+import { installPreloadErrorHandler } from "./utilities/staleChunk";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -32,6 +33,8 @@ const onSigninCallback = (user: User | undefined) => {
 // Before the global handlers, so their first logError can already queue for
 // the SDK. A no-op without OBSERVABILITY_ENDPOINT; never rejects.
 void initTelemetry();
+// A tab that outlived a deploy asks for chunks the release no longer has.
+installPreloadErrorHandler();
 setupGlobalErrorHandlers();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(

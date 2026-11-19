@@ -3,6 +3,7 @@ import { logError } from "@/services/errorLogging";
 import { ErrorMessage } from "@/components/chat/ErrorMessage";
 import { Toaster } from "@/components/ui/Sonner";
 import { REPORT_BUG_ENABLED } from "@/utilities/features";
+import { isChunkLoadError, reloadOnce } from "@/utilities/staleChunk";
 
 interface Props {
   children: ReactNode;
@@ -75,6 +76,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    if (isChunkLoadError(error)) reloadOnce();
     this.setState({
       error,
       errorInfo,
