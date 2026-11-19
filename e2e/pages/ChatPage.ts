@@ -26,6 +26,14 @@ export class ChatPage {
   readonly sidebarToggle: Locator;
   /** The sidebar toggle icon in the sidebar header: it paints nothing, so it sits on the sidebar ground. */
   readonly sidebarToggleIcon: Locator;
+  /** The phone header (FEATURE_MOBILE_COMPOSER on): hamburger, model field, New chat. */
+  readonly headerMenu: Locator;
+  readonly headerModelField: Locator;
+  readonly headerModelName: Locator;
+  readonly headerNewChat: Locator;
+  /** The bottom sheet the model field opens, and its rows (`data-current` marks the chosen one). */
+  readonly modelSheet: Locator;
+  readonly modelSheetOptions: Locator;
 
   constructor(readonly page: Page) {
     this.composer = new Composer(page);
@@ -39,6 +47,12 @@ export class ChatPage {
     this.chatGround = page.getByTestId("chat-ground");
     this.sidebarToggle = page.getByTestId("sidebar-toggle");
     this.sidebarToggleIcon = page.getByTestId("sidebar-toggle-icon");
+    this.headerMenu = page.getByTestId("chat-header-menu");
+    this.headerModelField = page.getByTestId("header-model-field");
+    this.headerModelName = page.getByTestId("header-model-name");
+    this.headerNewChat = page.getByTestId("header-new-chat");
+    this.modelSheet = page.getByTestId("model-sheet");
+    this.modelSheetOptions = page.getByTestId("model-sheet-option");
   }
 
   /**

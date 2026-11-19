@@ -14,7 +14,10 @@ import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { prefetchTokenUsage } from "@/services/useTokenUsage";
 import { WelcomeDialog } from "../onboarding/WelcomeDialog";
-import { WELCOME_DIALOG_ENABLED } from "@/utilities/features";
+import {
+  MOBILE_COMPOSER_ENABLED,
+  WELCOME_DIALOG_ENABLED,
+} from "@/utilities/features";
 
 export const ChatEmpty = () => {
   const navigate = useNavigate();
@@ -61,8 +64,21 @@ export const ChatEmpty = () => {
       <div className="flex-none">
         <ChatHeader />
       </div>
-      <div className="w-full flex flex-col items-center justify-center mt-10 md:mt-50 2xl:mt-80 3xl:mt-100 gap-4 overflow-hidden px-container-responsive px-4 md:px-6">
-        <div className="w-full overflow-y-auto flex flex-col gap-2 overflow-hidden">
+      <div
+        className={`w-full flex flex-col items-center justify-center ${
+          // Phone: the wrapper fills the screen under the header, so the composer sits at the
+          // bottom, in the slot a conversation uses (24 px under it). Other widths keep the
+          // fixed offsets.
+          MOBILE_COMPOSER_ENABLED
+            ? "md:mt-50 2xl:mt-80 3xl:mt-100 max-md:min-h-0 max-md:flex-1 max-md:pb-6"
+            : "mt-10 md:mt-50 2xl:mt-80 3xl:mt-100"
+        } gap-4 overflow-hidden px-container-responsive px-4 md:px-6`}
+      >
+        <div
+          className={`w-full overflow-y-auto flex flex-col gap-2 overflow-hidden ${
+            MOBILE_COMPOSER_ENABLED ? "max-md:min-h-0 max-md:flex-1" : ""
+          }`}
+        >
           <MessageInput
             variant="secondary"
             suggestions={suggestions}
