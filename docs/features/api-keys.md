@@ -5,7 +5,9 @@ through the browser. Keys start with `eve_`.
 
 ## Open the API keys dialog
 
-In the sidebar, click **API keys**. The dialog lists your keys and shows how many are active
+In the sidebar, click **API keys**. With the Settings page on there is no sidebar item: open
+**Settings** from the user menu and choose **API keys**, which shows the same list as a page section.
+The dialog lists your keys and shows how many are active
 out of your limit (10 active keys).
 
 For each key the list shows its name, when it was created, the last characters of the key,
