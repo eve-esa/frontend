@@ -6,11 +6,12 @@ import {
 import { routes } from "./utilities/routes";
 import { PrivateRoute } from "./route-guards/private-route/PrivateRoute";
 import { ChatLayout } from "./layouts/chat-layout/ChatLayout";
+import { RouteError } from "./components/RouteError";
 import { ARTIFACTS_ENABLED, SETTINGS_PAGE_ENABLED } from "./utilities/features";
 
 export const router = createBrowserRouter(
   createRoutesFromElements(
-    <Route>
+    <Route errorElement={<RouteError />}>
       <Route element={<PrivateRoute />}>
         <Route element={<ChatLayout />}>
           <Route {...routes.EMPTY_CHAT} />
