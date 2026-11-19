@@ -20,6 +20,8 @@ import {
 import { settingsPath } from "@/pages/settings/sections";
 import { ApiKeysDialog } from "@/components/api-keys/ApiKeysDialog";
 
+const SHOW_API_KEYS_ITEM = API_KEYS_ENABLED && !SETTINGS_PAGE_ENABLED;
+
 type SidebarMenuProps = {
   isOpen: boolean;
   /** Runs after the menu navigates to a page, so a phone drawer can close behind the user. */
@@ -69,15 +71,8 @@ export const SidebarMenu = ({ isOpen, onNavigate }: SidebarMenuProps) => {
       type="button"
       data-testid="sidebar-api-keys"
       aria-label="API keys"
-      aria-haspopup={SETTINGS_PAGE_ENABLED ? undefined : "dialog"}
-      onClick={() => {
-        if (SETTINGS_PAGE_ENABLED) {
-          navigate(settingsPath("api-keys"));
-          onNavigate?.();
-        } else {
-          setIsOpenApiKeysDialog(true);
-        }
-      }}
+      aria-haspopup="dialog"
+      onClick={() => setIsOpenApiKeysDialog(true)}
       className={`${baseStyles} ${layoutStyles} text-natural-50`}
     >
       <FontAwesomeIcon icon={faKey} className="w-4 h-4" />
@@ -116,7 +111,8 @@ export const SidebarMenu = ({ isOpen, onNavigate }: SidebarMenuProps) => {
           </Tooltip>
         ))}
 
-      {API_KEYS_ENABLED &&
+      {/* With the Settings page on, API keys live only in its api-keys section. */}
+      {SHOW_API_KEYS_ITEM &&
         (isOpen ? (
           apiKeysItem
         ) : (
@@ -157,8 +153,7 @@ export const SidebarMenu = ({ isOpen, onNavigate }: SidebarMenuProps) => {
         onOpenChange={setIsOpenCO2eqDialog}
       />
 
-      {/* The Settings page holds the API keys section when it is on. */}
-      {API_KEYS_ENABLED && !SETTINGS_PAGE_ENABLED && (
+      {SHOW_API_KEYS_ITEM && (
         <ApiKeysDialog
           isOpen={isOpenApiKeysDialog}
           onOpenChange={setIsOpenApiKeysDialog}

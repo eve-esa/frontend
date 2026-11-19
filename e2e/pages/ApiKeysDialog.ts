@@ -1,12 +1,13 @@
 import { expect, type Locator, type Page, type Response } from "@playwright/test";
 import type { ChatPage } from "./ChatPage";
-import { settingsPageOn } from "./SettingsPage";
+import { isSettingsUrl, SettingsPage, settingsPageOn } from "./SettingsPage";
 
 export type ApiKeyExpiry = "30" | "90" | "365" | "never";
 
 /**
- * API keys, opened from the sidebar entry (FEATURE_API_KEYS). With FEATURE_SETTINGS_PAGE off it
- * is the dialog. With it on the entry goes to `/settings/api-keys`: the list is the page section
+ * API keys (FEATURE_API_KEYS). With FEATURE_SETTINGS_PAGE off they open from the sidebar entry
+ * (`sidebar-api-keys`) as a dialog. With it on the sidebar has no such entry: the user menu goes to
+ * Settings and the API keys nav item to `/settings/api-keys`. The list is the page section
  * (`root`), Create key is `settings-apikeys-create` and opens a dialog with the same form and
  * reveal, the list shares the dialog's `api-key-*` and `api-keys-*` testids, and there is no
  * Close button.
@@ -29,10 +30,13 @@ export class ApiKeysDialog {
   readonly deleteTarget: Locator;
   readonly deleteSubmit: Locator;
 
+  private readonly settings: SettingsPage;
+
   /** Where the test was before `open` went to the settings page, so `close` can return. */
   private returnTo: string | null = null;
 
   constructor(private readonly page: Page, private readonly chat: ChatPage) {
+    this.settings = new SettingsPage(page, chat);
     this.root = page.getByTestId("api-keys-dialog").or(page.getByTestId("settings-section-api-keys"));
     this.rows = page.getByTestId("api-key-row");
     this.count = page.getByTestId("api-keys-count");
@@ -51,20 +55,31 @@ export class ApiKeysDialog {
     this.deleteSubmit = page.getByTestId("api-key-delete-confirm-submit");
   }
 
-  isEntryVisible(): Promise<boolean> {
-    return this.chat.apiKeysEntry.isVisible();
+  /**
+   * Whether the target offers API keys: the sidebar entry, or with the settings page on the
+   * API keys item of the settings list (the sidebar has none then; this goes to Settings).
+   */
+  async isEntryVisible(): Promise<boolean> {
+    if (!(await this.usesPage())) return this.chat.apiKeysEntry.isVisible();
+    await expect(this.chat.apiKeysEntry).toHaveCount(0);
+    await this.settings.openFromUserMenu();
+    return this.settings.offers("api-keys");
   }
 
-  /** True when the entry leads to the settings page, false when it opens the dialog. */
+  /** True when API keys live on the settings page, false when the sidebar entry opens the dialog. */
   async usesPage(): Promise<boolean> {
     return settingsPageOn(await this.chat.servedConfig());
   }
 
   async open(): Promise<void> {
     const onPage = await this.usesPage();
-    if (onPage) this.returnTo = this.page.url();
-    await this.chat.apiKeysEntry.click();
-    if (onPage) await expect(this.page).toHaveURL(/\/settings\/api-keys$/);
+    if (onPage && !isSettingsUrl(this.page.url())) this.returnTo = this.page.url();
+    if (onPage) {
+      if (!isSettingsUrl(this.page.url())) await this.settings.openFromUserMenu();
+      await this.settings.openSection("api-keys");
+    } else {
+      await this.chat.apiKeysEntry.click();
+    }
     await expect(this.root).toBeVisible();
   }
 
