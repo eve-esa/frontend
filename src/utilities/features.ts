@@ -18,7 +18,7 @@
  * all six.
  *
  * Values arrive at the release stage rather than the build, so a switch can differ between
- * staging and production and can be flipped without rebuilding — see `runtimeConfig.ts` for why
+ * staging and production and can be flipped without rebuilding, see `runtimeConfig.ts` for why
  * the artifact cannot carry them, and for what that costs.
  */
 

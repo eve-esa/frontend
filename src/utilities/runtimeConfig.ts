@@ -3,7 +3,7 @@
  *
  * The release pipeline builds one artifact and promotes it unchanged: the tarball
  * `promote-staging` produces is the one `promote-prod` republishes, byte for byte. That is the
- * property worth defending — what was tested is what ships — and it means a value that must
+ * property worth defending, what was tested is what ships, and it means a value that must
  * differ between staging and production cannot be a build-time constant, because there is only
  * one build.
  *
@@ -18,14 +18,14 @@
  * deletes the branch; a runtime flag cannot, so guarded code ships everywhere. That is an
  * acceptable price for the switches here, none of which hide anything sensitive, and it is the
  * price of a kill switch being operable without a rebuild. It would not be acceptable for a
- * feature that must leave no trace in the shipped JavaScript — put that behind the backend.
+ * feature that must leave no trace in the shipped JavaScript, put that behind the backend.
  */
 
 /**
  * Not OpenFeature, deliberately, but shaped so that becoming OpenFeature is a small step.
  *
- * The CNCF standard describes this exact starting point — evaluation from static environment
- * variables — and a graduation path to a file, a REST API or a vendor provider as a project
+ * The CNCF standard describes this exact starting point, evaluation from static environment
+ * variables, and a graduation path to a file, a REST API or a vendor provider as a project
  * matures. Five booleans in a pilot do not earn an SDK and a provider yet. `isEnabled(key,
  * default)` mirrors `getBooleanValue(flagKey, defaultValue)` so the day one of these is needed,
  * only this file changes: flipping a flag without a deploy, per-user or percentage targeting,
@@ -34,7 +34,7 @@
  * One thing to know before that day: OpenFeature's web SDK initialises its provider
  * asynchronously, so adopting it forces the module-scope reads below into React state. That is
  * the same constraint that ruled out fetching a `/config.json`, and it is the real cost of the
- * migration — not the dependency.
+ * migration, not the dependency.
  */
 export type ConfigKey =
   | "FEATURE_MODEL_PICKER"
@@ -67,7 +67,7 @@ export type ConfigKey =
   // Not switches. They are here because they are per-environment values that a
   // promoted artifact cannot carry, which is the same problem the flags have.
   // They were build-time only, set on deploy-dev and on nothing else, so
-  // `window.open(undefined)` opened about:blank on staging and production —
+  // `window.open(undefined)` opened about:blank on staging and production,
   // on the exact path the "one artifact, promoted unchanged" argument runs
   // through, since promote-prod republishes staging's tarball byte for byte.
   | "CONTACT_URL"
