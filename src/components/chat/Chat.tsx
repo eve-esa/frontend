@@ -223,7 +223,7 @@ export const Chat = () => {
           sendRequest={handleSendRequest}
           isLoading={isLoading}
           disabled={isMutating || isLoadingMessages}
-          showDisclaimer={messages.length > 0}
+          showDisclaimer={messages.some((message) => Boolean(message.output))}
         />
       </div>
 
