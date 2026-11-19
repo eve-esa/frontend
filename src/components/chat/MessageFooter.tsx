@@ -38,7 +38,10 @@ import { getRenderableDocuments } from "@/utilities/messageDocuments";
 import { useListModels } from "@/services/useListModels";
 import { resolveCustomModelDisplayName } from "@/utilities/modelSelection";
 import { resolveLlmTypeLabel } from "@/utilities/modelLabel";
-import { buildHallucinationCopyText } from "@/utilities/buildHallucinationCopyText";
+import {
+  buildHallucinationCopyText,
+  hallucinationHeading,
+} from "@/utilities/buildHallucinationCopyText";
 import {
   ANSWERED_BY_ENABLED,
   REPORT_BUG_ENABLED,
@@ -655,29 +658,21 @@ export const MessageFooter = ({ message, hideSources = false }: MessageFooterPro
             </div>
           )}
           <div className="space-y-3">
-            <div>
-              <h3 className="font-['NotesESA'] mb-1 font-bold">
-                Possible hallucination detected:
+            <div
+              data-testid="hallucination-result"
+              data-label={hallucinationLabel ?? ""}
+            >
+              <h3
+                data-testid="hallucination-heading"
+                className="font-['NotesESA'] mb-1 font-bold"
+              >
+                {hallucinationHeading(hallucinationLabel)}
               </h3>
-              <div className="text-sm md:text-base">
-                <span className="font-bold">
-                  {hallucinationLabel === 1
-                    ? "Yes"
-                    : hallucinationLabel === 0
-                      ? "No"
-                      : ""}
-                </span>
-                {Boolean(hallucinationDisplay) && (
-                  <>
-                    <span>
-                      {hallucinationLabel === 1 || hallucinationLabel === 0
-                        ? ": "
-                        : ""}
-                    </span>
-                    <SmartText text={hallucinationDisplay} />
-                  </>
-                )}
-              </div>
+              {Boolean(hallucinationDisplay) && (
+                <div className="text-sm md:text-base">
+                  <SmartText text={hallucinationDisplay} />
+                </div>
+              )}
             </div>
             {Boolean(rewrittenQuery) && (
               <div>

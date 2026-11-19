@@ -10,7 +10,7 @@ describe("buildHallucinationCopyText", () => {
       alternativeAnswer: "",
     });
     expect(text).toBe(
-      "Possible hallucination detected: No: The answer is grounded in the retrieved documents.",
+      "No hallucination detected: The answer is grounded in the retrieved documents.",
     );
   });
 
@@ -23,7 +23,7 @@ describe("buildHallucinationCopyText", () => {
     });
     expect(text).toBe(
       [
-        "Possible hallucination detected: Yes: The cited figure does not appear in any source.",
+        "Possible hallucination detected: The cited figure does not appear in any source.",
         "Searched for: 2023 wildfire burned area Portugal",
         "Alternative answer:\nThe area burned in 2023 was about 34,000 hectares.",
       ].join("\n\n"),
@@ -58,7 +58,7 @@ describe("buildHallucinationCopyText", () => {
         rewrittenQuery: "",
         alternativeAnswer: "",
       }),
-    ).toBe("Possible hallucination detected: Checking the answer against the sources.");
+    ).toBe("Checking the answer: Checking the answer against the sources.");
   });
 
   it("never copies the alternative answer unless a hallucination is flagged", () => {
@@ -71,7 +71,7 @@ describe("buildHallucinationCopyText", () => {
     });
     expect(text).not.toContain("Alternative answer");
     expect(text).toBe(
-      ["Possible hallucination detected: No: Grounded.", "Searched for: some query"].join(
+      ["No hallucination detected: Grounded.", "Searched for: some query"].join(
         "\n\n",
       ),
     );

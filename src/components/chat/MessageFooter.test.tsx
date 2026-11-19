@@ -387,3 +387,56 @@ describe("MessageFooter copy", () => {
     );
   });
 });
+
+describe("MessageFooter hallucination result", () => {
+  const withResult = (hallucination: Record<string, unknown>) =>
+    answer({ hallucination } as unknown as Partial<MessageType>);
+
+  it("says no hallucination was detected for label 0, with no No: prefix", async () => {
+    const html = await render(
+      undefined,
+      withResult({ label: 0, reason: "The answer accurately reflects the sources." }),
+    );
+    expect(html).toContain('data-testid="hallucination-result"');
+    expect(html).toContain('data-label="0"');
+    expect(html).toContain("No hallucination detected");
+    expect(html).not.toContain("Possible hallucination detected");
+    expect(html).toContain("The answer accurately reflects the sources.");
+    expect(html).not.toContain("No:");
+    expect(html).not.toContain("Alternative answer");
+  });
+
+  it("says possible hallucination for label 1, keeps the rewrite and final answer, no Yes: prefix", async () => {
+    const html = await render(
+      undefined,
+      withResult({
+        label: 1,
+        reason: "The cited figure is in no source.",
+        rewritten_question: "2023 burned area Portugal",
+        final_answer: "About 34,000 hectares.",
+      }),
+    );
+    expect(html).toContain('data-label="1"');
+    expect(html).toContain("Possible hallucination detected");
+    expect(html).not.toContain("No hallucination detected");
+    expect(html).toContain("The cited figure is in no source.");
+    expect(html).not.toContain("Yes:");
+    expect(html).toContain("Searched for:");
+    expect(html).toContain("2023 burned area Portugal");
+    expect(html).toContain("Alternative answer:");
+    expect(html).toContain("About 34,000 hectares.");
+  });
+
+  it("shows a neutral heading while no label has arrived", async () => {
+    const html = await render(
+      undefined,
+      withResult({ label: null, reason: "Comparing the claims with the sources." }),
+    );
+    expect(html).toContain('data-testid="hallucination-result"');
+    expect(html).toContain('data-label=""');
+    expect(html).toContain("Checking the answer");
+    expect(html).not.toContain("Possible hallucination detected");
+    expect(html).not.toContain("No hallucination detected");
+    expect(html).toContain("Comparing the claims with the sources.");
+  });
+});
