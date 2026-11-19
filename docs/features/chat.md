@@ -29,8 +29,9 @@ Your choice applies to the next messages you send.
 
 On a phone, with the composer layout on (`FEATURE_MOBILE_COMPOSER`, default off), the model list
 leaves the message box: tap the **Model** field at the top of the screen and choose a model from the
-sheet that opens. The message box sits at the bottom of the empty chat too, with three suggestions
-above it: tap one to put it in the box.
+sheet that opens (Esc or a tap outside closes it). The message box sits at the bottom of the empty
+chat too, in the same place as in a conversation, with three suggestions above it: tap one to put
+it in the box. On a computer the model list stays beside the message box.
 
 ## Choose toolkits
 
