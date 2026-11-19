@@ -18,6 +18,13 @@ export class Composer {
   readonly attachButton: Locator;
   readonly attachmentPreviews: Locator;
   readonly attachmentUploading: Locator;
+  /** The suggested questions: rows above the box on a phone, a list inside it on focus elsewhere. */
+  readonly suggestions: Locator;
+  /** The one-line notice under the box (FEATURE_MOBILE_COMPOSER on), after the first answer. */
+  readonly disclaimer: Locator;
+  readonly learnMore: Locator;
+  readonly learnMoreDialog: Locator;
+  readonly learnMoreClose: Locator;
 
   constructor(private readonly page: Page) {
     this.box = page.getByTestId("composer-box");
@@ -32,11 +39,31 @@ export class Composer {
     this.attachButton = page.getByTestId("attach-image-button");
     this.attachmentPreviews = page.getByTestId("attachment-preview");
     this.attachmentUploading = page.getByTestId("attachment-uploading");
+    this.suggestions = page.getByTestId("composer-suggestion");
+    this.disclaimer = page.getByTestId("composer-disclaimer");
+    this.learnMore = page.getByTestId("disclaimer-learn-more");
+    this.learnMoreDialog = page.getByTestId("disclaimer-dialog");
+    this.learnMoreClose = page.getByTestId("disclaimer-dialog-close");
     const last = page.getByTestId("message").last();
     this.lastTurnEnded = last
       .getByTestId("message-copy")
       .or(last.getByTestId("message-error"))
       .or(last.getByTestId("message-stopped"));
+  }
+
+  /** The box's frame in the page, or throws when it is not rendered. */
+  async boxFrame(): Promise<{ x: number; y: number; width: number; height: number }> {
+    const frame = await this.box.boundingBox();
+    if (!frame) throw new Error("the composer box has no frame");
+    return frame;
+  }
+
+  /** CSS pixels between the bottom of the box and the bottom of the viewport. */
+  async distanceToViewportBottom(): Promise<number> {
+    const frame = await this.boxFrame();
+    const viewport = this.page.viewportSize();
+    if (!viewport) throw new Error("the page has no viewport size");
+    return viewport.height - (frame.y + frame.height);
   }
 
   async waitReady(): Promise<void> {

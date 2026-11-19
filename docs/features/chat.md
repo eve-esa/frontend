@@ -27,6 +27,11 @@ and marked **Generation stopped**.
 Pick a model from the list beside the message box. EVE's own model is selected by default.
 Your choice applies to the next messages you send.
 
+On a phone, with the composer layout on (`FEATURE_MOBILE_COMPOSER`, default off), the model list
+leaves the message box: tap the **Model** field at the top of the screen and choose a model from the
+sheet that opens. The message box sits at the bottom of the empty chat too, with three suggestions
+above it: tap one to put it in the box.
+
 ## Choose toolkits
 
 Toolkits are the tools EVE can call while it answers.
@@ -69,6 +74,12 @@ off, answers have no sources.
 - Thumbs up or down to rate the answer, and the copy icon to copy its text.
 
 If an answer fails, EVE says so and offers **Retry**.
+
+## About EVE's answers
+
+With `FEATURE_MOBILE_COMPOSER` on, the message box shows no notice on the empty chat. After the
+first answer, one line under it reads "EVE is AI and can make mistakes." with a **Learn more**
+button that opens the full statement. Off, the full statement stays under the message box.
 
 ## Diagrams and formulas
 
