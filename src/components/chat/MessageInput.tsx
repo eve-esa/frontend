@@ -81,9 +81,15 @@ import { useTokenUsage } from "@/services/useTokenUsage";
 import { useIsPhone } from "@/hooks/useIsPhone";
 import { MODEL_SELECTION_EVENT } from "@/hooks/useModelSelection";
 import { ComposerDisclaimer } from "./ComposerDisclaimer";
-import { SuggestionRows } from "./SuggestionRows";
 import { composerButtonClasses } from "./composerButtons";
 
+
+/**
+ * FEATURE_MOBILE_COMPOSER, below md: the suggestion rows live outside the composer. A tap on one
+ * dispatches this event on `window` with the suggestion as `detail`, and the composer fills its
+ * input with it and takes focus.
+ */
+export const COMPOSER_FILL_EVENT = "eve:composer-fill";
 
 const TOKEN_RING_R = 7;
 const TOKEN_RING_C = 2 * Math.PI * TOKEN_RING_R;
@@ -164,11 +170,10 @@ export const MessageInput = ({
   showDisclaimer = false,
 }: MessageInputProps) => {
   const { isRunning, currentStep, totalSteps } = useTour();
-  // FEATURE_MOBILE_COMPOSER, below md: the model picker is in the header, and the empty chat puts
-  // its logo and suggestions above the composer instead of inside it.
+  // FEATURE_MOBILE_COMPOSER, below md: the model picker is in the header (K2), and the logo and
+  // the suggestions are rendered above the composer by the empty chat (K3), not inside this box.
   const isPhone = useIsPhone();
   const phone = MOBILE_COMPOSER_ENABLED && isPhone;
-  const phoneHero = phone && Boolean(suggestions);
   const buttons = composerButtonClasses();
   const { handleSubmit, reset, setValue, getValues, control } = useForm({
     defaultValues: {
@@ -429,6 +434,20 @@ export const MessageInput = ({
 
   // The header field (phone) writes the choice to storage and says so: follow it, so the picker
   // shown after a resize past md is not stale.
+  // Below md the suggestions are rows above the composer, outside this component: a tap there
+  // announces its text and the input takes it.
+  useEffect(() => {
+    if (!MOBILE_COMPOSER_ENABLED) return;
+    const onFill = (event: Event) => {
+      const text = (event as CustomEvent<string>).detail;
+      if (typeof text !== "string") return;
+      setValue("input", text);
+      textareaRef.current?.focus();
+    };
+    window.addEventListener(COMPOSER_FILL_EVENT, onFill);
+    return () => window.removeEventListener(COMPOSER_FILL_EVENT, onFill);
+  }, [setValue]);
+
   useEffect(() => {
     if (!MOBILE_COMPOSER_ENABLED) return;
     const onChange = () =>
@@ -481,7 +500,7 @@ export const MessageInput = ({
       <div
         className={
           MOBILE_COMPOSER_ENABLED
-            ? "flex h-[44px] w-[36px] cursor-default items-center justify-center"
+            ? "flex h-8 w-8 cursor-default items-center justify-center max-md:h-[44px] max-md:w-[36px]"
             : "flex h-8 w-8 cursor-default items-center justify-center"
         }
         aria-label="Token usage for this billing period"
@@ -489,7 +508,7 @@ export const MessageInput = ({
         <TokenUsageRing
           usedRatio={tokenUsage?.used_ratio ?? null}
           unlimited={tokenUsage?.unlimited ?? true}
-          className={MOBILE_COMPOSER_ENABLED ? "h-[28px] w-[28px]" : undefined}
+          className={MOBILE_COMPOSER_ENABLED ? "max-md:h-[28px] max-md:w-[28px]" : undefined}
         />
       </div>
     </Tooltip>
@@ -642,31 +661,13 @@ export const MessageInput = ({
         MOBILE_COMPOSER_ENABLED && "max-md:overflow-visible!",
       )}
     >
-      {suggestions && !phoneHero && (
+      {suggestions && !phone && (
         <EsaPhiLabLogo className="h-[60px] md:h-[110px]" />
-      )}
-
-      {phoneHero && suggestions && (
-        // The free space above the composer: the logo and three suggestions, centred in it. Short
-        // screens scroll it instead of squeezing the composer.
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-          <div className="my-auto flex flex-col gap-[18px] py-2">
-            <EsaPhiLabLogo className="h-[60px]" />
-            <SuggestionRows
-              suggestions={suggestions.slice(0, 3)}
-              onPick={(suggestion) => {
-                setValue("input", suggestion);
-                textareaRef.current?.focus();
-              }}
-            />
-          </div>
-        </div>
       )}
 
       <div
         className={cn(
           "flex flex-col gap-2 h-full",
-          phoneHero && "h-auto flex-none",
           MOBILE_COMPOSER_ENABLED && "max-md:relative",
         )}
       >
@@ -912,7 +913,7 @@ export const MessageInput = ({
                 )}
               </div>
             </div>
-            {suggestions && showSuggestions && !phoneHero && (
+            {suggestions && showSuggestions && !phone && (
               <div className="h-full flex flex-col gap-2 border-t-2 overflow-y-auto border-primary-400 ">
                 <div
                   className={`bg-primary-900 flex flex-col gap-4 p-4 md:p-8 ${
