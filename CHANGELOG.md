@@ -16,6 +16,38 @@ Release and promotes staging. Production is promoted from there by an explicit d
 The "Pilot history" section at the bottom predates this repository's version series: no tag was ever
 cut for it. The released tags start at `v0.0.1`.
 
+## [1.3.0](https://github.com/eve-esa/frontend/compare/v1.2.2...v1.3.0) (2026-11-19)
+
+
+### Added
+
+* add agentic skills toggle ([#190](https://github.com/eve-esa/frontend/issues/190)) ([b3c364e](https://github.com/eve-esa/frontend/commit/b3c364e67c70a7932309668cacb891ef8a1f4baf))
+* **chat:** add sandbox explorer (flag FEATURE_SANDBOX_EXPLORER, prod off) ([#202](https://github.com/eve-esa/frontend/issues/202)) ([fe6c79b](https://github.com/eve-esa/frontend/commit/fe6c79b81844c954b10f98f892f0f6ec6cd16a10))
+* **chat:** inline agent steps, Streamdown answers and inline citations ([#199](https://github.com/eve-esa/frontend/issues/199)) ([e838197](https://github.com/eve-esa/frontend/commit/e8381973a56fb441c3ff66f0b0385c1be2acfc88)) (flags FEATURE_AGENT_STEPS, FEATURE_STREAMDOWN, FEATURE_INLINE_CITATIONS, prod off)
+* **settings:** settings page (flag FEATURE_SETTINGS_PAGE, prod off) ([#203](https://github.com/eve-esa/frontend/issues/203)) ([e9b0994](https://github.com/eve-esa/frontend/commit/e9b0994cdf59e0101232360a78fd1ba1e05fd286))
+* **settings:** start the API keys Quickstart closed and cover the settings flows in e2e ([#204](https://github.com/eve-esa/frontend/issues/204)) ([1344226](https://github.com/eve-esa/frontend/commit/134422646f6da297e0b800de07dd7475a89d0403)) (flag FEATURE_SETTINGS_PAGE, prod off)
+* show MCP citation dialog ([#192](https://github.com/eve-esa/frontend/issues/192)) ([21e8bbe](https://github.com/eve-esa/frontend/commit/21e8bbef025173bd718a5f7fc3978ca792f9e750))
+* show summarizing wait in chat ([#194](https://github.com/eve-esa/frontend/issues/194)) ([c33cadd](https://github.com/eve-esa/frontend/commit/c33cadda391f2ac37aea892fa72d81334ac0b3f3))
+* **theme:** follow the OS theme and add a light theme ([#178](https://github.com/eve-esa/frontend/issues/178)) ([5c386e3](https://github.com/eve-esa/frontend/commit/5c386e3528193d17407e454dd306c2a49045115b)) (flag FEATURE_THEME_SWITCH, prod off)
+
+
+### Fixed
+
+* **app:** reload once when a deploy removed the page's code ([#210](https://github.com/eve-esa/frontend/issues/210)) ([9d122ef](https://github.com/eve-esa/frontend/commit/9d122ef9f873e72bf45d25a4dcdecd2eadbe2d0b))
+* **chat:** count the setup in the saved turn time ([#207](https://github.com/eve-esa/frontend/issues/207)) ([7e476df](https://github.com/eve-esa/frontend/commit/7e476dfbe935a566ad6d5157497652915fdd6f7d))
+* **chat:** load images from other hosts only on click ([#197](https://github.com/eve-esa/frontend/issues/197)) ([91c9246](https://github.com/eve-esa/frontend/commit/91c9246ab1ece2c06d61166ff2836a20a343ced1))
+* **chat:** make Show more on long messages visible and keyboard reachable ([#179](https://github.com/eve-esa/frontend/issues/179)) ([d42a8e4](https://github.com/eve-esa/frontend/commit/d42a8e4fc71ae31f222932fc6ef8050509a7a9c0))
+* **chat:** say no hallucination was found when none was ([#211](https://github.com/eve-esa/frontend/issues/211)) ([0f12dd8](https://github.com/eve-esa/frontend/commit/0f12dd8c3552e7db3c89c7356cddb693d127e540))
+* **chat:** space after the step verb and a turn clock that counts from the send ([#206](https://github.com/eve-esa/frontend/issues/206)) ([539dedc](https://github.com/eve-esa/frontend/commit/539dedc37dbc900043d2b4b703a50c863b15b270))
+* **chat:** take the saved turn time from the total latency ([#208](https://github.com/eve-esa/frontend/issues/208)) ([ac8b993](https://github.com/eve-esa/frontend/commit/ac8b9936564f11d9428a37d7e8de97ff0b01d7b5))
+* **conversations:** explain an incomplete delete and offer a retry ([#198](https://github.com/eve-esa/frontend/issues/198)) ([37d59ca](https://github.com/eve-esa/frontend/commit/37d59cac7725c03ac57b79d916d9f949c03c2f31))
+* **deps:** close the zod, follow-redirects and katex advisories ([#188](https://github.com/eve-esa/frontend/issues/188)) ([ce5b6f7](https://github.com/eve-esa/frontend/commit/ce5b6f7c81216a54c604c0c72ba8ce23e38aefe1))
+* **settings:** hide the sidebar API keys item when the Settings page is on ([#209](https://github.com/eve-esa/frontend/issues/209)) ([539993f](https://github.com/eve-esa/frontend/commit/539993f6efbfe7bb8249070da26f2ffe8caa8122))
+* **settings:** keyboard reach, field labels and a confirm before deleting a custom model ([#196](https://github.com/eve-esa/frontend/issues/196)) ([e8fc113](https://github.com/eve-esa/frontend/commit/e8fc1133af574c0b0920898f2c7f36f1be329a00))
+* **sidebar:** show the pointer, not the resize cursor, on the sidebar toggle ([#181](https://github.com/eve-esa/frontend/issues/181)) ([a310c7e](https://github.com/eve-esa/frontend/commit/a310c7ebec35422e285c3bf42bcc94b083810cbb))
+* **sidebar:** the logo takes you home ([#180](https://github.com/eve-esa/frontend/issues/180)) ([9951d88](https://github.com/eve-esa/frontend/commit/9951d881cbfcbbceda2981836018095aa5eb2de0))
+* **theme:** no resting shadows in light where dark shows none ([#184](https://github.com/eve-esa/frontend/issues/184)) ([80c2a87](https://github.com/eve-esa/frontend/commit/80c2a87fa2066e4f8406216047131d8273dad441))
+
 ## [1.2.2](https://github.com/eve-esa/frontend/compare/v1.2.1...v1.2.2) (2026-10-07)
 
 
