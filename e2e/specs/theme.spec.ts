@@ -241,6 +241,7 @@ test.describe("theme switch", () => {
   test("Light keeps text readable on chat, sidebar, composer, menu and toasts", async ({
     chat,
     profile,
+    api,
     authedPage: page,
   }) => {
     const theme = new ThemeMenu(page, chat);
@@ -298,7 +299,10 @@ test.describe("theme switch", () => {
     if (themeInMenu) await readable("theme option", theme.option("light"));
     await page.keyboard.press("Escape");
 
-    // Toasts from the profile save, answered here so nothing is written.
+    // Toasts from the profile save, answered here so nothing is written. The app caches the PATCH
+    // answer as the profile, so the success answer is what the backend sends: the stored profile
+    // with the request body merged in, never an empty object.
+    const me = (await api.get<Record<string, unknown>>("/users/me")).body;
     let fail = false;
     await page.route(
       (url) => url.pathname.endsWith("/users"),
@@ -312,7 +316,7 @@ test.describe("theme switch", () => {
                     contentType: "application/json",
                     body: JSON.stringify({ detail: "Profile update failed" }),
                   }
-                : { status: 200, contentType: "application/json", body: "{}" },
+                : { status: 200, json: { ...me, ...route.request().postDataJSON() } },
             ),
     );
     await profile.open();
