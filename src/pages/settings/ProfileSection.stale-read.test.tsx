@@ -17,6 +17,7 @@ vi.mock("@/utilities/features", async (importOriginal) => ({
   PROFILE_FIELDS_ENABLED: false,
 }));
 
+import { QUERY_KEYS } from "@/services/keys";
 import { ProfileSection } from "./ProfileSection";
 
 const OLD = { email: "ada@example.com", first_name: "Ada", last_name: "Lovelace" };
@@ -56,6 +57,48 @@ describe("ProfileSection after a save whose refetch reads a stale copy", () => {
         "Saved."
       )
     );
+    expect(first().value).toBe("Augusta");
+    expect(save.disabled).toBe(true);
+  });
+
+  it("keeps the saved values when a profile read already in flight resolves after the save", async () => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={client}>
+        <ProfileSection />
+      </QueryClientProvider>
+    );
+    const first = () =>
+      screen.getByTestId("profile-first-name") as HTMLInputElement;
+    await waitFor(() => expect(first().value).toBe("Ada"));
+
+    // A read starts before the save and answers only after it, with the old row.
+    let resolveRead!: (value: { data: typeof OLD }) => void;
+    get.mockReset();
+    get.mockReturnValue(
+      new Promise((resolve) => {
+        resolveRead = resolve;
+      })
+    );
+    void client.refetchQueries({ queryKey: [QUERY_KEYS.profile] });
+    await waitFor(() => expect(get).toHaveBeenCalledTimes(1));
+
+    fireEvent.change(first(), { target: { value: "Augusta" } });
+    const save = screen.getByTestId("settings-profile-save") as HTMLButtonElement;
+    await waitFor(() => expect(save.disabled).toBe(false));
+    fireEvent.click(save);
+    await waitFor(() =>
+      expect(screen.getByTestId("settings-profile-status").textContent).toBe(
+        "Saved."
+      )
+    );
+
+    resolveRead({ data: { ...OLD } });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    expect(client.getQueryData([QUERY_KEYS.profile])).toEqual(NEW);
     expect(first().value).toBe("Augusta");
     expect(save.disabled).toBe(true);
   });

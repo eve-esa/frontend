@@ -47,8 +47,8 @@ export const ProfileSection = () => {
     ),
   });
 
-  // Prefill when the profile loads, and again after a save refetches it, which
-  // also makes the form clean.
+  // Prefill when the profile loads, and again after a save writes the PATCH
+  // response into the profile query, which also makes the form clean.
   useEffect(() => {
     if (profile) {
       reset(toProfileFormValues(profile));
