@@ -16,6 +16,13 @@ Release and promotes staging. Production is promoted from there by an explicit d
 The "Pilot history" section at the bottom predates this repository's version series: no tag was ever
 cut for it. The released tags start at `v0.0.1`.
 
+## [1.3.1](https://github.com/eve-esa/frontend/compare/v1.3.0...v1.3.1) (2026-11-20)
+
+
+### Fixed
+
+* **settings:** keep the saved profile when the refetch reads a stale copy ([#213](https://github.com/eve-esa/frontend/issues/213)) ([494cedc](https://github.com/eve-esa/frontend/commit/494cedc105df2f2216107ffa5b5ae9efc287ce64))
+
 ## [1.3.0](https://github.com/eve-esa/frontend/compare/v1.2.2...v1.3.0) (2026-11-19)
 
 
