@@ -21,7 +21,7 @@ cut for it. The released tags start at `v0.0.1`.
 
 ### Fixed
 
-* **settings:** keep the saved profile when the refetch reads a stale copy ([#213](https://github.com/eve-esa/frontend/issues/213)) ([494cedc](https://github.com/eve-esa/frontend/commit/494cedc105df2f2216107ffa5b5ae9efc287ce64))
+* **settings:** keep the saved profile when the refetch reads a stale copy ([#213](https://github.com/eve-esa/frontend/issues/213)) ([494cedc](https://github.com/eve-esa/frontend/commit/494cedc105df2f2216107ffa5b5ae9efc287ce64)) (flag FEATURE_SETTINGS_PAGE, prod off)
 
 ## [1.3.0](https://github.com/eve-esa/frontend/compare/v1.2.2...v1.3.0) (2026-11-19)
 
