@@ -47,11 +47,14 @@ describe("toProfileFormValues, what the dialog is prefilled with", () => {
     expect(values.institution).toBe("");
   });
 
-  it.each(["", "   "])("treats a stored name of %j as no name", (name) => {
-    const values = toProfileFormValues({ first_name: name, last_name: name });
-    expect(values.first_name).toBeUndefined();
-    expect(values.last_name).toBeUndefined();
-  });
+  it.each(["", "   ", null, undefined])(
+    "prefills a stored name of %j as an empty input, never undefined",
+    (name) => {
+      const values = toProfileFormValues({ first_name: name, last_name: name });
+      expect(values.first_name).toBe("");
+      expect(values.last_name).toBe("");
+    },
+  );
 
   it("keeps a real name and accepts a profile with no name keys at all", () => {
     const named = RequiredProfileSchema.safeParse({
