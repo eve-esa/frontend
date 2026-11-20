@@ -100,13 +100,14 @@ export const useUpdateProfile = (onSuccess?: () => void) => {
     onError: (error) => {
       toast.error(error.message, { testId: "toast-profile-error" });
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // `PATCH /users` answers with the saved profile, the shape of `GET /users/me`. It goes into
+      // the cache as is and no refetch follows: on a replica set the refetch can read a
+      // secondary that has not seen the write, and the old row would put the form back to dirty.
+      queryClient.setQueryData([QUERY_KEYS.profile], data);
       onSuccess?.();
       toast.success("Profile updated successfully", {
         testId: "toast-profile-updated",
-      });
-      queryClient.invalidateQueries({
-        queryKey: [QUERY_KEYS.profile],
       });
     },
   });
