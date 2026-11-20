@@ -22,13 +22,13 @@ cut for it. The released tags start at `v0.0.1`.
 ### Added
 
 * add agentic skills toggle ([#190](https://github.com/eve-esa/frontend/issues/190)) ([b3c364e](https://github.com/eve-esa/frontend/commit/b3c364e67c70a7932309668cacb891ef8a1f4baf))
-* **chat:** add sandbox explorer behind a flag ([#202](https://github.com/eve-esa/frontend/issues/202)) ([fe6c79b](https://github.com/eve-esa/frontend/commit/fe6c79b81844c954b10f98f892f0f6ec6cd16a10))
-* **chat:** inline agent steps, Streamdown answers and inline citations ([#199](https://github.com/eve-esa/frontend/issues/199)) ([e838197](https://github.com/eve-esa/frontend/commit/e8381973a56fb441c3ff66f0b0385c1be2acfc88))
+* **chat:** add sandbox explorer (flag FEATURE_SANDBOX_EXPLORER, prod off) ([#202](https://github.com/eve-esa/frontend/issues/202)) ([fe6c79b](https://github.com/eve-esa/frontend/commit/fe6c79b81844c954b10f98f892f0f6ec6cd16a10))
+* **chat:** inline agent steps, Streamdown answers and inline citations ([#199](https://github.com/eve-esa/frontend/issues/199)) ([e838197](https://github.com/eve-esa/frontend/commit/e8381973a56fb441c3ff66f0b0385c1be2acfc88)) (flags FEATURE_AGENT_STEPS, FEATURE_STREAMDOWN, FEATURE_INLINE_CITATIONS, prod off)
 * **settings:** settings page (flag FEATURE_SETTINGS_PAGE, prod off) ([#203](https://github.com/eve-esa/frontend/issues/203)) ([e9b0994](https://github.com/eve-esa/frontend/commit/e9b0994cdf59e0101232360a78fd1ba1e05fd286))
-* **settings:** start the API keys Quickstart closed and cover the settings flows in e2e ([#204](https://github.com/eve-esa/frontend/issues/204)) ([1344226](https://github.com/eve-esa/frontend/commit/134422646f6da297e0b800de07dd7475a89d0403))
+* **settings:** start the API keys Quickstart closed and cover the settings flows in e2e ([#204](https://github.com/eve-esa/frontend/issues/204)) ([1344226](https://github.com/eve-esa/frontend/commit/134422646f6da297e0b800de07dd7475a89d0403)) (flag FEATURE_SETTINGS_PAGE, prod off)
 * show MCP citation dialog ([#192](https://github.com/eve-esa/frontend/issues/192)) ([21e8bbe](https://github.com/eve-esa/frontend/commit/21e8bbef025173bd718a5f7fc3978ca792f9e750))
 * show summarizing wait in chat ([#194](https://github.com/eve-esa/frontend/issues/194)) ([c33cadd](https://github.com/eve-esa/frontend/commit/c33cadda391f2ac37aea892fa72d81334ac0b3f3))
-* **theme:** follow the OS theme and add a light theme ([#178](https://github.com/eve-esa/frontend/issues/178)) ([5c386e3](https://github.com/eve-esa/frontend/commit/5c386e3528193d17407e454dd306c2a49045115b))
+* **theme:** follow the OS theme and add a light theme ([#178](https://github.com/eve-esa/frontend/issues/178)) ([5c386e3](https://github.com/eve-esa/frontend/commit/5c386e3528193d17407e454dd306c2a49045115b)) (flag FEATURE_THEME_SWITCH, prod off)
 
 
 ### Fixed
