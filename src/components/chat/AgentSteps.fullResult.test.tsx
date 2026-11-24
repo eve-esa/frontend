@@ -54,6 +54,27 @@ describe("offloadedFilePath", () => {
     expect(offloadedFilePath('{"events": []}')).toBeNull();
     expect(offloadedFilePath(null)).toBeNull();
   });
+
+  it("is null for a grep result that names the saved file", () => {
+    expect(offloadedFilePath('/large_tool_results/call_42:\n  1: {"type": "FeatureCollection"}')).toBeNull();
+  });
+});
+
+describe("a grep over the saved file", () => {
+  it("offers no Open full result", () => {
+    const grep: ToolActivityEntry = {
+      label: "Calling tool",
+      state: "done",
+      id: "g1",
+      tool: "grep",
+      args: { pattern: "Flood", path: "/large_tool_results/call_42" },
+      preview: '/large_tool_results/call_42:\n  1: {"type": "FeatureCollection"}',
+    };
+    render(<AgentSteps activity={[grep]} live={false} answerStarted conversationId="conv1" />);
+    fireEvent.click(screen.getByTestId("agent-steps-toggle"));
+    fireEvent.click(screen.getByTestId("agent-step-toggle"));
+    expect(screen.queryByTestId("agent-step-open-full")).toBeNull();
+  });
 });
 
 describe("Open full result", () => {
