@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CUSTOM_MODELS_ENABLED } from "@/utilities/features";
 import {
   getStoredModelSelection,
@@ -33,6 +33,11 @@ export const useModelSelection = () => {
     modelSelectionToValue(getStoredModelSelection()),
   );
 
+  const modelsRef = useRef(models);
+  useEffect(() => {
+    modelsRef.current = models;
+  }, [models]);
+
   useEffect(() => {
     if (!models) return;
     const stored = getStoredModelSelection(models);
@@ -44,8 +49,14 @@ export const useModelSelection = () => {
   }, [models]);
 
   useEffect(() => {
-    const onChange = () =>
-      setValue(modelSelectionToValue(getStoredModelSelection()));
+    const onChange = () => {
+      const current = modelsRef.current;
+      setValue(
+        modelSelectionToValue(
+          reconcileModelSelection(getStoredModelSelection(current), current),
+        ),
+      );
+    };
     window.addEventListener(MODEL_SELECTION_EVENT, onChange);
     return () => window.removeEventListener(MODEL_SELECTION_EVENT, onChange);
   }, []);
@@ -58,8 +69,7 @@ export const useModelSelection = () => {
   }, []);
 
   const currentName = useMemo(() => {
-    const [type, ...rest] = value.split(":");
-    const id = rest.join(":");
+    const { type, id } = parseModelSelectionValue(value);
     const list = type === "custom" ? models?.custom : models?.platform;
     return list?.find((model) => model.id === id)?.display_name ?? null;
   }, [models, value]);

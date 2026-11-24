@@ -81,4 +81,14 @@ describe("BottomSheet", () => {
     fireEvent.click(screen.getByTestId("opener"));
     expect(screen.getByTestId("sheet").contains(document.activeElement)).toBe(true);
   });
+
+  it("focuses the checked row on open when there is one, else the first focusable", () => {
+    render(
+      <BottomSheet open onOpenChange={vi.fn()} title="Model" data-testid="sheet">
+        <button role="radio" aria-checked="false" data-testid="a">a</button>
+        <button role="radio" aria-checked="true" data-testid="b">b</button>
+      </BottomSheet>,
+    );
+    expect(document.activeElement).toBe(screen.getByTestId("b"));
+  });
 });

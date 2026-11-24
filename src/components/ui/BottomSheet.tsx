@@ -30,14 +30,24 @@ export function BottomSheet({
   returnFocusTo,
   "data-testid": testId,
 }: BottomSheetProps) {
+  const contentRef = React.useRef<HTMLDivElement>(null);
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPortal>
         <DialogOverlay />
         <DialogPrimitive.Content
+          ref={contentRef}
           data-slot="bottom-sheet"
           data-testid={testId}
           aria-describedby={undefined}
+          onOpenAutoFocus={(event) => {
+            const checked = contentRef.current?.querySelector<HTMLElement>(
+              "[aria-checked=true]",
+            );
+            if (!checked) return;
+            event.preventDefault();
+            checked.focus();
+          }}
           onCloseAutoFocus={(event) => {
             if (!returnFocusTo?.current) return;
             event.preventDefault();

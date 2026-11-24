@@ -19,8 +19,9 @@ const models = {
   custom: [{ id: "c1", display_name: "My model" }],
 } as unknown as ModelListResponse;
 
+let listed: ModelListResponse | undefined = models;
 vi.mock("@/services/useListModels", () => ({
-  useListModels: () => ({ data: models }),
+  useListModels: () => ({ data: listed }),
 }));
 
 // A cold first render of the dialog primitives is slow on a busy machine.
@@ -41,6 +42,7 @@ const renderField = async (customModels = true) => {
 };
 
 beforeEach(() => {
+  listed = models;
   localStorage.clear();
   localStorage.setItem(
     "model_selection",
@@ -158,5 +160,32 @@ describe("ModelField", () => {
     expect(field.className).toContain("h-[44px]");
     expect(field.className).not.toMatch(/rounded/);
     expect(field.querySelector("svg")).toBeNull();
+  });
+
+  it("the field is named 'Model: <name>' for assistive tech", async () => {
+    await renderField();
+    expect(screen.getByRole("button", { name: "Model: EVE-Instruct" })).toBeTruthy();
+  });
+
+  it("shows one non-interactive row when no model is listed", async () => {
+    listed = { platform: [], providers: [], custom: [] } as unknown as ModelListResponse;
+    await renderField();
+    fireEvent.click(screen.getByTestId("header-model-field"));
+    expect(within(screen.getByTestId("model-sheet")).getByText("No models available")).toBeTruthy();
+    expect(screen.queryByRole("radiogroup")).toBeNull();
+    expect(screen.queryAllByRole("radio")).toHaveLength(0);
+  });
+
+  it("shows no 'Select model' text while the list is loading", async () => {
+    listed = undefined;
+    await renderField();
+    expect(screen.getByTestId("header-model-name").textContent).toBe("");
+  });
+
+  it("opening the sheet focuses the checked row", async () => {
+    await renderField();
+    fireEvent.click(screen.getByTestId("header-model-field"));
+    const checked = screen.getByRole("radio", { checked: true });
+    await waitFor(() => expect(document.activeElement).toBe(checked));
   });
 });

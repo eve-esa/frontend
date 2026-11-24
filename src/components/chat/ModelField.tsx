@@ -30,6 +30,17 @@ export const ModelOptionList = ({
     })),
   ];
 
+  if (options.length === 0) {
+    return (
+      <p
+        data-testid="model-sheet-empty"
+        className="flex h-[56px] items-center px-4 text-[16px] text-natural-200"
+      >
+        No models available
+      </p>
+    );
+  }
+
   return (
     <div className="flex flex-col" role="radiogroup" aria-label="Model">
       {options.map((option) => {
@@ -70,6 +81,8 @@ export const ModelField = ({ className }: { className?: string }) => {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const { models, value, select, currentName } = useModelSelection();
+  // Before the list arrives the name is unknown: show nothing rather than a prompt that flashes away.
+  const displayName = currentName ?? (models ? "Select model" : "");
 
   return (
     <>
@@ -77,6 +90,7 @@ export const ModelField = ({ className }: { className?: string }) => {
         ref={triggerRef}
         type="button"
         data-testid="header-model-field"
+        aria-label={`Model: ${displayName || "not loaded"}`}
         aria-haspopup="dialog"
         aria-expanded={open}
         onClick={() => setOpen(true)}
@@ -90,7 +104,7 @@ export const ModelField = ({ className }: { className?: string }) => {
           data-testid="header-model-name"
           className="truncate text-[15px] leading-5 text-natural-50"
         >
-          {currentName ?? "Select model"}
+          {displayName}
         </span>
       </button>
       <BottomSheet
