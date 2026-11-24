@@ -431,6 +431,10 @@ export const MessageInput = ({
     [listedModels],
   );
   const [isAnimatingOut, setIsAnimatingOut] = useState(false);
+  const modelsRef = useRef(models);
+  useEffect(() => {
+    modelsRef.current = models;
+  }, [models]);
 
   // The header field (phone) writes the choice to storage and says so: follow it, so the picker
   // shown after a resize past md is not stale.
@@ -450,8 +454,18 @@ export const MessageInput = ({
 
   useEffect(() => {
     if (!MOBILE_COMPOSER_ENABLED) return;
-    const onChange = () =>
-      setModelSelectionValue(modelSelectionToValue(getStoredModelSelection()));
+    // Same reconcile as the [models] effect, so a deleted custom model is never shown.
+    const onChange = () => {
+      const currentModels = modelsRef.current;
+      const stored = getStoredModelSelection(currentModels);
+      setModelSelectionValue(
+        modelSelectionToValue(
+          currentModels
+            ? reconcileModelSelection(stored, currentModels)
+            : stored,
+        ),
+      );
+    };
     window.addEventListener(MODEL_SELECTION_EVENT, onChange);
     return () => window.removeEventListener(MODEL_SELECTION_EVENT, onChange);
   }, []);
@@ -616,6 +630,9 @@ export const MessageInput = ({
           e.stopPropagation();
           openDynamicSidebar({ type: "settings" });
         }}
+        onClick={(e) => {
+          if (e.detail === 0) openDynamicSidebar({ type: "settings" });
+        }}
         className={cn(buttons.quietWide, "settings-button-tour")}
         data-tour="settings-button"
         data-testid="composer-settings"
@@ -639,6 +656,9 @@ export const MessageInput = ({
           e.preventDefault();
           e.stopPropagation();
           fileInputRef.current?.click();
+        }}
+        onClick={(e) => {
+          if (e.detail === 0) fileInputRef.current?.click();
         }}
         className={buttons.quiet}
       >

@@ -25,4 +25,20 @@ describe("SuggestionRows", () => {
     fireEvent.click(screen.getAllByTestId("composer-suggestion")[2]);
     expect(onPick).toHaveBeenCalledExactlyOnceWith("third question");
   });
+
+  it("disables every row and ignores taps when disabled", () => {
+    const onPick = vi.fn();
+    render(<SuggestionRows suggestions={items} onPick={onPick} disabled />);
+    const rows = screen.getAllByTestId("composer-suggestion") as HTMLButtonElement[];
+    rows.forEach((row) => expect(row.disabled).toBe(true));
+    fireEvent.click(rows[0]);
+    expect(onPick).not.toHaveBeenCalled();
+  });
+
+  it("leaves the rows enabled by default", () => {
+    render(<SuggestionRows suggestions={items} onPick={vi.fn()} />);
+    (screen.getAllByTestId("composer-suggestion") as HTMLButtonElement[]).forEach((row) =>
+      expect(row.disabled).toBe(false),
+    );
+  });
 });

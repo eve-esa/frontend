@@ -10,6 +10,8 @@ import { suggestions } from "@/utilities/suggestions";
  * composer, a tap fills the input. Flag off or md and up: the layout of main, suggestions inside
  * the composer.
  */
+let creating = false;
+
 vi.mock("./MessageInput", () => ({
   // Stand-in with the two things the empty chat touches: the textarea and the suggestions prop.
   MessageInput: ({ suggestions: inside }: { suggestions?: string[] }) => {
@@ -23,7 +25,7 @@ vi.mock("./MessageInput", () => ({
 vi.mock("./ChatHeader", () => ({ ChatHeader: () => null }));
 vi.mock("../onboarding/WelcomeDialog", () => ({ WelcomeDialog: () => null }));
 vi.mock("@/services/useCreateConversation", () => ({
-  useCreateConversation: () => ({ mutate: vi.fn(), isPending: false }),
+  useCreateConversation: () => ({ mutate: vi.fn(), isPending: creating }),
 }));
 vi.mock("@/services/useTokenUsage", () => ({ prefetchTokenUsage: vi.fn() }));
 vi.mock("@tanstack/react-query", () => ({ useQueryClient: () => ({}) }));
@@ -34,6 +36,7 @@ vi.mock("react-router-dom", () => ({
 vi.mock("@/utilities/routes", () => ({ routes: { CHAT: { path: "/c/:conversationId" } } }));
 
 afterEach(() => {
+  creating = false;
   cleanup();
   delete (window as unknown as { __EVE_CONFIG__?: unknown }).__EVE_CONFIG__;
   vi.unstubAllGlobals();
@@ -91,6 +94,19 @@ describe("ChatEmpty on a phone with FEATURE_MOBILE_COMPOSER on", () => {
     expect(wrapper.className).toContain("pb-6");
     expect(wrapper.className).toContain("px-4");
     expect(wrapper.className).not.toContain("mt-10");
+  });
+});
+
+describe("ChatEmpty while the conversation is being created", () => {
+  it("disables the suggestion rows", async () => {
+    creating = true;
+    await renderEmpty(true, true);
+    const rows = screen.getAllByTestId("composer-suggestion") as HTMLButtonElement[];
+    expect(rows).toHaveLength(3);
+    rows.forEach((row) => expect(row.disabled).toBe(true));
+    const input = screen.getByTestId("composer-input") as HTMLTextAreaElement;
+    fireEvent.click(rows[0]);
+    expect(input.value).toBe("");
   });
 });
 

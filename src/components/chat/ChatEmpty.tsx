@@ -110,6 +110,7 @@ export const ChatEmpty = () => {
               <EsaPhiLabLogo className="h-[60px]" />
               <SuggestionRows
                 suggestions={suggestions.slice(0, 3)}
+                disabled={isCreatingConversation}
                 onPick={(suggestion) =>
                   fillComposerInput(composerRef.current, suggestion)
                 }
