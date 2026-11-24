@@ -31,16 +31,17 @@ export const ModelOptionList = ({
   ];
 
   return (
-    <div className="flex flex-col" role="group" aria-label="Models">
+    <div className="flex flex-col" role="radiogroup" aria-label="Model">
       {options.map((option) => {
         const current = option.value === value;
         return (
           <button
             key={option.value}
             type="button"
+            role="radio"
+            aria-checked={current}
             data-testid="model-sheet-option"
             data-current={current ? "true" : "false"}
-            aria-current={current ? "true" : undefined}
             onClick={() => onSelect(option.value)}
             className={cn(
               "flex h-[56px] w-full flex-none cursor-pointer items-center justify-between px-4 text-start text-[16px] outline-none focus-visible:ring-[2px] focus-visible:ring-inset focus-visible:ring-focus",
@@ -50,7 +51,9 @@ export const ModelOptionList = ({
             )}
           >
             <span className="truncate">{option.name}</span>
-            {current && <FontAwesomeIcon icon={faCheck} className="size-[18px]" />}
+            {current && (
+              <FontAwesomeIcon icon={faCheck} className="size-[18px]" aria-hidden="true" />
+            )}
           </button>
         );
       })}

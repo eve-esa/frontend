@@ -83,6 +83,26 @@ describe("ModelField", () => {
     expect(screen.getByTestId("header-model-field").getAttribute("aria-expanded")).toBe("true");
   });
 
+  it("announces the rows as radio choices in a named group, one checked", async () => {
+    await renderField();
+    fireEvent.click(screen.getByTestId("header-model-field"));
+    const group = screen.getByRole("radiogroup", { name: "Model" });
+    const radios = within(group).getAllByRole("radio");
+    expect(radios).toHaveLength(4);
+    const checked = radios.filter((radio: HTMLElement) => radio.getAttribute("aria-checked") === "true");
+    expect(checked).toHaveLength(1);
+    expect(checked[0].textContent).toBe("EVE-Instruct");
+    expect(checked[0].querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
+    expect(radios.some((radio: HTMLElement) => radio.hasAttribute("aria-current"))).toBe(false);
+  });
+
+  it("choosing another radio calls the select handler", async () => {
+    await renderField();
+    fireEvent.click(screen.getByTestId("header-model-field"));
+    fireEvent.click(screen.getByRole("radio", { name: "Mistral Small" }));
+    expect(stored()).toEqual({ type: "platform", id: "mistral-small" });
+  });
+
   it("a pick switches the stored selection, updates the field and closes the sheet", async () => {
     await renderField();
     const events = vi.fn();
