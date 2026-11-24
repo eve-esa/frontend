@@ -5,6 +5,7 @@ export const SETTINGS_SECTION_IDS = [
   "profile",
   "appearance",
   "models",
+  "toolkits",
   "usage",
   "api-keys",
   "account",
