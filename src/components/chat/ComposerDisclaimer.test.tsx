@@ -46,7 +46,16 @@ const render = async (
   return renderToStaticMarkup(<ComposerDisclaimer className="w-full" {...props} />);
 };
 
-const text = (html: string) => html.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
+// Strip tags until nothing changes, so a tag split by a removed tag cannot survive.
+const text = (html: string) => {
+  let out = html;
+  let prev;
+  do {
+    prev = out;
+    out = out.replace(/<[^>]*>/g, "");
+  } while (out !== prev);
+  return out.replace(/\s+/g, " ").trim();
+};
 
 afterEach(() => {
   vi.unstubAllGlobals();
