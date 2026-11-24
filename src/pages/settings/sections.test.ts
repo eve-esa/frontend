@@ -9,12 +9,14 @@ import {
 const allOn: SettingsFlags = {
   themeSwitch: true,
   customModels: true,
+  toolkitCredentials: true,
   usage: true,
   apiKeys: true,
 };
 const allOff: SettingsFlags = {
   themeSwitch: false,
   customModels: false,
+  toolkitCredentials: false,
   usage: false,
   apiKeys: false,
 };
@@ -22,11 +24,12 @@ const allOff: SettingsFlags = {
 const ids = (flags: SettingsFlags) => visibleSections(flags).map((s) => s.id);
 
 describe("visibleSections", () => {
-  it("lists the six sections in order with every feature on", () => {
+  it("lists the seven sections in order with every feature on", () => {
     expect(ids(allOn)).toEqual([
       "profile",
       "appearance",
       "models",
+      "toolkits",
       "usage",
       "api-keys",
       "account",
@@ -40,12 +43,13 @@ describe("visibleSections", () => {
   it.each([
     ["themeSwitch", "appearance"],
     ["customModels", "models"],
+    ["toolkitCredentials", "toolkits"],
     ["usage", "usage"],
     ["apiKeys", "api-keys"],
   ] as const)("hides a section when only %s is off", (flag, hidden) => {
     const listed = ids({ ...allOn, [flag]: false });
     expect(listed).not.toContain(hidden);
-    expect(listed).toHaveLength(5);
+    expect(listed).toHaveLength(6);
   });
 });
 
@@ -68,6 +72,9 @@ describe("resolveSection", () => {
       "profile"
     );
     expect(resolveSection("models", { ...allOn, customModels: false })).toBe(
+      "profile"
+    );
+    expect(resolveSection("toolkits", { ...allOn, toolkitCredentials: false })).toBe(
       "profile"
     );
     expect(resolveSection("usage", allOff)).toBe("profile");

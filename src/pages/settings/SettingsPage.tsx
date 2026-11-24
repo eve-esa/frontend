@@ -8,6 +8,7 @@ import { AppearanceSection } from "./AppearanceSection";
 import { ModelsSection } from "./ModelsSection";
 import { ProfileSection } from "./ProfileSection";
 import { settingsTitleId } from "./SettingsSection";
+import { ToolkitsSection } from "./ToolkitsSection";
 import { UsageSection } from "./UsageSection";
 import {
   currentSettingsFlags,
@@ -21,6 +22,7 @@ const SECTION_COMPONENTS: Record<SettingsSectionId, ComponentType> = {
   profile: ProfileSection,
   appearance: AppearanceSection,
   models: ModelsSection,
+  toolkits: ToolkitsSection,
   usage: UsageSection,
   "api-keys": ApiKeysSection,
   account: AccountSection,

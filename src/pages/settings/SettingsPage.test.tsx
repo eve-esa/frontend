@@ -8,6 +8,7 @@ vi.mock("@/utilities/features", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/utilities/features")>()),
   THEME_SWITCH_ENABLED: false,
   CUSTOM_MODELS_ENABLED: false,
+  TOOLKIT_CREDENTIALS_ENABLED: false,
   SETTINGS_USAGE_ENABLED: false,
   API_KEYS_ENABLED: false,
 }));
@@ -23,6 +24,9 @@ vi.mock("./AppearanceSection", () => ({
 }));
 vi.mock("./ModelsSection", () => ({
   ModelsSection: () => <div data-testid="stub-models" />,
+}));
+vi.mock("./ToolkitsSection", () => ({
+  ToolkitsSection: () => <div data-testid="stub-toolkits" />,
 }));
 vi.mock("./UsageSection", () => ({
   UsageSection: () => <div data-testid="stub-usage" />,
