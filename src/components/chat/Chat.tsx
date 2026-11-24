@@ -30,6 +30,7 @@ import { MUTATION_KEYS } from "@/services/keys";
 import { useRetry } from "@/services/useRetry";
 import { prefetchTokenUsage } from "@/services/useTokenUsage";
 import { useListModels } from "@/services/useListModels";
+import { MOBILE_COMPOSER_ENABLED } from "@/utilities/features";
 
 export const Chat = () => {
   const navigate = useNavigate();
@@ -199,7 +200,13 @@ export const Chat = () => {
         )}
       </div>
 
-      <div className="flex-none p-4 @md:p-8 px-[2cqw] @sm:px-[3cqw] @md:px-[10cqw] @lg:px-[10cqw] @xl:px-[15cqw] @5xl:px-[14cqw] @7xl:px-[12cqw] @8xl:px-[15cqw] @9xl:px-[18cqw] @10xl:px-[20cqw] relative w-full">
+      <div
+        className={`flex-none p-4 @md:p-8 px-[2cqw] @sm:px-[3cqw] @md:px-[10cqw] @lg:px-[10cqw] @xl:px-[15cqw] @5xl:px-[14cqw] @7xl:px-[12cqw] @8xl:px-[15cqw] @9xl:px-[18cqw] @10xl:px-[20cqw] relative w-full${
+          // Phone: the slot the empty chat uses (16 px sides, 24 px under the composer, which is
+          // where the one-line notice sits), so the composer does not move on the first send.
+          MOBILE_COMPOSER_ENABLED ? " max-md:px-4! max-md:pt-2! max-md:pb-6!" : ""
+        }`}
+      >
         <div
           ref={scrollButtonRef}
           data-testid="chat-scroll-to-bottom"
@@ -216,6 +223,7 @@ export const Chat = () => {
           sendRequest={handleSendRequest}
           isLoading={isLoading}
           disabled={isMutating || isLoadingMessages}
+          showDisclaimer={messages.some((message) => Boolean(message.output))}
         />
       </div>
 

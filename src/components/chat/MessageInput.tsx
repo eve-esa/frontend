@@ -44,6 +44,7 @@ import { CustomModelsDialog } from "./CustomModelsDialog";
 import {
   ATTACHMENTS_ENABLED,
   CUSTOM_MODELS_ENABLED,
+  MOBILE_COMPOSER_ENABLED,
   MODEL_PICKER_ENABLED,
   SETTINGS_PAGE_ENABLED,
 } from "@/utilities/features";
@@ -77,7 +78,18 @@ import { Tooltip } from "@/components/ui/Tooltip";
 import { useQueryClient } from "@tanstack/react-query";
 import { QUERY_KEYS } from "@/services/keys";
 import { useTokenUsage } from "@/services/useTokenUsage";
+import { useIsPhone } from "@/hooks/useIsPhone";
+import { MODEL_SELECTION_EVENT } from "@/hooks/useModelSelection";
+import { ComposerDisclaimer } from "./ComposerDisclaimer";
+import { composerButtonClasses } from "./composerButtons";
 
+
+/**
+ * FEATURE_MOBILE_COMPOSER, below md: the suggestion rows live outside the composer. A tap on one
+ * dispatches this event on `window` with the suggestion as `detail`, and the composer fills its
+ * input with it and takes focus.
+ */
+export const COMPOSER_FILL_EVENT = "eve:composer-fill";
 
 const TOKEN_RING_R = 7;
 const TOKEN_RING_C = 2 * Math.PI * TOKEN_RING_R;
@@ -85,9 +97,11 @@ const TOKEN_RING_C = 2 * Math.PI * TOKEN_RING_R;
 function TokenUsageRing({
   usedRatio,
   unlimited,
+  className,
 }: {
   usedRatio: number | null;
   unlimited: boolean;
+  className?: string;
 }) {
   const ratio =
     unlimited || usedRatio == null ? 0 : Math.min(1, Math.max(0, usedRatio));
@@ -96,7 +110,7 @@ function TokenUsageRing({
   return (
     <svg
       viewBox="0 0 20 20"
-      className="h-6 w-6 shrink-0"
+      className={cn("h-6 w-6 shrink-0", className)}
       aria-hidden
       focusable="false"
     >
@@ -138,6 +152,11 @@ export type MessageInputProps = {
   disabled?: boolean;
   sendRequest?: (input: string, attachments?: ImageAttachment[]) => void;
   suggestions?: string[];
+  /**
+   * True once the conversation holds a message. With FEATURE_MOBILE_COMPOSER on, the notice under
+   * the composer shows only then; off, the full statement always shows and this is ignored.
+   */
+  showDisclaimer?: boolean;
 };
 
 export const MessageInput = ({
@@ -148,8 +167,14 @@ export const MessageInput = ({
   disabled,
   sendRequest,
   suggestions,
+  showDisclaimer = false,
 }: MessageInputProps) => {
   const { isRunning, currentStep, totalSteps } = useTour();
+  // FEATURE_MOBILE_COMPOSER, below md: the model picker is in the header (K2), and the logo and
+  // the suggestions are rendered above the composer by the empty chat (K3), not inside this box.
+  const isPhone = useIsPhone();
+  const phone = MOBILE_COMPOSER_ENABLED && isPhone;
+  const buttons = composerButtonClasses();
   const { handleSubmit, reset, setValue, getValues, control } = useForm({
     defaultValues: {
       input: "",
@@ -406,6 +431,44 @@ export const MessageInput = ({
     [listedModels],
   );
   const [isAnimatingOut, setIsAnimatingOut] = useState(false);
+  const modelsRef = useRef(models);
+  useEffect(() => {
+    modelsRef.current = models;
+  }, [models]);
+
+  // The header field (phone) writes the choice to storage and says so: follow it, so the picker
+  // shown after a resize past md is not stale.
+  // Below md the suggestions are rows above the composer, outside this component: a tap there
+  // announces its text and the input takes it.
+  useEffect(() => {
+    if (!MOBILE_COMPOSER_ENABLED) return;
+    const onFill = (event: Event) => {
+      const text = (event as CustomEvent<string>).detail;
+      if (typeof text !== "string") return;
+      setValue("input", text);
+      textareaRef.current?.focus();
+    };
+    window.addEventListener(COMPOSER_FILL_EVENT, onFill);
+    return () => window.removeEventListener(COMPOSER_FILL_EVENT, onFill);
+  }, [setValue]);
+
+  useEffect(() => {
+    if (!MOBILE_COMPOSER_ENABLED) return;
+    // Same reconcile as the [models] effect, so a deleted custom model is never shown.
+    const onChange = () => {
+      const currentModels = modelsRef.current;
+      const stored = getStoredModelSelection(currentModels);
+      setModelSelectionValue(
+        modelSelectionToValue(
+          currentModels
+            ? reconcileModelSelection(stored, currentModels)
+            : stored,
+        ),
+      );
+    };
+    window.addEventListener(MODEL_SELECTION_EVENT, onChange);
+    return () => window.removeEventListener(MODEL_SELECTION_EVENT, onChange);
+  }, []);
 
   useEffect(() => {
     if (!models) return;
@@ -449,12 +512,17 @@ export const MessageInput = ({
   const tokenRing = (
     <Tooltip content={tokenUsageTooltip} disableClick={true} side="top">
       <div
-        className="flex h-8 w-8 cursor-default items-center justify-center"
+        className={
+          MOBILE_COMPOSER_ENABLED
+            ? "flex h-8 w-8 cursor-default items-center justify-center max-md:h-[44px] max-md:w-[36px]"
+            : "flex h-8 w-8 cursor-default items-center justify-center"
+        }
         aria-label="Token usage for this billing period"
       >
         <TokenUsageRing
           usedRatio={tokenUsage?.used_ratio ?? null}
           unlimited={tokenUsage?.unlimited ?? true}
+          className={MOBILE_COMPOSER_ENABLED ? "max-md:h-[28px] max-md:w-[28px]" : undefined}
         />
       </div>
     </Tooltip>
@@ -551,19 +619,78 @@ export const MessageInput = ({
     };
   }, []);
 
+  const controlPanelButton = (
+    <Tooltip content={<>Control Panel</>} disableClick={true}>
+      <Button
+        type="button"
+        variant="icon"
+        size="sm"
+        onMouseDown={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          openDynamicSidebar({ type: "settings" });
+        }}
+        onClick={(e) => {
+          if (e.detail === 0) openDynamicSidebar({ type: "settings" });
+        }}
+        className={cn(buttons.quietWide, "settings-button-tour")}
+        data-tour="settings-button"
+        data-testid="composer-settings"
+        aria-label="Control Panel"
+      >
+        <FontAwesomeIcon icon={faSliders} className="size-4" />
+        {MOBILE_COMPOSER_ENABLED && <span>Control Panel</span>}
+      </Button>
+    </Tooltip>
+  );
+
+  const attachButton = ATTACHMENTS_ENABLED ? (
+    <Tooltip content={<>Attach files</>} disableClick={true}>
+      <Button
+        type="button"
+        variant="icon"
+        size="sm"
+        aria-label="Attach files"
+        data-testid="attach-image-button"
+        onMouseDown={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          fileInputRef.current?.click();
+        }}
+        onClick={(e) => {
+          if (e.detail === 0) fileInputRef.current?.click();
+        }}
+        className={buttons.quiet}
+      >
+        <FontAwesomeIcon icon={faPaperclip} className="size-4" />
+      </Button>
+    </Tooltip>
+  ) : null;
+
   return (
     <div
       className={cn(
         `flex flex-col gap-6 mx-auto h-full w-full overflow-hidden ${
-          variant === "secondary" ? "pb-40" : ""
+          variant === "secondary"
+            ? MOBILE_COMPOSER_ENABLED
+              ? "md:pb-40"
+              : "pb-40"
+            : ""
         }`,
+        // The notice sits in the padding under the composer, outside this box.
+        MOBILE_COMPOSER_ENABLED && "max-md:overflow-visible!",
       )}
     >
-      {suggestions && (
+      {suggestions && !phone && (
         <EsaPhiLabLogo className="h-[60px] md:h-[110px]" />
       )}
 
-      <div className="flex flex-col gap-2 h-full">
+      <div
+        className={cn(
+          "flex flex-col gap-2 h-full",
+          MOBILE_COMPOSER_ENABLED && "max-md:relative",
+        )}
+      >
         <ComposerBusyNotice notice={busyNotice} />
         {/* Sending runs from the button handlers and the Enter key, never from a
             native submit: without this, any click that lands on the Send button
@@ -648,7 +775,7 @@ export const MessageInput = ({
 
             <div className="flex items-center justify-between pointer-events-none p-2 md:p-6 pt-0 md:pt-1">
               <div className="pointer-events-auto flex items-center gap-2">
-                {MODEL_PICKER_ENABLED && (
+                {MODEL_PICKER_ENABLED && !phone && (
                     <div className="min-w-[140px]">
                       <Select
                         value={modelSelectionValue}
@@ -736,42 +863,18 @@ export const MessageInput = ({
                     />
                   </>
                 )}
-                <Tooltip content={<>Control Panel</>} disableClick={true}>
-                  <Button
-                    type="button"
-                    variant="icon"
-                    size="sm"
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      openDynamicSidebar({ type: "settings" });
-                    }}
-                    className="h-8 w-8 p-0 cursor-pointer settings-button-tour"
-                    data-tour="settings-button"
-                    data-testid="composer-settings"
-                    aria-label="Control Panel"
-                  >
-                    <FontAwesomeIcon icon={faSliders} className="size-4" />
-                  </Button>
-                </Tooltip>
-                {ATTACHMENTS_ENABLED && (
-                  <Tooltip content={<>Attach files</>} disableClick={true}>
-                    <Button
-                      type="button"
-                      variant="icon"
-                      size="sm"
-                      aria-label="Attach files"
-                      data-testid="attach-image-button"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        fileInputRef.current?.click();
-                      }}
-                      className="h-8 w-8 p-0 cursor-pointer"
-                    >
-                      <FontAwesomeIcon icon={faPaperclip} className="size-4" />
-                    </Button>
-                  </Tooltip>
+                {/* Attach first when the composer is redesigned, so the tab order reads
+                    the way the buttons do. */}
+                {MOBILE_COMPOSER_ENABLED ? (
+                  <>
+                    {attachButton}
+                    {controlPanelButton}
+                  </>
+                ) : (
+                  <>
+                    {controlPanelButton}
+                    {attachButton}
+                  </>
                 )}
               </div>
               <div className="pointer-events-auto flex items-center gap-1">
@@ -789,7 +892,7 @@ export const MessageInput = ({
                     size="sm"
                     aria-label="Stop generating"
                     data-testid="composer-stop"
-                    className="h-8 w-8 p-0 cursor-pointer"
+                    className={buttons.filled}
                     onMouseDown={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -815,7 +918,7 @@ export const MessageInput = ({
                     size="sm"
                     aria-label="Send message"
                     data-testid="composer-send"
-                    className="h-8 w-8 p-0 cursor-pointer"
+                    className={buttons.filled}
                     onMouseDown={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -830,7 +933,7 @@ export const MessageInput = ({
                 )}
               </div>
             </div>
-            {suggestions && showSuggestions && (
+            {suggestions && showSuggestions && !phone && (
               <div className="h-full flex flex-col gap-2 border-t-2 overflow-y-auto border-primary-400 ">
                 <div
                   className={`bg-primary-900 flex flex-col gap-4 p-4 md:p-8 ${
@@ -870,16 +973,11 @@ export const MessageInput = ({
           </div>
         </form>
 
-        <p
-          className={`text-sm text-natural-200 text-center ${className || ""} overflow-visible`}
-        >
-          EVE outputs represent an automated synthesis and do not constitute
-          statements by, or endorsements from, the original data providers or
-          authors.{" "}
-          <span className="text-sm text-natural-200 text-center whitespace-nowrap">
-            EVE could make errors. Always check the content.
-          </span>
-        </p>
+        <ComposerDisclaimer
+          show={showDisclaimer}
+          className={className}
+          lineClassName="max-md:absolute max-md:inset-x-0 max-md:top-full max-md:mt-1"
+        />
       </div>
     </div>
   );

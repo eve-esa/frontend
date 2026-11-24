@@ -18,7 +18,7 @@
  * all six.
  *
  * Values arrive at the release stage rather than the build, so a switch can differ between
- * staging and production and can be flipped without rebuilding — see `runtimeConfig.ts` for why
+ * staging and production and can be flipped without rebuilding, see `runtimeConfig.ts` for why
  * the artifact cannot carry them, and for what that costs.
  */
 
@@ -243,3 +243,15 @@ export const SETTINGS_PAGE_ENABLED = isEnabled("FEATURE_SETTINGS_PAGE", false);
  * Default off: a new capability ships off in production and on where an environment opts in.
  */
 export const SETTINGS_USAGE_ENABLED = isEnabled("FEATURE_SETTINGS_USAGE", false);
+
+/**
+ * The composer on a phone and its controls. Below the `md` breakpoint the composer sits at the
+ * bottom of the empty chat (logo and three suggestions above it, suggestions out of the box), the
+ * header holds a model field that opens a bottom sheet and a New chat button, and the model picker
+ * leaves the composer. On every width Attach, Control Panel and Send are 44 px squares, and the
+ * disclaimer is one short line with a Learn more dialog, shown after the first answer only.
+ * Off, the composer, the header and the disclaimer are as before.
+ *
+ * Default off: a new capability ships off in production and on where an environment opts in.
+ */
+export const MOBILE_COMPOSER_ENABLED = isEnabled("FEATURE_MOBILE_COMPOSER", false);
