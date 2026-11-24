@@ -56,7 +56,7 @@ export const ComposerDisclaimer = ({
     <p
       data-testid="composer-disclaimer"
       className={cn(
-        "text-center text-xs leading-4 whitespace-nowrap text-natural-200",
+        "text-center text-[12px] leading-4 whitespace-nowrap text-natural-200",
         lineClassName,
       )}
     >
@@ -66,13 +66,13 @@ export const ComposerDisclaimer = ({
           <button
             type="button"
             data-testid="disclaimer-learn-more"
-            className="relative cursor-pointer text-natural-50 underline outline-none before:absolute before:-inset-x-1.5 before:-inset-y-[14px] focus-visible:ring-[2px] focus-visible:ring-focus"
+            className="relative cursor-pointer text-natural-50 underline outline-none after:absolute after:inset-x-0 after:-inset-y-[15px] after:content-[''] focus-visible:ring-[2px] focus-visible:ring-focus"
           >
             Learn more
           </button>
         </DialogTrigger>
         <DialogContent showCloseButton={false} data-testid="disclaimer-dialog">
-          <DialogHeader>
+          <DialogHeader className="text-left">
             <DialogTitle>About EVE&apos;s answers</DialogTitle>
             <DialogDescription>{DISCLAIMER_FULL_TEXT}</DialogDescription>
           </DialogHeader>

@@ -22,7 +22,11 @@ vi.mock("@/components/ui/Dialog", () => {
         {children}
       </div>
     ),
-    DialogHeader: Pass,
+    DialogHeader: ({ children, className }: { children?: ReactNode; className?: string }) => (
+      <div data-slot="dialog-header" className={className}>
+        {children}
+      </div>
+    ),
     DialogFooter: Pass,
     DialogClose: Pass,
     DialogTitle: Title,
@@ -69,9 +73,25 @@ describe("ComposerDisclaimer", () => {
     const html = await render({ FEATURE_MOBILE_COMPOSER: "true" }, { show: true });
     const line = html.match(/<p [^>]*data-testid="composer-disclaimer"[^>]*>/)?.[0];
     expect(line).toBeDefined();
-    expect(line).toContain("text-xs");
+    expect(line).toContain("text-[12px]");
     expect(html).toContain("EVE is AI and can make mistakes.");
     expect(html).toMatch(/<button [^>]*data-testid="disclaimer-learn-more"[^>]*>Learn more<\/button>/);
+  });
+
+  it("Learn more keeps its name and gets a 44 px tap area from an invisible pseudo element", async () => {
+    const html = await render({ FEATURE_MOBILE_COMPOSER: "true" }, { show: true });
+    const button = html.match(/<button [^>]*data-testid="disclaimer-learn-more"[^>]*>[^<]*<\/button>/)?.[0];
+    expect(button).toBeDefined();
+    expect(text(button as string)).toBe("Learn more");
+    expect(button).toContain("after:absolute");
+    expect(button).toContain("after:-inset-y-[15px]");
+  });
+
+  it("the dialog header is left aligned at every width", async () => {
+    const html = await render({ FEATURE_MOBILE_COMPOSER: "true" }, { show: true });
+    const header = html.match(/<div [^>]*data-slot="dialog-header"[^>]*>/)?.[0];
+    expect(header).toBeDefined();
+    expect(header).toMatch(/class="[^"]*\btext-left\b/);
   });
 
   it("the dialog shows today's text unchanged, with a title and a Close button", async () => {
