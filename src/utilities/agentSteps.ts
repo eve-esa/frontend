@@ -275,6 +275,16 @@ const REASON_TEXT: Record<string, string> = {
 const isOffloaded = (text: string | null): boolean =>
   Boolean(text && OFFLOAD_PATH.test(text));
 
+const OFFLOAD_FILE = /\/(large_tool_results\/[\w-]+(?:\.[\w-]+)*)/;
+
+/**
+ * The saved file an offload stub points at, relative to the conversation
+ * (`large_tool_results/{tool_call_id}`), the path `GET /conversations/{id}/files/{path}`
+ * takes; null when the text names no such file.
+ */
+export const offloadedFilePath = (text: string | null): string | null =>
+  (text && OFFLOAD_FILE.exec(text)?.[1]) || null;
+
 /**
  * Folds the attempts of one step into one row: a call that names `retry_of`
  * (or reuses a step id already shown) replaces the earlier row and keeps it,

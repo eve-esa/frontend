@@ -26,6 +26,7 @@ import { ArtifactDownloadChip } from "@/components/ui/ArtifactDownloadChip";
 import { StepSourceChips } from "./citations/StepSourceChips";
 import { CopyButton } from "@/components/ui/CopyButton";
 import { Spinner } from "@/components/ui/Spinner";
+import { useConversationFileText } from "@/services/useSandbox";
 import { cn } from "@/lib/utils";
 import type { AgenticTraceStep, ToolActivityEntry } from "@/types";
 import {
@@ -44,6 +45,7 @@ import {
   buildStepsFromTrace,
   formatClock,
   inputLines,
+  offloadedFilePath,
   summaryParts,
   type CollectionCatalog,
   type AgentStepRow,
@@ -109,8 +111,10 @@ type BlockContext = {
   catalog: CollectionCatalog | null;
   /** The app's label of the model that answered, for raw endpoint names. */
   modelLabel: string | null;
+  /** The conversation the steps belong to: where an offloaded result is read from. */
+  conversationId: string | null;
 };
-const BlockContextValue = createContext<BlockContext>({ catalog: null, modelLabel: null });
+const BlockContextValue = createContext<BlockContext>({ catalog: null, modelLabel: null, conversationId: null });
 
 const toCopyText = (value: unknown): string =>
   typeof value === "string" ? value : (JSON.stringify(value, null, 2) ?? "");
@@ -517,6 +521,47 @@ const InputBody = ({ input, code }: { input: unknown; code: string | null }) => 
   );
 };
 
+const prettyText = (text: string): string => {
+  try {
+    return JSON.stringify(JSON.parse(text), null, 2);
+  } catch {
+    return text;
+  }
+};
+
+/**
+ * The whole offloaded result, read from the conversation's saved files on
+ * open (the stored step keeps only the stub with the path and a preview).
+ * When it cannot be read, the stub stays with a line that says so.
+ */
+const FullResult = ({ stub }: { stub: string }) => {
+  const { conversationId } = useContext(BlockContextValue);
+  const path = offloadedFilePath(stub);
+  const { data, isPending, isError } = useConversationFileText(conversationId, path, true);
+  if (path && conversationId && isPending) {
+    return (
+      <p data-testid="agent-step-full-loading" className={cn("text-[12px]", MUTED)}>
+        Loading the full result…
+      </p>
+    );
+  }
+  const text = typeof data === "string" ? prettyText(data) : null;
+  return (
+    <>
+      {text === null && (
+        <p data-testid="agent-step-full-unavailable" className={cn("text-[12px]", MUTED)}>
+          {isError ? "The full result could not be loaded." : "The full result is not available."}
+        </p>
+      )}
+      <CopyableBlock value={text ?? stub} label="Copy full result" testId="agent-step-copy-full">
+        <FadeBox testId="agent-step-full" label="Full result">
+          {text ?? stub}
+        </FadeBox>
+      </CopyableBlock>
+    </>
+  );
+};
+
 /**
  * The opened step, the clean preview's `.detail`: Input as `key: value`
  * lines and Output in code boxes with copy, lists cut with "N more"; then a
@@ -590,7 +635,7 @@ export const StepResult = ({ row, detailsOpen = false }: { row: AgentStepRow; de
           >
             {full ? "Hide full result" : "Open full result"}
           </button>
-          {full && <FadeBox label="Full result">{row.output.copyText}</FadeBox>}
+          {full && <FullResult stub={row.output.copyText} />}
         </>
       )}
       {hasDetails && (
@@ -925,6 +970,8 @@ type AgentStepsProps = {
   startedAt?: number | null;
   /** Seconds the turn took as the backend stored them (`turnTimeS`), setup included. */
   workS?: number | null;
+  /** The message's conversation, where an offloaded tool result is read from. */
+  conversationId?: string | null;
 };
 
 const hasRows = (view: AgentStepsView) => view.rows.length > 0;
@@ -988,6 +1035,7 @@ const AgentStepsBlock = ({
   modelLabel = null,
   startedAt = null,
   workS = null,
+  conversationId = null,
 }: AgentStepsProps) => {
   // The run starts at the send when the caller knows it (a remount mid-turn
   // keeps the real time), else now.
@@ -1043,8 +1091,8 @@ const AgentStepsBlock = ({
   const timed = [view.totalS, stopped ? null : workS, runS].filter((n): n is number => n !== null);
   const totalS = timed.length > 0 ? Math.max(...timed) : null;
   const context = useMemo<BlockContext>(
-    () => ({ catalog: collections, modelLabel }),
-    [collections, modelLabel],
+    () => ({ catalog: collections, modelLabel, conversationId }),
+    [collections, modelLabel, conversationId],
   );
 
   const working = live && !answerStarted && !stopped;
