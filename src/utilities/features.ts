@@ -255,3 +255,13 @@ export const SETTINGS_USAGE_ENABLED = isEnabled("FEATURE_SETTINGS_USAGE", false)
  * Default off: a new capability ships off in production and on where an environment opts in.
  */
 export const MOBILE_COMPOSER_ENABLED = isEnabled("FEATURE_MOBILE_COMPOSER", false);
+
+/**
+ * Bring your own credentials for toolkits. A toolkit that declares a credential form (the backend
+ * sends `user_credentials` on its row) can be given the user's own credentials, which the backend
+ * checks, stores encrypted and uses on that user's tool calls only. The flag gates the API
+ * calls and the screens that use them. The backend has its own flag and answers 404 when it is off.
+ *
+ * Default off: a new capability ships off in production and on where an environment opts in.
+ */
+export const TOOLKIT_CREDENTIALS_ENABLED = isEnabled("FEATURE_TOOLKIT_CREDENTIALS", false);

@@ -64,6 +64,7 @@ export type ConfigKey =
   | "FEATURE_SETTINGS_PAGE"
   | "FEATURE_SETTINGS_USAGE"
   | "FEATURE_MOBILE_COMPOSER"
+  | "FEATURE_TOOLKIT_CREDENTIALS"
   // Not switches. They are here because they are per-environment values that a
   // promoted artifact cannot carry, which is the same problem the flags have.
   // They were build-time only, set on deploy-dev and on nothing else, so
@@ -134,6 +135,7 @@ const BUILD_TIME: Record<ConfigKey, string | undefined> = {
   FEATURE_SETTINGS_PAGE: import.meta.env.VITE_FEATURE_SETTINGS_PAGE,
   FEATURE_SETTINGS_USAGE: import.meta.env.VITE_FEATURE_SETTINGS_USAGE,
   FEATURE_MOBILE_COMPOSER: import.meta.env.VITE_FEATURE_MOBILE_COMPOSER,
+  FEATURE_TOOLKIT_CREDENTIALS: import.meta.env.VITE_FEATURE_TOOLKIT_CREDENTIALS,
   CONTACT_URL: import.meta.env.VITE_CONTACT_URL,
   PRIVACY_POLICY_URL: import.meta.env.VITE_PRIVACY_POLICY_URL,
   ABOUT_US_URL: import.meta.env.VITE_ABOUT_US_URL,

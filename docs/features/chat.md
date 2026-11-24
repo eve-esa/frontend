@@ -43,6 +43,11 @@ Toolkits are the tools EVE can call while it answers.
 The EVE knowledge base search is the toolkit available today, and it is on by default. With it
 off, answers have no sources.
 
+With `FEATURE_TOOLKIT_CREDENTIALS` on (default off, and the backend flag of the same purpose on),
+a toolkit that accepts your own credentials can be given them. The backend checks them before
+saving, stores them encrypted and uses them on your tool calls only. Values are never shown again,
+only the last characters of each.
+
 ## Work with an answer
 
 - **Sources (n)**: the documents the answer used, with the cited passages.
