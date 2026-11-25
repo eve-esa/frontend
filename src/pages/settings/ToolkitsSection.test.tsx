@@ -114,7 +114,7 @@ describe("ToolkitsSection", () => {
   it("states what a toolkit uses and what its buttons are", () => {
     render(<ToolkitsSection />);
     expect(screen.getByTestId("settings-toolkits-status-alpha").textContent).toBe(
-      "Not set. EVE's shared access is used."
+      "Not set."
     );
     expect(screen.getByTestId("settings-toolkits-status-beta").textContent).toBe(
       "Not set. Required to use this toolkit."

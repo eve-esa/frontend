@@ -33,7 +33,7 @@ const statusText = ({ user_credentials: creds }: CredentialsServer): string => {
   if (!creds.configured) {
     return creds.required
       ? "Not set. Required to use this toolkit."
-      : "Not set. EVE's shared access is used.";
+      : "Not set.";
   }
   const hints = creds.fields
     .filter((field) => creds.hints[field.name])
@@ -186,8 +186,7 @@ const RemoveCredentialsDialog = ({ server, onOpenChange }: RemoveDialogProps) =>
           <DialogTitle>Remove your credentials for {shown?.name}?</DialogTitle>
         </DialogHeader>
         <DialogDescription>
-          Your stored credentials are deleted. EVE's shared access is used
-          instead, if this toolkit has one.
+          Your stored credentials are deleted.
         </DialogDescription>
         {isError && (
           <p
