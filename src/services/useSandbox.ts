@@ -53,6 +53,26 @@ export const useSandboxFiles = (conversationId: string | undefined, enabled: boo
     ...FRESH,
   });
 
+/** One saved text file, read only while `enabled` (a tool result offloaded to S3). */
+export const useConversationFileText = (
+  conversationId: string | null | undefined,
+  path: string | null,
+  enabled: boolean,
+) =>
+  useQuery({
+    queryKey: [QUERY_KEYS.conversationFiles, conversationId, path],
+    queryFn: async () => {
+      const { data } = await api.get<string>(conversationFileUrl(conversationId!, path!), {
+        responseType: "text",
+      });
+      return data;
+    },
+    enabled: Boolean(conversationId && path) && enabled,
+    staleTime: Infinity,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+
 export const useConversationFiles = (conversationId: string | undefined) =>
   useQuery({
     queryKey: [QUERY_KEYS.conversationFiles, conversationId],

@@ -107,7 +107,6 @@ export const isKnowledgeBaseTool = (tool: string | null, server?: string | null)
   (tool !== null && KNOWLEDGE_BASE_TOOLS.has(tool)) || server === "eve_retrieval";
 
 const SKILL_PATH = /\/skills\/([^/]+)\/SKILL\.md$/;
-const OFFLOAD_PATH = /\/large_tool_results\//;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -272,8 +271,23 @@ const REASON_TEXT: Record<string, string> = {
   agent_error: "model error",
 };
 
-const isOffloaded = (text: string | null): boolean =>
-  Boolean(text && OFFLOAD_PATH.test(text));
+/**
+ * The stub deepagents leaves in place of a result over the token limit. Only
+ * the stub counts: a `grep` or `read_file` result that names the same path is
+ * an ordinary result (same rule as the backend's `offloaded_result_path`).
+ */
+const OFFLOAD_STUB =
+  /^\s*Tool result too large\b[\s\S]*?saved in the filesystem at this path:\s*\/(large_tool_results\/[\w-]+(?:\.[\w-]+)*)/;
+
+/**
+ * The saved file an offload stub points at, relative to the conversation
+ * (`large_tool_results/{tool_call_id}`), the path `GET /conversations/{id}/files/{path}`
+ * takes; null when the text is not the stub.
+ */
+export const offloadedFilePath = (text: string | null): string | null =>
+  (text && OFFLOAD_STUB.exec(text)?.[1]) || null;
+
+const isOffloaded = (text: string | null): boolean => offloadedFilePath(text) !== null;
 
 /**
  * Folds the attempts of one step into one row: a call that names `retry_of`

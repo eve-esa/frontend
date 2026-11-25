@@ -416,6 +416,7 @@ export const Message = ({
               modelLabel={answeredModelLabel(message, models)}
               startedAt={isStreamingTarget ? sendTimeFromId(message.id) : null}
               workS={turnTimeS(message.metadata)}
+              conversationId={message.conversation_id ?? null}
               onOpenMyCollections={onOpenMyCollections}
             />
           )}
