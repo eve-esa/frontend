@@ -200,8 +200,20 @@ export class MessagePanel {
    * Whether the last turn shows what the agent did: the inline agent steps with
    * FEATURE_AGENT_STEPS on, the footer Trace button with it off or with FEATURE_TRACE_SIDEBAR on.
    */
-  hasTrace(agentSteps: boolean, sidebar: boolean): Promise<boolean> {
-    return !agentSteps || sidebar ? this.hasTraceButton() : this.hasAgentSteps();
+  async hasTrace(agentSteps: boolean, sidebar: boolean): Promise<boolean> {
+    // The stored trace arrives with the conversation refetch, which can land a moment after the
+    // composer is idle again, so this positive check waits. hasTraceButton and hasAgentSteps stay
+    // instant for the negative checks.
+    const target =
+      !agentSteps || sidebar
+        ? this.last.getByTestId("message-trace-button")
+        : this.lastAgentSteps;
+    try {
+      await target.waitFor({ state: "visible", timeout: 15_000 });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   /** Opens the agent steps block of the last turn when it folded itself after the answer. */
