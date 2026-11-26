@@ -6,9 +6,12 @@ import {
   externalHref,
   groupCitedSources,
   isUserFile,
+  itemProviderMarker,
   locatorValue,
   markerLabel,
   metaValue,
+  MY_COLLECTIONS_SOURCES_LABEL,
+  SHARED_COLLECTIONS_LABEL,
   sourceTitle,
   sourcesSummary,
   type Citation,
@@ -18,14 +21,14 @@ import {
 } from "@/utilities/citations";
 import { useCitations } from "./CitationsContext";
 import { CardPopover, FileName, MarkerButton, NewTabNote } from "./SourceCard";
-import { ChevronIcon, CopyIcon, ProviderSlug } from "./SourceLook";
+import { ChevronIcon, CopyIcon } from "./SourceLook";
 
 /**
  * The sources list under an answer that carries citations (spec 4.8): one
- * line by default, `Sources: 5 cited from 3 providers and your files`; open,
- * two groups (decision 0002): `Cited`, grouped by provider slug in
- * first-citation order, one item per number, then `Also retrieved: N` folded
- * last, with no numbers. Colours as the
+ * line by default, `Sources: 5 cited from Shared collections and My collections`;
+ * open, two sections: Shared collections (Wiley and the other providers stay
+ * as a marker on the item; `oa` does not) and My collections. Then
+ * `Also retrieved: N` folded last, with no numbers. Colours as the
  * card: edge primary-400, text natural-50, secondary primary-300, hover
  * highlight ("Active and hover item").
  */
@@ -87,9 +90,15 @@ const ItemTitle = ({ source }: { source: CitationSource }) => {
 
 const ItemBody = ({ source }: { source: CitationSource }) => {
   const meta = itemMeta(source);
+  const marker = itemProviderMarker(source);
   return (
     <span className="flex min-w-0 flex-1 flex-col">
       <ItemTitle source={source} />
+      {marker && (
+        <span data-testid="source-item-provider" className={cn("font-mono text-xs lowercase", MUTED)}>
+          {marker}
+        </span>
+      )}
       {meta && (
         <span className={cn("text-xs break-words", MUTED, meta.mono && "font-mono break-all")}>{meta.text}</span>
       )}
@@ -114,12 +123,16 @@ const CitedItem = ({ item }: { item: CitedSource }) => {
   );
 };
 
-const GroupHead = ({ source, count }: { source: Citation; count: number }) => (
+const GroupHead = ({ label, count }: { label: string; count: number }) => (
   <div className={cn("flex items-center gap-2 text-xs", MUTED)}>
-    <ProviderSlug source={source} />
+    <span>{label}</span>
     <span className="tabular-nums">{count}</span>
   </div>
 );
+
+/** Marker on an uncited row: `oa` reads as the section, Wiley stays `wiley`. */
+const uncitedMarker = (source: CitationSource): string =>
+  isUserFile(source) ? MY_COLLECTIONS_SOURCES_LABEL : (itemProviderMarker(source) ?? SHARED_COLLECTIONS_LABEL);
 
 const Uncited = ({ retrieved, anyCited }: { retrieved: readonly RetrievedSource[]; anyCited: boolean }) => {
   const [open, setOpen] = useState(false);
@@ -142,17 +155,22 @@ const Uncited = ({ retrieved, anyCited }: { retrieved: readonly RetrievedSource[
       </button>
       {open && (
         <ul id={listId} className="m-0 mt-1.5 flex list-none flex-col gap-0.5 p-0">
-          {retrieved.map((source) => (
-            <li key={source.id} data-testid="source-uncited-item" className="-mx-1.5 flex items-baseline gap-2.5 px-1.5 py-1 hover:bg-highlight">
-              <span className="flex min-w-0 flex-1 flex-col">
-                <ItemTitle source={source} />
-                <span className={cn("flex flex-wrap items-baseline gap-x-2 text-xs break-words", MUTED)}>
-                  <ProviderSlug source={source} small muted />
-                  {itemMeta(source)?.text}
+          {retrieved.map((source) => {
+            const marker = uncitedMarker(source);
+            const slug =
+              marker !== SHARED_COLLECTIONS_LABEL && marker !== MY_COLLECTIONS_SOURCES_LABEL;
+            return (
+              <li key={source.id} data-testid="source-uncited-item" className="-mx-1.5 flex items-baseline gap-2.5 px-1.5 py-1 hover:bg-highlight">
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <ItemTitle source={source} />
+                  <span className={cn("flex flex-wrap items-baseline gap-x-2 text-xs break-words", MUTED)}>
+                    <span className={cn(slug && "font-mono lowercase")}>{marker}</span>
+                    {itemMeta(source)?.text}
+                  </span>
                 </span>
-              </span>
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
@@ -200,11 +218,6 @@ export const MessageSources = ({
             className={TOGGLE}
           >
             <span>{sourcesSummary(groups)}</span>
-            <span aria-hidden="true" className="inline-flex items-center gap-2 text-xs">
-              {groups.map((group) => (
-                <ProviderSlug key={group.key} source={group.items[0].entries[0]} small muted />
-              ))}
-            </span>
             <ChevronIcon open={open} />
           </button>
           {open && (
@@ -214,7 +227,7 @@ export const MessageSources = ({
               </p>
               {groups.map((group) => (
                 <div key={group.key} data-testid="source-group" data-provider={group.key} className="mt-3">
-                  <GroupHead source={group.items[0].entries[0]} count={group.items.length} />
+                  <GroupHead label={group.label} count={group.items.length} />
                   <ul className="m-0 mt-1.5 flex list-none flex-col gap-0.5 p-0">
                     {group.items.map((item) => (
                       <CitedItem key={item.n} item={item} />

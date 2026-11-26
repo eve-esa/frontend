@@ -208,7 +208,8 @@ export const TRACE_BUTTON_ENABLED = !AGENT_STEPS_ENABLED || TRACE_SIDEBAR_ENABLE
  * Inline citations on agentic answers whose backend sends them: a numbered marker after each
  * cited claim opens a source card on click (provider, title, passage, locator, Open and Copy
  * citation), and the sources list under the answer, folded to one line, groups the cited sources
- * by provider with the uncited ones folded last. Replaces the Sources button for those turns only;
+ * into Shared collections and My collections, with the uncited ones folded last. Replaces the
+ * Sources button for those turns only;
  * turns without citations keep it.
  *
  * Default off: a new capability ships off in production and on where an environment opts in.

@@ -872,12 +872,13 @@ const isEmptyInput = (value: unknown): boolean =>
 export const inputLines = (
   input: unknown,
   max = 3,
+  valueMax = 160,
 ): { lines: [string, string][]; more: number } | null => {
   if (!isRecord(input)) return null;
   const entries = Object.entries(input).filter(([, value]) => !isEmptyInput(value));
   if (entries.length === 0) return null;
   return {
-    lines: entries.slice(0, max).map(([key, value]) => [key, inputValueText(value)]),
+    lines: entries.slice(0, max).map(([key, value]) => [key, inputValueText(value, valueMax)]),
     more: Math.max(0, entries.length - max),
   };
 };

@@ -262,15 +262,19 @@ describe("sources list", () => {
     { id: "r2", title: "Uncited two", provider: "wikipedia-512", provider_label: "Wikipedia EO", kind: "document" },
   ];
 
-  it("is folded to one summary line by default and groups by provider when opened", () => {
+  it("is folded to one summary line by default and opens as Shared collections and My collections", () => {
     renderAnswer(text, citations, retrieved);
     const toggle = screen.getByTestId("message-sources-toggle");
     expect(toggle.getAttribute("aria-expanded")).toBe("false");
-    expect(toggle.textContent).toContain("Sources: 3 cited from 2 providers and your file");
+    expect(toggle.textContent).toContain("Sources: 3 cited from Shared collections and My collections");
+    expect(toggle.textContent).not.toContain("oa");
     expect(screen.queryAllByTestId("source-group")).toHaveLength(0);
     fireEvent.click(toggle);
     const groups = screen.getAllByTestId("source-group");
-    expect(groups.map((g) => g.getAttribute("data-provider"))).toEqual(["wiley", "qwen-512-filtered", "own"]);
+    expect(groups.map((g) => g.getAttribute("data-provider"))).toEqual(["shared", "own"]);
+    expect(groups[0].textContent).toContain("Shared collections");
+    expect(groups[0].textContent).toContain("wiley");
+    expect(groups[1].textContent).toContain("My collections");
     expect(screen.getByTestId("message-sources-cited-label").textContent).toBe("Cited");
     const uncited = screen.getByTestId("message-sources-uncited-toggle");
     expect(uncited.textContent).toContain("Also retrieved: 2");

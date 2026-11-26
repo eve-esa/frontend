@@ -59,6 +59,24 @@ describe("the opened step input", () => {
     expect(input.textContent).not.toMatch(/[{}"]/);
   });
 
+  it("opens every input field from N more, then folds them again", () => {
+    render(<StepResult row={mcp} />);
+    const more = screen.getByTestId("agent-step-input-more");
+    expect(more.getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(more);
+    const input = screen.getByTestId("agent-step-input");
+    expect(more.getAttribute("aria-expanded")).toBe("true");
+    expect(more.textContent).toBe("Show less");
+    expect(within(input).getAllByTestId("agent-step-input-key").map((k) => k.textContent)).toEqual([
+      "collection:",
+      "bbox:",
+      "limit:",
+      "datetime:",
+    ]);
+    fireEvent.click(more);
+    expect(input.textContent).toBe("collection: sentinel-1-grd\nbbox: 12.1, 44.7, 12.6, 45.1\nlimit: 4\n1 more");
+  });
+
   it("keeps the raw JSON in Details only, folded by default, and copies the raw input", () => {
     render(<StepResult row={mcp} />);
     expect(screen.queryByTestId("agent-step-input-json")).toBeNull();

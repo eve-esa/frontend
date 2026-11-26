@@ -12,6 +12,7 @@ import {
   uncitedSources,
   groupCitedSources,
   hasInlineCitations,
+  itemProviderMarker,
   markCitations,
   markerLabel,
   normalizeCitations,
@@ -132,24 +133,31 @@ describe("groupCitedSources", () => {
   const file = cite(5, [0], { provider: "my-collections", provider_label: "My collections", kind: "user_file", visibility: "private" });
   const convFile = cite(6, [0], { provider: "conversation", provider_label: "This conversation", kind: "user_file", visibility: "private" });
 
-  it("groups by provider in first-citation order, one item per number, the user's files together", () => {
+  it("puts Wiley, OA and other providers in Shared collections, and the user's files in My collections", () => {
     const groups = groupCitedSources([kb3, file, stac, wiley, kb2, kb2b, convFile]);
-    expect(groups.map((g) => g.key)).toEqual(["wiley", "qwen-512-filtered", "cdse", "own"]);
-    expect(groups[1].items.map((i) => i.n)).toEqual([2, 3]);
-    expect(groups[1].items[0].entries.map((e) => e.id)).toEqual(["src_2", "src_2b"]);
-    expect(groups[3].items.map((i) => i.n)).toEqual([5, 6]);
-    expect(groups[3].label).toBe("Your files");
+    expect(groups.map((g) => g.key)).toEqual(["shared", "own"]);
+    expect(groups[0].label).toBe("Shared collections");
+    expect(groups[0].items.map((i) => i.n)).toEqual([1, 2, 3, 4]);
+    expect(groups[0].items[1].entries.map((e) => e.id)).toEqual(["src_2", "src_2b"]);
+    expect(groups[1].items.map((i) => i.n)).toEqual([5, 6]);
+    expect(groups[1].label).toBe("My collections");
+  });
+
+  it("keeps wiley on the item and drops the oa marker", () => {
+    expect(itemProviderMarker(cite(1, [0], { slug: "oa" }))).toBeNull();
+    expect(itemProviderMarker(wiley)).toBe("wiley");
+    expect(itemProviderMarker(file)).toBeNull();
   });
 
   it("summarises the folded list in one line", () => {
     expect(sourcesSummary(groupCitedSources([wiley, kb2, kb3, stac, file]))).toBe(
-      "Sources: 5 cited from 3 providers and your file",
+      "Sources: 5 cited from Shared collections and My collections",
     );
     expect(sourcesSummary(groupCitedSources([wiley, kb2, kb3, stac, file, convFile]))).toBe(
-      "Sources: 6 cited from 3 providers and your files",
+      "Sources: 6 cited from Shared collections and My collections",
     );
-    expect(sourcesSummary(groupCitedSources([kb2]))).toBe("Sources: 1 cited from 1 provider");
-    expect(sourcesSummary(groupCitedSources([file, convFile]))).toBe("Sources: 2 cited from your files");
+    expect(sourcesSummary(groupCitedSources([kb2]))).toBe("Sources: 1 cited from Shared collections");
+    expect(sourcesSummary(groupCitedSources([file, convFile]))).toBe("Sources: 2 cited from My collections");
   });
 });
 
