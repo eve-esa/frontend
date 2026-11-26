@@ -997,8 +997,8 @@ export type BlockToggle = { open: boolean; autoOpen: boolean };
 export const resolveBlockOpen = (toggle: BlockToggle | null, autoOpen: boolean): boolean =>
   toggle !== null && toggle.autoOpen === autoOpen ? toggle.open : autoOpen;
 
-/** Wall clock of one run: from the start of the live turn to its first
- * answer token, its Stop or its end. */
+/** Wall clock of one run: from the start of the live turn to its Stop or the
+ * end of the stream. */
 type RunClock = { start: number | null; end: number | null };
 
 /**
@@ -1067,14 +1067,16 @@ const AgentStepsBlock = ({
     }
   }, [live]);
 
-  // The run ends at the first answer token, a Stop or the end of the stream.
+  // The run ends at a Stop or the end of the stream, never at the first answer
+  // token: the deep agent can stream interim text next to its tool calls and
+  // keep working for minutes.
   useEffect(() => {
-    if (answerStarted || stopped || !live) {
+    if (stopped || !live) {
       setRun((current) =>
         current.start !== null && current.end === null ? { ...current, end: Date.now() } : current,
       );
     }
-  }, [live, answerStarted, stopped]);
+  }, [live, stopped]);
 
   const runS = run.start !== null && run.end !== null ? (run.end - run.start) / 1000 : null;
 
@@ -1106,7 +1108,9 @@ const AgentStepsBlock = ({
     [collections, modelLabel, conversationId],
   );
 
-  const working = live && !answerStarted && !stopped;
+  // The clock and the header state follow the stream, the fold follows the
+  // first answer token (autoOpen above).
+  const working = live && !stopped;
   // A folded group of calls with a failed call stays in sight too.
   const failedRows = view.rows.filter(
     (row) => row.status === "error" || (row.kind === "group" && row.children.some((c) => c.status === "error")),
@@ -1114,6 +1118,9 @@ const AgentStepsBlock = ({
   if (!hasRows(view) && !(agentic && working)) return null;
 
   const headerActivity = working ? currentActivity(view.rows, { summarizing }) : null;
+  // The answer streams with no step running: the header says the run is
+  // going with its clock, not a stale "Thinking…".
+  const writing = headerActivity !== null && answerStarted && !summarizing && !latestRunningRow(view.rows);
   // Folded while live: the running row's own line (chip, verb), so the
   // header and the row never word the same step two ways.
   const runningRow = headerActivity && !open ? latestRunningRow(view.rows) : null;
@@ -1132,7 +1139,9 @@ const AgentStepsBlock = ({
   const announcement = working
     ? announcedRow
       ? stepSentence(announcedRow, collections)
-      : (headerActivity ?? "")
+      : writing
+        ? "Working"
+        : (headerActivity ?? "")
     : label
       ? `${label.head}, ${label.rest}`
       : "";
@@ -1178,9 +1187,10 @@ const AgentStepsBlock = ({
             />
           )}
           <span data-testid="agent-steps-summary" className="tabular-nums">
-            {headerActivity && open ? (
-              // Open: the rows carry the current action, the header only says
-              // the run is going, with the clock muted.
+            {headerActivity && (open || writing) ? (
+              // Open, or folded while the answer streams: the rows carry the
+              // current action, the header only says the run is going, with
+              // the clock muted.
               <>
                 <span data-testid="agent-steps-working">Working</span>{" "}
                 {run.start !== null && <LiveClock start={run.start} />}

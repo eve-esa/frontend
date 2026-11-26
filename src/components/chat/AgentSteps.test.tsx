@@ -44,7 +44,7 @@ describe("AgentSteps block", () => {
   it("collapses to the summary line once the final answer starts", () => {
     const finished = ACTIVITY.map((e) => ({ ...e, state: "done" as const }));
     const html = renderToStaticMarkup(
-      <AgentSteps activity={finished} live answerStarted />,
+      <AgentSteps activity={finished} live={false} answerStarted />,
     );
     expect(blockState(html)).toBe("closed");
     expect(html).toContain("2 steps");
@@ -319,7 +319,7 @@ describe("AgentSteps header, one status line", () => {
     expect(activityText(renderToStaticMarkup(<AgentSteps activity={finished} live answerStarted={false} agentic />))).toBe(
       "Ran code shell, done in 1 second",
     );
-    const end = renderToStaticMarkup(<AgentSteps activity={finished} live answerStarted agentic />);
+    const end = renderToStaticMarkup(<AgentSteps activity={finished} live={false} answerStarted agentic />);
     expect(end).not.toContain('data-testid="agent-steps-working"');
     expect(activityText(end)).toBe("Worked, 1 step");
     expect(end).toContain("1 step");

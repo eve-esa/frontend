@@ -519,7 +519,7 @@ export const Message = ({
             hallucination-check: no footer, and no padding for it either. The
             spacer used to render unconditionally, leaving 2rem of nothing
             under a stopped or failed message. */}
-        {!showLoading && Boolean(message.output) && (
+        {!showLoading && !isStreamingTarget && Boolean(message.output) && (
           <div className="pt-8">
             <MessageFooter message={message} hideSources={withCitations} />
           </div>
