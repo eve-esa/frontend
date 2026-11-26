@@ -66,6 +66,10 @@ jobs:
       CI: "true"
       E2E_EMAIL: ${{ secrets.E2E_EMAIL }}
       E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+      # Optional: a CDSE OAuth client for the valid save in toolkit-credentials.spec.ts. Unset, that
+      # test skips. Dev copies it from Secrets Manager esa-eve/dev/e2e/cdse-oauth-client.
+      E2E_CDSE_CLIENT_ID: ${{ secrets.E2E_CDSE_CLIENT_ID }}
+      E2E_CDSE_CLIENT_SECRET: ${{ secrets.E2E_CDSE_CLIENT_SECRET }}
       E2E_PROJECT: ${{ inputs.target || 'dev' }}
     steps:
       - name: Check the test account secrets
