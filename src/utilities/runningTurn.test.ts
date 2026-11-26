@@ -68,6 +68,12 @@ describe("conversationRefetchInterval", () => {
     expect(conversationRefetchInterval(query(conversation([row()], ID)))).toBe(5000);
   });
 
+  it("stops when the field no longer names the last row (a newer turn, or none)", () => {
+    const rows = [row(), row({ id: "newer" })];
+    expect(conversationRefetchInterval(query(conversation(rows, ID)))).toBe(false);
+    expect(conversationRefetchInterval(query(conversation([], ID)))).toBe(false);
+  });
+
   it("stops when the field turns null, is absent, or there is no data", () => {
     expect(conversationRefetchInterval(query(conversation([row()], null)))).toBe(false);
     expect(conversationRefetchInterval(query(conversation([row()])))).toBe(false);

@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronDown } from "@fortawesome/free-solid-svg-icons";
 import { useGetConversation } from "@/services/useGetConversation";
-import { runningTurnId } from "@/utilities/runningTurn";
+import { useRunningTurn } from "@/hooks/useRunningTurn";
 import { useSendRequest } from "@/services/useSendRequest";
 import { useNavigate, useParams } from "react-router-dom";
 import { LOCAL_STORAGE_DRAFT_NEW_CONVERSATION } from "@/utilities/localStorage";
@@ -61,6 +61,7 @@ export const Chat = () => {
     isFetching: isFetchingMessages,
     error,
     isError,
+    refetch,
   } = useGetConversation({
     conversationId,
     enabled: (!draftMessage || firstMessageSent.current) && !isMutating,
@@ -155,7 +156,8 @@ export const Chat = () => {
   const isRetry = !lastMessage?.output && !isStopped;
   // A turn the backend still generates after a reload: no stream of this page
   // feeds it, so it is neither a failure to retry nor a composer to unlock.
-  const runningMessageId = isMutating ? null : runningTurnId(data);
+  const runningTurn = useRunningTurn(data, refetch);
+  const runningMessageId = isMutating ? null : runningTurn;
   const isRunning = runningMessageId !== null;
   const isLoading =
     isMutating || isLoadingMessages || isFetchingMessages || isRunning;

@@ -25,8 +25,15 @@ export const runningTurnId = (
   return active;
 };
 
-/** `refetchInterval` of the conversation query: poll while a turn is active. */
+/** `refetchInterval` of the conversation query: poll while the backend names
+ * the last row as active. A field that names another row (a newer turn) or
+ * none ends the polling. */
 export const conversationRefetchInterval = (
   query: Pick<Query<ChaMessageType>, "state">,
-): number | false =>
-  query.state.data?.active_message_id ? CONVERSATION_POLL_MS : false;
+): number | false => {
+  const data = query.state.data;
+  const active = data?.active_message_id;
+  const rows = data?.messages;
+  const last = rows?.length ? rows[rows.length - 1] : undefined;
+  return active && last?.id === active ? CONVERSATION_POLL_MS : false;
+};
