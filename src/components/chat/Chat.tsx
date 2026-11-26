@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronDown } from "@fortawesome/free-solid-svg-icons";
 import { useGetConversation } from "@/services/useGetConversation";
+import { runningTurnId } from "@/utilities/runningTurn";
 import { useSendRequest } from "@/services/useSendRequest";
 import { useNavigate, useParams } from "react-router-dom";
 import { LOCAL_STORAGE_DRAFT_NEW_CONVERSATION } from "@/utilities/localStorage";
@@ -152,7 +153,12 @@ export const Chat = () => {
   const lastMessage = messages?.[messages.length - 1];
   const isStopped = Boolean(data?.stopped || lastMessage?.stopped);
   const isRetry = !lastMessage?.output && !isStopped;
-  const isLoading = isMutating || isLoadingMessages || isFetchingMessages;
+  // A turn the backend still generates after a reload: no stream of this page
+  // feeds it, so it is neither a failure to retry nor a composer to unlock.
+  const runningMessageId = isMutating ? null : runningTurnId(data);
+  const isRunning = runningMessageId !== null;
+  const isLoading =
+    isMutating || isLoadingMessages || isFetchingMessages || isRunning;
   // Retry visibility must not depend on background refetch state: gating it on
   // isFetchingMessages hid the button behind every conversation refetch while
   // isRetry kept the composer locked, leaving no way out short of a reload.
@@ -164,7 +170,8 @@ export const Chat = () => {
       !lastMessage.id.startsWith("temp-") &&
       !lastMessage.id.startsWith("srv-"),
   );
-  const showRetry = isRetry && !isMutating && lastMessageIsPersisted;
+  const showRetry =
+    isRetry && !isMutating && !isRunning && lastMessageIsPersisted;
 
   return (
     <div className="flex h-full w-full flex-col bg-natural-900 in-data-[theme=light]:bg-(--color-chat-ground) relative">
@@ -185,6 +192,7 @@ export const Chat = () => {
               messages={messages || []}
               isSending={isMutating}
               isError={showRetry}
+              runningMessageId={runningMessageId}
               scrollContainerRef={scrollContainerRef}
               onRetry={() => {
                 if (showRetry) {
@@ -222,7 +230,7 @@ export const Chat = () => {
         <MessageInput
           sendRequest={handleSendRequest}
           isLoading={isLoading}
-          disabled={isMutating || isLoadingMessages}
+          disabled={isMutating || isLoadingMessages || isRunning}
           showDisclaimer={messages.some((message) => Boolean(message.output))}
         />
       </div>

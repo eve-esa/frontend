@@ -1288,6 +1288,15 @@ export const sendTimeFromId = (id: string | null | undefined): number | null => 
   return match ? Number(match[1]) : null;
 };
 
+/** When a turn started, from its message id: the send time of an optimistic
+ * `temp-<ms>` id, else the creation second inside a stored 24 hex id (the row
+ * is created when the turn starts). Null for anything else. */
+export const turnStartFromId = (id: string | null | undefined): number | null => {
+  const sent = sendTimeFromId(id);
+  if (sent !== null) return sent;
+  return id && /^[0-9a-f]{24}$/i.test(id) ? parseInt(id.slice(0, 8), 16) * 1000 : null;
+};
+
 /** Seconds the turn took, as the backend stored them, setup included:
  * `metadata.latencies.total_latency`, else `first_token_latency` (which in a
  * turn with tool steps comes before the tools); null when neither is a real time. */

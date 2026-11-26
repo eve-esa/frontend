@@ -229,6 +229,10 @@ export type ChaMessageType = {
   timestamp: Date;
   user_id: string;
   stopped?: boolean;
+  // Id of the assistant message the backend is still generating for this
+  // conversation. Null when none runs or the backend cannot tell; absent on
+  // older backends.
+  active_message_id?: string | null;
   messages: MessageType[];
 };
 

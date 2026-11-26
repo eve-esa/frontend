@@ -10,6 +10,8 @@ type MessageListProps = {
   messages: MessageType[];
   isSending: boolean;
   isError: boolean;
+  /** Id of the turn the backend still generates after a reload, if any. */
+  runningMessageId?: string | null;
   onRetry: () => void;
   scrollContainerRef?: React.RefObject<HTMLDivElement | null>;
 };
@@ -18,6 +20,7 @@ export const MessageList = ({
   messages,
   isSending,
   isError,
+  runningMessageId = null,
   onRetry,
   scrollContainerRef,
 }: MessageListProps) => {
@@ -52,6 +55,7 @@ export const MessageList = ({
             message={message}
             isSending={isSending}
             isLastMessage={isLastMessage}
+            isRunning={isLastMessage && message.id === runningMessageId}
             scrollContainerRef={scrollContainerRef}
             messageIndex={index}
             collections={collections}
