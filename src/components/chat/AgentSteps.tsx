@@ -997,8 +997,8 @@ export type BlockToggle = { open: boolean; autoOpen: boolean };
 export const resolveBlockOpen = (toggle: BlockToggle | null, autoOpen: boolean): boolean =>
   toggle !== null && toggle.autoOpen === autoOpen ? toggle.open : autoOpen;
 
-/** Wall clock of one run: from the start of the live turn to its first
- * answer token, its Stop or its end. */
+/** Wall clock of one run: from the start of the live turn to its Stop or the
+ * end of the stream. */
 type RunClock = { start: number | null; end: number | null };
 
 /**
@@ -1067,14 +1067,16 @@ const AgentStepsBlock = ({
     }
   }, [live]);
 
-  // The run ends at the first answer token, a Stop or the end of the stream.
+  // The run ends at a Stop or the end of the stream, never at the first answer
+  // token: the deep agent can stream interim text next to its tool calls and
+  // keep working for minutes.
   useEffect(() => {
-    if (answerStarted || stopped || !live) {
+    if (stopped || !live) {
       setRun((current) =>
         current.start !== null && current.end === null ? { ...current, end: Date.now() } : current,
       );
     }
-  }, [live, answerStarted, stopped]);
+  }, [live, stopped]);
 
   const runS = run.start !== null && run.end !== null ? (run.end - run.start) / 1000 : null;
 
@@ -1106,7 +1108,9 @@ const AgentStepsBlock = ({
     [collections, modelLabel, conversationId],
   );
 
-  const working = live && !answerStarted && !stopped;
+  // The clock and the header state follow the stream, the fold follows the
+  // first answer token (autoOpen above).
+  const working = live && !stopped;
   // A folded group of calls with a failed call stays in sight too.
   const failedRows = view.rows.filter(
     (row) => row.status === "error" || (row.kind === "group" && row.children.some((c) => c.status === "error")),

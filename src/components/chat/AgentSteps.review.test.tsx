@@ -53,7 +53,7 @@ describe("agent steps review fixes", () => {
     try {
       const { rerender, container } = render(<AgentSteps trace={failedTrace} live answerStarted={false} agentic />);
       expect(screen.getByTestId("agent-steps").getAttribute("data-state")).toBe("open");
-      rerender(<AgentSteps trace={failedTrace} live answerStarted agentic />);
+      rerender(<AgentSteps trace={failedTrace} live={false} answerStarted agentic />);
       expect(screen.getByTestId("agent-steps").getAttribute("data-state")).toBe("closed");
       expect(screen.queryByTestId("agent-steps-failed-rows")).toBeNull();
       const content = container.querySelector("[data-state='closed'][class*='animate-agent-steps-up']");

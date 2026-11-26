@@ -60,13 +60,17 @@ describe("the turn clock", () => {
     expect(clock()).toBe("0:40");
   });
 
-  it("ends at the real turn time, from the send to the first answer token", () => {
+  it("ends at the real turn time, from the send to the end of the stream", () => {
     const { rerender } = render(
       <AgentSteps activity={[mcpRunning]} live answerStarted={false} agentic startedAt={SENT} />,
     );
     advance(48_000);
+    // Interim text next to the tool calls: the clock keeps going.
     rerender(<AgentSteps activity={[mcpRunning]} live answerStarted agentic startedAt={SENT} />);
-    expect(head()).toBe("Worked for 48s");
+    advance(30_000);
+    expect(clock()).toBe("1:18");
+    rerender(<AgentSteps activity={[mcpRunning]} live={false} answerStarted agentic startedAt={SENT} />);
+    expect(head()).toBe("Worked for 1m 18s");
   });
 
   it("keeps the send time across the hand-over when the id stops being temp-*", () => {

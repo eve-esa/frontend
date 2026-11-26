@@ -72,18 +72,39 @@ describe("AgentSteps live behaviour", () => {
     expect(within(toggle).queryByRole("status")).toBeNull();
   });
 
-  it("folds at the first answer token, stops the clock and sums the work time", () => {
+  it("folds at the first answer token but keeps the clock until the stream ends", () => {
     const { rerender } = render(<AgentSteps {...base} activity={[search]} />);
     expect(block().getAttribute("data-state")).toBe("open");
     advance(4000);
     rerender(<AgentSteps {...base} activity={[search]} answerStarted />);
     expect(block().getAttribute("data-state")).toBe("closed");
-    expect(screen.queryByTestId("agent-steps-clock")).toBeNull();
-    expect(head()).toBe("Worked for 4s");
-    // Answer streaming time is not work time.
+    // The agent may keep working after interim text: no "Worked for" yet.
+    expect(screen.queryByTestId("agent-steps-summary-head")).toBeNull();
+    expect(clock()).toBe("0:04");
     advance(10_000);
-    expect(head()).toBe("Worked for 4s");
+    expect(clock()).toBe("0:14");
+    rerender(<AgentSteps {...base} activity={[search]} live={false} answerStarted />);
+    expect(screen.queryByTestId("agent-steps-clock")).toBeNull();
+    expect(head()).toBe("Worked for 14s");
+    advance(10_000);
+    expect(head()).toBe("Worked for 14s");
     expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("keeps Working and a ticking clock when a new step runs after the first answer token", () => {
+    const next: ToolActivityEntry = { ...search, id: "s2", state: "running" };
+    const { rerender } = render(<AgentSteps {...base} activity={[{ ...search, state: "done" }]} />);
+    advance(3000);
+    rerender(<AgentSteps {...base} activity={[{ ...search, state: "done" }]} answerStarted />);
+    rerender(<AgentSteps {...base} activity={[{ ...search, state: "done" }, next]} answerStarted />);
+    expect(screen.queryByTestId("agent-steps-summary-head")).toBeNull();
+    expect(clock()).toBe("0:03");
+    advance(60_000);
+    expect(clock()).toBe("1:03");
+    // Open it: the header reads Working with the same clock.
+    fireEvent.click(screen.getByTestId("agent-steps-toggle"));
+    expect(screen.getByTestId("agent-steps-working").textContent).toBe("Working");
+    expect(clock()).toBe("1:03");
   });
 
   it("freezes on Stop and folds to the Stopped header", () => {

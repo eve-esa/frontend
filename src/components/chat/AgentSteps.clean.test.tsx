@@ -117,7 +117,11 @@ describe("header copy per state", () => {
     expect(screen.getByTestId("agent-steps-working").textContent).toBe("Working");
     expect(screen.getByTestId("agent-steps-clock")).toBeTruthy();
     advance(18_000);
+    // The first answer token does not end the run: still working.
     rerender(<AgentSteps {...live} answerStarted />);
+    expect(screen.queryByTestId("agent-steps-summary-head")).toBeNull();
+    expect(screen.getByTestId("agent-steps-clock")).toBeTruthy();
+    rerender(<AgentSteps {...live} live={false} answerStarted />);
     expect(head()).toBe("Worked for 18s");
   });
 
