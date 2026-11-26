@@ -495,13 +495,16 @@ const DetailHeading = ({ children }: { children: ReactNode }) => (
 
 /**
  * The input as the clean preview reads it: `key: value` lines, the key
- * muted, three at most then "N more"; code as highlighted code; anything
- * else as compact JSON.
+ * muted, three at most then "N more". "N more" opens every field, values
+ * included. Code as highlighted code; anything else as compact JSON.
  */
 const InputBody = ({ input, code }: { input: unknown; code: string | null }) => {
+  const [open, setOpen] = useState(false);
   if (code) return <HighlightedCode code={code} />;
   if (typeof input === "string") return <>{input}</>;
-  const readable = inputLines(input);
+  const preview = inputLines(input);
+  if (!preview) return <HighlightedJson text={compactJson(input)} />;
+  const readable = open ? inputLines(input, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY) : preview;
   if (!readable) return <HighlightedJson text={compactJson(input)} />;
   return (
     <>
@@ -511,10 +514,18 @@ const InputBody = ({ input, code }: { input: unknown; code: string | null }) => 
           <span data-testid="agent-step-input-key" className={MUTED}>{`${key}:`}</span> {value}
         </span>
       ))}
-      {readable.more > 0 && (
+      {preview.more > 0 && (
         <>
           {"\n"}
-          <More count={readable.more} />
+          <button
+            type="button"
+            data-testid="agent-step-input-more"
+            aria-expanded={open}
+            onClick={() => setOpen((value) => !value)}
+            className={cn("cursor-pointer underline-offset-2 hover:underline", MUTED, FOCUS)}
+          >
+            {open ? "Show less" : `${preview.more} more`}
+          </button>
         </>
       )}
     </>
