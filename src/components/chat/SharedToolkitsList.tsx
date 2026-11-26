@@ -86,14 +86,6 @@ export const SharedToolkitsList = ({
                 {server.description}
               </p>
             )}
-            {blocked && (
-              <p
-                data-testid={`toolkit-credentials-required-${server.name}`}
-                className="text-xs 3xl:text-xl text-natural-200"
-              >
-                Credentials required.
-              </p>
-            )}
             <ToolkitCredentialsLink server={server} />
             <McpServerTools server={server} />
           </div>
