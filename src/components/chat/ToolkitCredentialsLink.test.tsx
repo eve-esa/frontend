@@ -102,19 +102,19 @@ describe("ToolkitCredentialsLink", () => {
     }
   );
 
-  it("says Not set and offers Add credentials", async () => {
+  it("offers the user's own credentials when they are optional", async () => {
     await renderLink(server("effis", creds()));
-    expect(screen.getByTestId("toolkit-credentials-status-effis").textContent).toBe("Not set.");
-    expect(screen.getByTestId("toolkit-credentials-link-effis").textContent).toContain("Add credentials");
+    expect(screen.getByTestId("toolkit-credentials-status-effis").textContent).toBe("Use your own credentials");
+    expect(screen.getByTestId("toolkit-credentials-link-effis").textContent).toBe("Use your own credentials");
   });
 
   it("says when the credentials are required", async () => {
     await renderLink(server("effis", creds({ required: true })));
-    expect(screen.getByTestId("toolkit-credentials-status-effis").textContent).toContain("Not set. Required to use this toolkit.");
-    expect(screen.getByTestId("toolkit-credentials-link-effis").textContent).toContain("Add credentials");
+    expect(screen.getByTestId("toolkit-credentials-required-effis").textContent).toBe("Add your credentials to use this toolkit.");
+    expect(screen.getByTestId("toolkit-credentials-link-effis").textContent).toBe("Add your credentials to use this toolkit.");
   });
 
-  it("says Using your credentials and offers Manage credentials", async () => {
+  it("confirms the user's credentials without details and offers Change", async () => {
     await renderLink(
       server(
         "effis",
@@ -122,9 +122,8 @@ describe("ToolkitCredentialsLink", () => {
       )
     );
     const status = screen.getByTestId("toolkit-credentials-status-effis");
-    expect(status.textContent).toContain("Using your credentials");
-    expect(status.textContent).toContain("Client ID ending in 4f2a");
-    expect(screen.getByTestId("toolkit-credentials-link-effis").textContent).toContain("Manage credentials");
+    expect(status.textContent).toBe("Using your credentials.");
+    expect(screen.getByTestId("toolkit-credentials-link-effis").textContent).toBe("Change");
   });
 
   it("links to the Toolkits section of Settings", async () => {
@@ -176,8 +175,8 @@ describe("SharedToolkitsList switch when credentials are required", () => {
     expect((toggle as HTMLButtonElement).disabled).toBe(true);
     expect(toggle.getAttribute("aria-disabled")).toBe("true");
     expect(toggle.getAttribute("aria-checked")).toBe("false");
-    expect(screen.getByTestId("toolkit-credentials-required-effis").textContent).toBe("Credentials required.");
-    expect(screen.getByTestId("toolkit-credentials-link-effis").textContent).toContain("Add credentials");
+    expect(screen.getByTestId("toolkit-credentials-required-effis").textContent).toBe("Add your credentials to use this toolkit.");
+    expect(screen.getAllByTestId("toolkit-credentials-link-effis")).toHaveLength(1);
   });
 
   it("keeps the stored choice in storage", async () => {
