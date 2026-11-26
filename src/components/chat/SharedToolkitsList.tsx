@@ -9,6 +9,7 @@ import {
 } from "@/utilities/mcpServers";
 import { McpAttributionButton } from "./McpServerAttribution";
 import { McpServerTools } from "./McpServerTools";
+import { ToolkitCredentialsLink } from "./ToolkitCredentialsLink";
 
 type SharedToolkitsListProps = {
   isLoading: boolean;
@@ -79,6 +80,7 @@ export const SharedToolkitsList = ({
               {server.description}
             </p>
           )}
+          <ToolkitCredentialsLink server={server} />
           <McpServerTools server={server} />
         </div>
       ))}
