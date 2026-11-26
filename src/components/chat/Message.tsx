@@ -36,7 +36,7 @@ import {
 } from "@/utilities/citations";
 import { CitationsProvider } from "./citations/CitationsContext";
 import { MessageSources } from "./citations/MessageSources";
-import { turnTimeS, hasAgentStepRows, sendTimeFromId, type CollectionCatalog } from "@/utilities/agentSteps";
+import { turnTimeS, hasAgentStepRows, sendTimeFromId, turnStartFromId, type CollectionCatalog } from "@/utilities/agentSteps";
 import { answeredModelLabel } from "@/utilities/modelLabel";
 
 const NO_MARKERS: readonly MarkerInstance[] = [];
@@ -55,6 +55,9 @@ type MessageProps = {
   message: MessageType;
   isSending: boolean;
   isLastMessage: boolean;
+  /** The backend still generates this turn but no stream of this page feeds
+   * it (reloaded mid-turn): it shows as working, never as failed. */
+  isRunning?: boolean;
   scrollContainerRef?: React.RefObject<HTMLDivElement | null>;
   messageIndex?: number;
   /** Collection labels for the knowledge base rows of the agent steps. */
@@ -69,6 +72,7 @@ export const Message = ({
   message,
   isSending,
   isLastMessage,
+  isRunning = false,
   scrollContainerRef,
   messageIndex,
   collections,
@@ -94,7 +98,7 @@ export const Message = ({
     (a) => !(a.content_type ?? "").startsWith("image/"),
   );
 
-  const isStreamingTarget = isSending && isLastMessage;
+  const isStreamingTarget = (isSending || isRunning) && isLastMessage;
 
   // Live tool activity of the active streaming target. FEATURE_AGENT_STEPS
   // on: it drives the agent steps block, which reads the stored trace once
@@ -133,6 +137,7 @@ export const Message = ({
   const showLoading =
     awaitingOutput &&
     (isSending ||
+      isRunning ||
       Boolean(message.pre_answer_notices?.length) ||
       showToolActivity ||
       showSummarizing);
@@ -414,7 +419,13 @@ export const Message = ({
               summarizing={showSummarizing}
               collections={collections}
               modelLabel={answeredModelLabel(message, models)}
-              startedAt={isStreamingTarget ? sendTimeFromId(message.id) : null}
+              startedAt={
+                isStreamingTarget
+                  ? isRunning
+                    ? turnStartFromId(message.id)
+                    : sendTimeFromId(message.id)
+                  : null
+              }
               workS={turnTimeS(message.metadata)}
               conversationId={message.conversation_id ?? null}
               onOpenMyCollections={onOpenMyCollections}

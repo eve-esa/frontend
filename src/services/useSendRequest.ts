@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import type { CitationMetadata } from "@/utilities/citations";
-import { useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { MUTATION_KEYS, QUERY_KEYS } from "./keys";
 import { toast } from "sonner";
 import type { AdvancedSettingsValidation } from "@/utilities/advancedSettingsSchema";
@@ -13,6 +13,7 @@ import type {
   ModelSelection,
 } from "@/types";
 import api from "./axios";
+import { reconcileAfterStop } from "./stopRunningTurn";
 import {
   postStream,
   consumeSuppressToastFlag,
@@ -115,34 +116,6 @@ export const sendRequest = async ({
   });
   const response = await api.post<CreateMessageResponse>(url, payload);
   return mapCreateMessageResponse(response.data);
-};
-
-// After a user stop, the backend persists the final state (stopped flag plus
-// the partial output) only at the generation loop's next cooperative
-// checkpoint, which can be seconds away mid tool call. Refetching before that
-// would replace the visible partial with the mid-generation row (empty output,
-// stopped unset) and paint the stop as an error. Poll the server directly,
-// outside the cache, and reconcile once the truth exists (bounded, then
-// reconcile regardless so the cache always converges).
-const reconcileAfterStop = async (
-  queryClient: QueryClient,
-  conversationId: string,
-) => {
-  for (let attempt = 0; attempt < 6; attempt++) {
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    try {
-      const { data } = await api.get<ChaMessageType>(
-        `/conversations/${conversationId}`,
-      );
-      const last = data.messages?.[data.messages.length - 1];
-      if (last && (last.stopped || last.output)) break;
-    } catch {
-      break;
-    }
-  }
-  queryClient.invalidateQueries({
-    queryKey: [QUERY_KEYS.conversation, conversationId],
-  });
 };
 
 export const useSendRequest = (conversationId?: string) => {

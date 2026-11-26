@@ -76,7 +76,8 @@ import { stopConversation as stopConversationApi } from "@/services/stopConversa
 import { rememberStoppedMessageId } from "@/utilities/stoppedPartials";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { useQueryClient } from "@tanstack/react-query";
-import { QUERY_KEYS } from "@/services/keys";
+import { MUTATION_KEYS, QUERY_KEYS } from "@/services/keys";
+import { isRunningRow, stopRunningTurn } from "@/services/stopRunningTurn";
 import { useTokenUsage } from "@/services/useTokenUsage";
 import { useIsPhone } from "@/hooks/useIsPhone";
 import { MODEL_SELECTION_EVENT } from "@/hooks/useModelSelection";
@@ -546,6 +547,18 @@ export const MessageInput = ({
         ])
       : undefined;
     const lastIndex = (cached?.messages?.length ?? 0) - 1;
+    // A turn this page does not stream (reloaded mid-turn): only the backend
+    // Stop for this conversation. The stream controller is global, aborting
+    // it would end another conversation's live stream.
+    const last = cached?.messages?.[lastIndex];
+    const sending =
+      queryClient.isMutating({
+        mutationKey: [MUTATION_KEYS.sendRequest, conversationId],
+      }) > 0;
+    if (conversationId && last && !sending && isRunningRow(last)) {
+      await stopRunningTurn(queryClient, conversationId, lastIndex, last.id);
+      return;
+    }
     const stoppedIndex = cached?.messages?.[lastIndex]?.id?.startsWith("temp-")
       ? lastIndex
       : -1;

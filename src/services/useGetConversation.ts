@@ -3,6 +3,7 @@ import { QUERY_KEYS } from "./keys";
 import type { ChaMessageType } from "@/types";
 import api from "./axios";
 import { applyStoppedPartial } from "@/utilities/stoppedPartials";
+import { conversationRefetchInterval } from "@/utilities/runningTurn";
 
 export const getConversation = async (
   conversationId?: string
@@ -28,5 +29,8 @@ export const useGetConversation = ({
     queryKey: [QUERY_KEYS.conversation, conversationId],
     queryFn: () => getConversation(conversationId),
     enabled,
+    // A turn that outlives its stream (a reload) is read again until the
+    // backend stops reporting it as active.
+    refetchInterval: conversationRefetchInterval,
   });
 };

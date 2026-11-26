@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronDown } from "@fortawesome/free-solid-svg-icons";
 import { useGetConversation } from "@/services/useGetConversation";
+import { useRunningTurn } from "@/hooks/useRunningTurn";
 import { useSendRequest } from "@/services/useSendRequest";
 import { useNavigate, useParams } from "react-router-dom";
 import { LOCAL_STORAGE_DRAFT_NEW_CONVERSATION } from "@/utilities/localStorage";
@@ -26,7 +27,7 @@ import {
 import { StopRequestWarningDialog } from "./StopRequestWarningDialog";
 import { useSidebar } from "./DynamicSidebarProvider";
 import { useIsMutating, useQueryClient } from "@tanstack/react-query";
-import { MUTATION_KEYS } from "@/services/keys";
+import { MUTATION_KEYS, QUERY_KEYS } from "@/services/keys";
 import { useRetry } from "@/services/useRetry";
 import { prefetchTokenUsage } from "@/services/useTokenUsage";
 import { useListModels } from "@/services/useListModels";
@@ -57,7 +58,6 @@ export const Chat = () => {
   const {
     data,
     isLoading: isLoadingMessages,
-    isFetching: isFetchingMessages,
     error,
     isError,
   } = useGetConversation({
@@ -67,11 +67,13 @@ export const Chat = () => {
 
   const messages = data?.messages || [];
 
+  // Only a conversation that never loaded leaves the page: a failed background
+  // read (the poll of a running turn) keeps the data it had.
   useEffect(() => {
-    if (isError) {
+    if (isError && !data) {
       navigate(routes.EMPTY_CHAT.path);
     }
-  }, [isError, error]);
+  }, [isError, error, data]);
 
   const {
     scrollContainerRef,
@@ -152,7 +154,18 @@ export const Chat = () => {
   const lastMessage = messages?.[messages.length - 1];
   const isStopped = Boolean(data?.stopped || lastMessage?.stopped);
   const isRetry = !lastMessage?.output && !isStopped;
-  const isLoading = isMutating || isLoadingMessages || isFetchingMessages;
+  // A turn the backend still generates after a reload: no stream of this page
+  // feeds it, so it is neither a failure to retry nor a composer to unlock.
+  const runningTurn = useRunningTurn(data, conversationId, () =>
+    queryClient.invalidateQueries({
+      queryKey: [QUERY_KEYS.conversation, conversationId],
+    }),
+  );
+  const runningMessageId = isMutating ? null : runningTurn;
+  const isRunning = runningMessageId !== null;
+  // Background reads (the poll, the settle read) never turn Send into Stop:
+  // the send in flight or the running turn decides.
+  const isLoading = isMutating || isLoadingMessages || isRunning;
   // Retry visibility must not depend on background refetch state: gating it on
   // isFetchingMessages hid the button behind every conversation refetch while
   // isRetry kept the composer locked, leaving no way out short of a reload.
@@ -164,7 +177,8 @@ export const Chat = () => {
       !lastMessage.id.startsWith("temp-") &&
       !lastMessage.id.startsWith("srv-"),
   );
-  const showRetry = isRetry && !isMutating && lastMessageIsPersisted;
+  const showRetry =
+    isRetry && !isMutating && !isRunning && lastMessageIsPersisted;
 
   return (
     <div className="flex h-full w-full flex-col bg-natural-900 in-data-[theme=light]:bg-(--color-chat-ground) relative">
@@ -185,6 +199,7 @@ export const Chat = () => {
               messages={messages || []}
               isSending={isMutating}
               isError={showRetry}
+              runningMessageId={runningMessageId}
               scrollContainerRef={scrollContainerRef}
               onRetry={() => {
                 if (showRetry) {
@@ -222,7 +237,7 @@ export const Chat = () => {
         <MessageInput
           sendRequest={handleSendRequest}
           isLoading={isLoading}
-          disabled={isMutating || isLoadingMessages}
+          disabled={isMutating || isLoadingMessages || isRunning}
           showDisclaimer={messages.some((message) => Boolean(message.output))}
         />
       </div>

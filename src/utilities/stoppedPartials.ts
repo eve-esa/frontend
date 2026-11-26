@@ -157,6 +157,26 @@ export const rememberStoppedPartial = (
 };
 
 /**
+ * Records a Stop on a turn this page does not stream (reloaded mid-turn): the
+ * row already has its persisted id, so the stop is filed by id at once. Every
+ * later read of the conversation then keeps the row stopped until the backend
+ * saves the stop, an error or an answer of its own.
+ */
+export const rememberStoppedTurn = (
+  conversationId: string,
+  index: number,
+  messageId: string,
+) => {
+  const others = (store[conversationId] ?? []).filter(
+    (partial) => partial.messageId !== messageId && partial.index !== index,
+  );
+  store = {
+    ...store,
+    [conversationId]: [...others, { index, output: "", messageId }],
+  };
+};
+
+/**
  * Binds the persisted id the Stop response returned to the turn the Stop was
  * clicked for, by the position that turn had when the Stop was clicked, so
  * later merges find it by id. Neither a slow response nor another pending stop
