@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { faScrewdriverWrench } from "@fortawesome/free-solid-svg-icons";
 import {
   Menubar,
@@ -13,6 +13,8 @@ import { Tooltip } from "../ui/Tooltip";
 import { useTour } from "@/components/onboarding/TourContext";
 import { cn } from "@/lib/utils";
 import { useGetMcpServers } from "@/services/useGetMcpServers";
+import { setBlockedMcpServerNames } from "@/utilities/mcpServers";
+import { isBlockedByCredentials } from "@/utilities/toolkitCredentials";
 import { enabledToolkits, shouldShowToolkitsEntry } from "@/utilities/toolkits";
 
 type ToolkitsMenuBarProps = {
@@ -31,6 +33,17 @@ export const ToolkitsMenuBar = ({
   // matches :focus-visible and paints the light focus ring on the open item.
   // A keyboard close keeps the focus return, and with it the ring.
   const closedByPointer = useRef(false);
+
+  // Feeds the send path: a toolkit that needs credentials the user has not set is
+  // not sent with a turn. Runs before the early return below, this entry is always mounted.
+  const pages = data?.pages;
+  useEffect(() => {
+    setBlockedMcpServerNames(
+      enabledToolkits(pages)
+        .filter(isBlockedByCredentials)
+        .map((server) => server.name)
+    );
+  }, [pages]);
 
   const isToolkitsSidebarOpen =
     isOpenDynamicSidebar && content?.type === "toolkits";

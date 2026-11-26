@@ -19,7 +19,7 @@ import {
   useDeleteToolkitCredentials,
   useSaveToolkitCredentials,
 } from "@/services/useToolkitCredentials";
-import { formatApiDate } from "@/utilities/dayjs";
+import { toolkitCredentialsStatus } from "@/utilities/toolkitCredentials";
 import { SettingsPanel, SettingsSection } from "./SettingsSection";
 
 type CredentialsServer = McpServerPublic & {
@@ -28,23 +28,6 @@ type CredentialsServer = McpServerPublic & {
 
 const hasCredentialForm = (server: McpServerPublic): server is CredentialsServer =>
   Boolean(server.user_credentials);
-
-const statusText = ({ user_credentials: creds }: CredentialsServer): string => {
-  if (!creds.configured) {
-    return creds.required
-      ? "Not set. Required to use this toolkit."
-      : "Not set.";
-  }
-  const hints = creds.fields
-    .filter((field) => creds.hints[field.name])
-    .map((field) => `${field.label} ending in ${creds.hints[field.name]}`);
-  const checked = formatApiDate(creds.verified_at);
-  return [
-    "Using your credentials",
-    ...hints,
-    ...(checked ? [`Checked ${checked}`] : []),
-  ].join(". ");
-};
 
 type CredentialsFormProps = {
   server: CredentialsServer;
@@ -283,7 +266,7 @@ export const ToolkitsSection = () => {
                     data-testid={`settings-toolkits-status-${server.name}`}
                     className="text-sm text-natural-200"
                   >
-                    {statusText(server)}
+                    {toolkitCredentialsStatus(server.user_credentials)}
                   </p>
                 </div>
                 <div className="flex shrink-0 gap-2">

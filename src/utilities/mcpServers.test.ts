@@ -85,3 +85,24 @@ describe("getSelectedMcpServerNames with toolkits off", () => {
     );
   });
 });
+
+describe("toolkits blocked by missing credentials", () => {
+  it("are left out of the selection sent, and stay in storage", async () => {
+    const m = await loadMcpServers("true");
+    seed(["effis", "geocode"]);
+    m.setBlockedMcpServerNames(["effis"]);
+
+    expect(m.getSelectedMcpServerNames()).toEqual(["geocode"]);
+    expect(m.getStoredMcpServerNames()).toEqual(["effis", "geocode"]);
+  });
+
+  it("are selectable again once the block is lifted", async () => {
+    const m = await loadMcpServers("true");
+    seed(["effis"]);
+    m.setBlockedMcpServerNames(["effis"]);
+    expect(m.getSelectedMcpServerNames()).toEqual([]);
+
+    m.setBlockedMcpServerNames([]);
+    expect(m.getSelectedMcpServerNames()).toEqual(["effis"]);
+  });
+});

@@ -4,11 +4,13 @@ import { Switch } from "@/components/ui/Switch";
 import useInfinityLoading from "@/hooks/useInfinityLoading";
 import type { McpServerPublic } from "@/services/useGetMcpServers";
 import {
-  getSelectedMcpServerNames,
+  getStoredMcpServerNames,
   toggleMcpServerSelection,
 } from "@/utilities/mcpServers";
 import { McpAttributionButton } from "./McpServerAttribution";
 import { McpServerTools } from "./McpServerTools";
+import { isBlockedByCredentials } from "@/utilities/toolkitCredentials";
+import { ToolkitCredentialsLink } from "./ToolkitCredentialsLink";
 
 type SharedToolkitsListProps = {
   isLoading: boolean;
@@ -34,7 +36,7 @@ export const SharedToolkitsList = ({
   // what useSendRequest reads to fill `public_mcp_servers`. With nothing stored
   // the default applies, so eve_retrieval starts switched on.
   const [selectedServers, setSelectedServers] = useState<string[]>(() =>
-    getSelectedMcpServerNames(),
+    getStoredMcpServerNames(),
   );
   const isSelected = (name: string) => selectedServers.includes(name);
   const toggleServer = (name: string) =>
@@ -52,36 +54,51 @@ export const SharedToolkitsList = ({
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-8">
-      {serversList.map((server) => (
-        <div
-          className="flex min-w-0 flex-col gap-4"
-          key={server.id ?? server.name}
-          data-testid="toolkit-item"
-        >
-          <div className="flex min-w-0 items-center gap-2">
-            <Switch
-              checked={isSelected(server.name)}
-              onCheckedChange={() => toggleServer(server.name)}
-            />
-            <span
-              data-testid="toolkit-name"
-              className="min-w-0 flex-1 break-words leading-none 3xl:text-3xl font-semibold text-natural-50"
-            >
-              {server.name}
-            </span>
-            <McpAttributionButton
-              attribution={server.attribution}
-              serverName={server.name}
-            />
+      {serversList.map((server) => {
+        const blocked = isBlockedByCredentials(server);
+        return (
+          <div
+            className="flex min-w-0 flex-col gap-4"
+            key={server.id ?? server.name}
+            data-testid="toolkit-item"
+          >
+            <div className="flex min-w-0 items-center gap-2">
+              <Switch
+                data-testid={`toolkit-switch-${server.name}`}
+                checked={!blocked && isSelected(server.name)}
+                disabled={blocked}
+                aria-disabled={blocked}
+                onCheckedChange={() => toggleServer(server.name)}
+              />
+              <span
+                data-testid="toolkit-name"
+                className="min-w-0 flex-1 break-words leading-none 3xl:text-3xl font-semibold text-natural-50"
+              >
+                {server.name}
+              </span>
+              <McpAttributionButton
+                attribution={server.attribution}
+                serverName={server.name}
+              />
+            </div>
+            {server.description && (
+              <p className="break-words text-xs 3xl:text-xl text-natural-200">
+                {server.description}
+              </p>
+            )}
+            {blocked && (
+              <p
+                data-testid={`toolkit-credentials-required-${server.name}`}
+                className="text-xs 3xl:text-xl text-natural-200"
+              >
+                Credentials required.
+              </p>
+            )}
+            <ToolkitCredentialsLink server={server} />
+            <McpServerTools server={server} />
           </div>
-          {server.description && (
-            <p className="break-words text-xs 3xl:text-xl text-natural-200">
-              {server.description}
-            </p>
-          )}
-          <McpServerTools server={server} />
-        </div>
-      ))}
+        );
+      })}
       {hasNextPage && <div ref={serversEndRef} />}
       {isFetchingNextPage && <Skeleton className="w-full h-6" />}
     </div>
