@@ -74,6 +74,16 @@ describe("conversationRefetchInterval", () => {
     expect(conversationRefetchInterval(query(conversation([], ID)))).toBe(false);
   });
 
+  it("stops when the last row is settled although the field still names it", () => {
+    expect(conversationRefetchInterval(query(conversation([row({ output: "Done." })], ID)))).toBe(false);
+    expect(conversationRefetchInterval(query(conversation([row({ stopped: true })], ID)))).toBe(false);
+    expect(
+      conversationRefetchInterval(
+        query(conversation([row({ metadata: { error: { code: "timeout" } } } as Partial<MessageType>)], ID)),
+      ),
+    ).toBe(false);
+  });
+
   it("stops when the field turns null, is absent, or there is no data", () => {
     expect(conversationRefetchInterval(query(conversation([row()], null)))).toBe(false);
     expect(conversationRefetchInterval(query(conversation([row()])))).toBe(false);

@@ -61,6 +61,29 @@ describe("conversation polling while a turn runs", () => {
     expect(get).toHaveBeenCalledTimes(3);
   });
 
+  it("never polls while the query is disabled (a send in flight)", async () => {
+    get.mockResolvedValue(body("m1"));
+    renderHook(() => useGetConversation({ conversationId: "c1", enabled: false }), {
+      wrapper: wrap(),
+    });
+    await tick(30_000);
+    expect(get).not.toHaveBeenCalled();
+  });
+
+  it("stops polling once the row is settled although the field still names it", async () => {
+    get.mockResolvedValueOnce(body("m1")).mockResolvedValue({
+      data: { ...body("m1").data, messages: [{ ...body("m1").data.messages[0], output: "Done." }] },
+    });
+    renderHook(() => useGetConversation({ conversationId: "c1", enabled: true }), {
+      wrapper: wrap(),
+    });
+    await tick(0);
+    await tick(5100);
+    expect(get).toHaveBeenCalledTimes(2);
+    await tick(30_000);
+    expect(get).toHaveBeenCalledTimes(2);
+  });
+
   it("never polls when the field is absent", async () => {
     get.mockResolvedValue(body(undefined));
     renderHook(() => useGetConversation({ conversationId: "c1", enabled: true }), {

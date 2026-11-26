@@ -27,7 +27,7 @@ import {
 import { StopRequestWarningDialog } from "./StopRequestWarningDialog";
 import { useSidebar } from "./DynamicSidebarProvider";
 import { useIsMutating, useQueryClient } from "@tanstack/react-query";
-import { MUTATION_KEYS } from "@/services/keys";
+import { MUTATION_KEYS, QUERY_KEYS } from "@/services/keys";
 import { useRetry } from "@/services/useRetry";
 import { prefetchTokenUsage } from "@/services/useTokenUsage";
 import { useListModels } from "@/services/useListModels";
@@ -58,10 +58,8 @@ export const Chat = () => {
   const {
     data,
     isLoading: isLoadingMessages,
-    isFetching: isFetchingMessages,
     error,
     isError,
-    refetch,
   } = useGetConversation({
     conversationId,
     enabled: (!draftMessage || firstMessageSent.current) && !isMutating,
@@ -69,11 +67,13 @@ export const Chat = () => {
 
   const messages = data?.messages || [];
 
+  // Only a conversation that never loaded leaves the page: a failed background
+  // read (the poll of a running turn) keeps the data it had.
   useEffect(() => {
-    if (isError) {
+    if (isError && !data) {
       navigate(routes.EMPTY_CHAT.path);
     }
-  }, [isError, error]);
+  }, [isError, error, data]);
 
   const {
     scrollContainerRef,
@@ -156,11 +156,16 @@ export const Chat = () => {
   const isRetry = !lastMessage?.output && !isStopped;
   // A turn the backend still generates after a reload: no stream of this page
   // feeds it, so it is neither a failure to retry nor a composer to unlock.
-  const runningTurn = useRunningTurn(data, refetch);
+  const runningTurn = useRunningTurn(data, conversationId, () =>
+    queryClient.invalidateQueries({
+      queryKey: [QUERY_KEYS.conversation, conversationId],
+    }),
+  );
   const runningMessageId = isMutating ? null : runningTurn;
   const isRunning = runningMessageId !== null;
-  const isLoading =
-    isMutating || isLoadingMessages || isFetchingMessages || isRunning;
+  // Background reads (the poll, the settle read) never turn Send into Stop:
+  // the send in flight or the running turn decides.
+  const isLoading = isMutating || isLoadingMessages || isRunning;
   // Retry visibility must not depend on background refetch state: gating it on
   // isFetchingMessages hid the button behind every conversation refetch while
   // isRetry kept the composer locked, leaving no way out short of a reload.
