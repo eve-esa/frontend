@@ -22,4 +22,5 @@ export {
 export { SignedOutPage } from "./SignedOutPage";
 export { SignupPage, type NewAccount } from "./SignupPage";
 export { ThemeMenu, themeSwitchOn, type ThemeChoice } from "./ThemeMenu";
+export { ToolkitCredentialsSection } from "./ToolkitCredentialsSection";
 export { ToolkitsPanel } from "./ToolkitsPanel";

@@ -3,6 +3,7 @@ import {
   CUSTOM_MODELS_ENABLED,
   SETTINGS_USAGE_ENABLED,
   THEME_SWITCH_ENABLED,
+  TOOLKIT_CREDENTIALS_ENABLED,
 } from "@/utilities/features";
 
 export const SETTINGS_PATH = "/settings";
@@ -12,6 +13,7 @@ export const SETTINGS_SECTIONS = [
   { id: "profile", label: "Profile" },
   { id: "appearance", label: "Appearance", flag: "themeSwitch" },
   { id: "models", label: "Models", flag: "customModels" },
+  { id: "toolkits", label: "Toolkits", flag: "toolkitCredentials" },
   { id: "usage", label: "Usage", flag: "usage" },
   { id: "api-keys", label: "API keys", flag: "apiKeys" },
   { id: "account", label: "Account" },
@@ -31,6 +33,8 @@ export type SettingsFlags = {
   themeSwitch: boolean;
   /** FEATURE_CUSTOM_MODELS, which is already off with agentic chat off. */
   customModels: boolean;
+  /** FEATURE_TOOLKIT_CREDENTIALS. */
+  toolkitCredentials: boolean;
   /** FEATURE_SETTINGS_USAGE. */
   usage: boolean;
   /** FEATURE_API_KEYS. */
@@ -42,6 +46,7 @@ type SettingsFlag = keyof SettingsFlags;
 export const currentSettingsFlags = (): SettingsFlags => ({
   themeSwitch: THEME_SWITCH_ENABLED,
   customModels: CUSTOM_MODELS_ENABLED,
+  toolkitCredentials: TOOLKIT_CREDENTIALS_ENABLED,
   usage: SETTINGS_USAGE_ENABLED,
   apiKeys: API_KEYS_ENABLED,
 });

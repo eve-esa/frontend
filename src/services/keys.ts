@@ -15,6 +15,7 @@ export const MUTATION_KEYS = {
   uploadImage: "uploadImage",
   apiKeys: "apiKeys",
   reportBug: "reportBug",
+  toolkitCredentials: "toolkitCredentials",
 };
 
 export const QUERY_KEYS = {

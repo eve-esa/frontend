@@ -36,6 +36,31 @@ export type McpServerAttribution = {
   preferred_citation: McpPreferredCitation | null;
 };
 
+export type ToolkitCredentialField = {
+  name: string;
+  label: string;
+  /** A secret field is entered masked and never shown again, only its hint. */
+  secret: boolean;
+  help_text: string | null;
+};
+
+/**
+ * The credential form a toolkit declares and the state of the caller's own
+ * credentials for it, from GET /mcp-servers and PUT /mcp-servers/{id}/credentials.
+ * Values are never returned: `hints` holds the last characters of what was
+ * saved, keyed by field name.
+ */
+export type ToolkitUserCredentials = {
+  fields: ToolkitCredentialField[];
+  /** True when a tool call without the user's credentials is refused. */
+  required: boolean;
+  help_url: string | null;
+  configured: boolean;
+  hints: Record<string, string>;
+  verified_at: string | null;
+  updated_at: string | null;
+};
+
 export type McpServerPublic = {
   id: string | null;
   timestamp: string;
@@ -53,6 +78,11 @@ export type McpServerPublic = {
   updated_at: string;
   deleted_at: string | null;
   attribution: McpServerAttribution | null;
+  /**
+   * Null unless the backend flag is on and the toolkit accepts the user's own
+   * credentials. Optional so a response from a backend without the field still fits.
+   */
+  user_credentials?: ToolkitUserCredentials | null;
 };
 
 export type McpServersResponse = {
