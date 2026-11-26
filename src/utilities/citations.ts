@@ -298,7 +298,7 @@ export type CitedSource = {
 };
 
 export type SourceGroup = {
-  /** Provider key, or `own` for the user's files. */
+  /** `shared` or `own`. */
   key: string;
   label: string;
   items: CitedSource[];
@@ -317,6 +317,22 @@ export const providerSlug = (source: CitationSource): string => {
   return slug.toLowerCase() || "source";
 };
 
+/** Sources list sections. Product menu names, not title case. */
+export const SHARED_COLLECTIONS_LABEL = "Shared collections";
+export const MY_COLLECTIONS_SOURCES_LABEL = "My collections";
+
+/**
+ * Provider slug to print on one shared source inside the sources list.
+ * `oa` is the shared-collections bucket, so the section name covers it.
+ * Wiley and the other named providers stay. Null for the user's files.
+ */
+export const itemProviderMarker = (source: CitationSource): string | null => {
+  if (isUserFile(source)) return null;
+  const slug = providerSlug(source);
+  if (slug === "oa" || slug === "source") return null;
+  return slug;
+};
+
 /** One item per number, in number order. */
 export const citedSources = (citations: readonly Citation[]): CitedSource[] => {
   const byN = new Map<number, Citation[]>();
@@ -330,35 +346,28 @@ export const citedSources = (citations: readonly Citation[]): CitedSource[] => {
     .map(([n, entries]) => ({ n, entries }));
 };
 
-/** Groups by provider in first-citation order; the user's files form one group. */
+/**
+ * Two sections, shared first: Shared collections (Wiley, OA, every other
+ * provider) and My collections (the user's files). Empty sections drop out.
+ */
 export const groupCitedSources = (citations: readonly Citation[]): SourceGroup[] => {
-  const groups = new Map<string, SourceGroup>();
+  const shared: CitedSource[] = [];
+  const own: CitedSource[] = [];
   for (const item of citedSources(citations)) {
-    const first = item.entries[0];
-    const own = isUserFile(first);
-    const key = own ? "own" : first.provider || first.provider_label || "other";
-    const group = groups.get(key);
-    if (group) group.items.push(item);
-    else
-      groups.set(key, {
-        key,
-        label: own ? "Your files" : first.provider_label || first.provider || "Other",
-        items: [item],
-      });
+    (isUserFile(item.entries[0]) ? own : shared).push(item);
   }
-  return [...groups.values()];
+  const groups: SourceGroup[] = [];
+  if (shared.length) groups.push({ key: "shared", label: SHARED_COLLECTIONS_LABEL, items: shared });
+  if (own.length) groups.push({ key: "own", label: MY_COLLECTIONS_SOURCES_LABEL, items: own });
+  return groups;
 };
 
-/** `Sources: 5 cited from 3 providers and your files`. */
+/** `Sources: 5 cited from Shared collections and My collections`. */
 export const sourcesSummary = (groups: readonly SourceGroup[]): string => {
   const cited = groups.reduce((sum, g) => sum + g.items.length, 0);
-  const providers = groups.filter((g) => g.key !== "own").length;
-  const ownFiles = groups.find((g) => g.key === "own")?.items.length ?? 0;
-  const yours = ownFiles === 1 ? "your file" : "your files";
+  const names = groups.map((g) => g.label);
   const from =
-    providers > 0
-      ? `${providers} ${providers === 1 ? "provider" : "providers"}${ownFiles ? ` and ${yours}` : ""}`
-      : yours;
+    names.length <= 1 ? (names[0] ?? "") : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
   return `Sources: ${cited} cited from ${from}`;
 };
 
