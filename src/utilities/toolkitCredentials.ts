@@ -1,5 +1,9 @@
-import type { ToolkitUserCredentials } from "@/services/useGetMcpServers";
+import type {
+  McpServerPublic,
+  ToolkitUserCredentials,
+} from "@/services/useGetMcpServers";
 import { formatApiDate } from "@/utilities/dayjs";
+import { TOOLKIT_CREDENTIALS_ENABLED } from "@/utilities/features";
 
 /**
  * One line about where a toolkit's credentials stand, shared by the Settings Toolkits section
@@ -22,4 +26,15 @@ export const toolkitCredentialsStatus = (
     ...hints,
     ...(checked ? [`Checked ${checked}`] : []),
   ].join(". ");
+};
+
+/**
+ * True when the toolkit needs the user's own credentials and has none: its switch is
+ * disabled and it is not sent with a turn.
+ */
+export const isBlockedByCredentials = (
+  server: Pick<McpServerPublic, "user_credentials">
+): boolean => {
+  const creds = server.user_credentials;
+  return TOOLKIT_CREDENTIALS_ENABLED && !!creds?.required && !creds.configured;
 };

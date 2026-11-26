@@ -17,6 +17,7 @@ vi.mock("@/utilities/features", async (importOriginal) => ({
   get TOOLKIT_CREDENTIALS_ENABLED() {
     return flags.TOOLKIT_CREDENTIALS_ENABLED;
   },
+  TOOLKITS_ENABLED: true,
   get SETTINGS_PAGE_ENABLED() {
     return flags.SETTINGS_PAGE_ENABLED;
   },
@@ -149,5 +150,62 @@ describe("SharedToolkitsList credentials line", () => {
     expect(screen.getAllByTestId("toolkit-item")).toHaveLength(2);
     expect(screen.getByTestId("toolkit-credentials-link-effis")).toBeTruthy();
     expect(screen.queryByTestId("toolkit-credentials-link-geocode")).toBeNull();
+  });
+});
+
+describe("SharedToolkitsList switch when credentials are required", () => {
+  const renderList = async (servers: McpServerPublic[]) => {
+    const { SharedToolkitsList } = await import("./SharedToolkitsList");
+    return render(
+      <MemoryRouter>
+        <SharedToolkitsList
+          isLoading={false}
+          isFetchingNextPage={false}
+          hasNextPage={false}
+          fetchNextPage={() => undefined}
+          serversList={servers}
+        />
+      </MemoryRouter>
+    );
+  };
+
+  it("disables the switch, shows it off and says why", async () => {
+    localStorage.setItem("mcp_servers", JSON.stringify(["effis"]));
+    await renderList([server("effis", creds({ required: true }))]);
+    const toggle = screen.getByTestId("toolkit-switch-effis");
+    expect((toggle as HTMLButtonElement).disabled).toBe(true);
+    expect(toggle.getAttribute("aria-disabled")).toBe("true");
+    expect(toggle.getAttribute("aria-checked")).toBe("false");
+    expect(screen.getByTestId("toolkit-credentials-required-effis").textContent).toBe("Credentials required.");
+    expect(screen.getByTestId("toolkit-credentials-link-effis").textContent).toContain("Add credentials");
+  });
+
+  it("keeps the stored choice in storage", async () => {
+    localStorage.setItem("mcp_servers", JSON.stringify(["effis"]));
+    await renderList([server("effis", creds({ required: true }))]);
+    expect(JSON.parse(localStorage.getItem("mcp_servers") ?? "[]")).toEqual(["effis"]);
+  });
+
+  it.each([
+    ["not required", creds({ required: false })],
+    ["configured", creds({ required: true, configured: true })],
+  ])("leaves the switch alone when %s", async (_label, c) => {
+    localStorage.setItem("mcp_servers", JSON.stringify(["effis"]));
+    await renderList([server("effis", c)]);
+    const toggle = screen.getByTestId("toolkit-switch-effis");
+    expect((toggle as HTMLButtonElement).disabled).toBe(false);
+    expect(toggle.getAttribute("aria-checked")).toBe("true");
+    expect(screen.queryByTestId("toolkit-credentials-required-effis")).toBeNull();
+  });
+
+  it("puts a switch testid on a toolkit without credentials", async () => {
+    await renderList([server("geocode")]);
+    expect(screen.getByTestId("toolkit-switch-geocode")).toBeTruthy();
+  });
+
+  it("flag off: a required toolkit stays switchable", async () => {
+    flags.TOOLKIT_CREDENTIALS_ENABLED = false;
+    await renderList([server("effis", creds({ required: true }))]);
+    expect((screen.getByTestId("toolkit-switch-effis") as HTMLButtonElement).disabled).toBe(false);
   });
 });
