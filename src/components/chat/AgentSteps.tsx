@@ -1118,6 +1118,9 @@ const AgentStepsBlock = ({
   if (!hasRows(view) && !(agentic && working)) return null;
 
   const headerActivity = working ? currentActivity(view.rows, { summarizing }) : null;
+  // The answer streams with no step running: the header says the run is
+  // going with its clock, not a stale "Thinking…".
+  const writing = headerActivity !== null && answerStarted && !summarizing && !latestRunningRow(view.rows);
   // Folded while live: the running row's own line (chip, verb), so the
   // header and the row never word the same step two ways.
   const runningRow = headerActivity && !open ? latestRunningRow(view.rows) : null;
@@ -1136,7 +1139,9 @@ const AgentStepsBlock = ({
   const announcement = working
     ? announcedRow
       ? stepSentence(announcedRow, collections)
-      : (headerActivity ?? "")
+      : writing
+        ? "Working"
+        : (headerActivity ?? "")
     : label
       ? `${label.head}, ${label.rest}`
       : "";
@@ -1182,9 +1187,10 @@ const AgentStepsBlock = ({
             />
           )}
           <span data-testid="agent-steps-summary" className="tabular-nums">
-            {headerActivity && open ? (
-              // Open: the rows carry the current action, the header only says
-              // the run is going, with the clock muted.
+            {headerActivity && (open || writing) ? (
+              // Open, or folded while the answer streams: the rows carry the
+              // current action, the header only says the run is going, with
+              // the clock muted.
               <>
                 <span data-testid="agent-steps-working">Working</span>{" "}
                 {run.start !== null && <LiveClock start={run.start} />}

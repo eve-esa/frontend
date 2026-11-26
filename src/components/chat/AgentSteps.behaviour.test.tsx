@@ -91,6 +91,17 @@ describe("AgentSteps live behaviour", () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
+  it("reads Working with the clock while the answer streams folded with no step running", () => {
+    const { rerender } = render(<AgentSteps {...base} activity={[search]} />);
+    advance(2000);
+    rerender(<AgentSteps {...base} activity={[search]} answerStarted />);
+    expect(block().getAttribute("data-state")).toBe("closed");
+    expect(screen.getByTestId("agent-steps-working").textContent).toBe("Working");
+    expect(screen.queryByTestId("agent-steps-activity")).toBeNull();
+    expect(screen.getByTestId("agent-steps-summary").textContent).not.toContain("Thinking");
+    expect(clock()).toBe("0:02");
+  });
+
   it("keeps Working and a ticking clock when a new step runs after the first answer token", () => {
     const next: ToolActivityEntry = { ...search, id: "s2", state: "running" };
     const { rerender } = render(<AgentSteps {...base} activity={[{ ...search, state: "done" }]} />);
