@@ -1,10 +1,18 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import type { AxiosProgressEvent } from "axios";
 import { MUTATION_KEYS } from "./keys";
 import api from "./axios";
 import { logError } from "./errorLogging";
-import type { ImageUploadResponse } from "@/types";
+import { invalidateStorageUsage } from "./useStorageUsage";
+import type { ApiError, ImageUploadResponse } from "@/types";
+import { handleApiError } from "@/utilities/helpers";
+import {
+  STORAGE_SETTINGS_PATH,
+  isStorageQuotaError,
+  storageSettingsLinkEnabled,
+} from "@/utilities/storageQuota";
 
 const httpUploadImage = async (
   file: File,
@@ -27,8 +35,14 @@ const httpUploadImage = async (
  * surfaced visually by the attachment preview, so — unlike `useUploadDocument`
  * — no success toast is fired; only failures are toasted and logged. Exposes
  * axios `onUploadProgress` so callers can drive per-item progress UI.
+ *
+ * A file that does not fit the user's storage (403 `storage_quota_exceeded`)
+ * is toasted with the backend's message and not logged: it is the user's
+ * state, not a fault.
  */
 export const useUploadImage = () => {
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
   return useMutation({
     mutationKey: [MUTATION_KEYS.uploadImage],
     mutationFn: ({
@@ -39,7 +53,23 @@ export const useUploadImage = () => {
       onUploadProgress?: (event: AxiosProgressEvent) => void;
     }) => httpUploadImage(file, onUploadProgress),
     onError: (error) => {
-      toast.error(error.message);
+      const message = handleApiError(error as ApiError);
+      if (isStorageQuotaError(error)) {
+        toast.error(
+          message,
+          storageSettingsLinkEnabled()
+            ? {
+                id: "storage-quota-exceeded",
+                action: {
+                  label: "Manage storage",
+                  onClick: () => navigate(STORAGE_SETTINGS_PATH),
+                },
+              }
+            : { id: "storage-quota-exceeded" },
+        );
+        return;
+      }
+      toast.error(message);
       logError({
         error_message: error.message,
         error_stack: error.stack,
@@ -49,6 +79,9 @@ export const useUploadImage = () => {
         component: "useUploadImage",
         description: "Error uploading image",
       });
+    },
+    onSettled: () => {
+      void invalidateStorageUsage(queryClient);
     },
   });
 };

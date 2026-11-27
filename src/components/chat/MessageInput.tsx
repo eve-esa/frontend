@@ -67,6 +67,7 @@ import {
   useBusyNotice,
 } from "@/services/serviceBusy";
 import { ComposerBusyNotice } from "./ComposerBusyNotice";
+import { ComposerStorageNotice } from "./ComposerStorageNotice";
 import {
   releaseSentAttachments,
   restoreSentAttachments,
@@ -705,6 +706,7 @@ export const MessageInput = ({
         )}
       >
         <ComposerBusyNotice notice={busyNotice} />
+        <ComposerStorageNotice conversationId={conversationId} />
         {/* Sending runs from the button handlers and the Enter key, never from a
             native submit: without this, any click that lands on the Send button
             submits the form with a GET and reloads the whole page. */}
