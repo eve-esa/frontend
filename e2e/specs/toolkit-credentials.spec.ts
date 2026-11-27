@@ -131,8 +131,8 @@ test.describe("settings toolkit credentials @dev", () => {
     );
     const stored = await credentialsOf(api);
     expect(stored.verified_at).toBeTruthy();
-    // The hint is the last 4 characters of the client id, never more.
-    expect(stored.hints.client_id).toBe(CDSE_ID.slice(-4));
+    // The hint is an ellipsis and the last 4 characters of the client id, never more.
+    expect(stored.hints.client_id).toBe(`…${CDSE_ID.slice(-4)}`);
 
     expect(await section.remove()).toBeLessThan(300);
     await expect(section.removeDialog).toBeHidden();
