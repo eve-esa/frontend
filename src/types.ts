@@ -396,6 +396,8 @@ export type ImageAttachment = {
 export type RawMessageAttachment = {
   id?: string;
   image_id?: string;
+  /** Set on the chip of a conversation document sent with the message. */
+  document_id?: string;
   url: string;
   filename: string;
   content_type: string;

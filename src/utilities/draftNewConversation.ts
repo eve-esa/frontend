@@ -1,4 +1,5 @@
 import type { ImageAttachment } from "@/types";
+import type { SentDocuments } from "@/services/useConversationDocuments";
 
 // Draft persisted by ChatEmpty in localStorage while a new conversation is being
 // created, then replayed by Chat once the conversation id exists. Serialized as
@@ -6,6 +7,8 @@ import type { ImageAttachment } from "@/types";
 export type DraftNewConversation = {
   input: string;
   attachments?: ImageAttachment[];
+  /** Documents already uploaded to the new conversation, still processing. */
+  sentDocuments?: SentDocuments;
 };
 
 export const serializeDraftNewConversation = (
@@ -31,6 +34,12 @@ export const parseDraftNewConversation = (
         attachments: Array.isArray(parsed.attachments)
           ? parsed.attachments
           : undefined,
+        sentDocuments:
+          parsed.sentDocuments &&
+          typeof parsed.sentDocuments.jobId === "string" &&
+          Array.isArray(parsed.sentDocuments.documents)
+            ? parsed.sentDocuments
+            : undefined,
       };
     }
   } catch {

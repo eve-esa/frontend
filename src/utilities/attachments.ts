@@ -13,7 +13,7 @@ import type { ImageAttachment, RawMessageAttachment } from "@/types";
 export const toImageAttachment = (
   raw: RawMessageAttachment,
 ): ImageAttachment => ({
-  id: raw.id ?? raw.image_id ?? "",
+  id: raw.id ?? raw.image_id ?? raw.document_id ?? "",
   url: raw.url,
   filename: raw.filename,
   content_type: raw.content_type,

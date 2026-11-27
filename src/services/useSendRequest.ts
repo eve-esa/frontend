@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import type { CitationMetadata } from "@/utilities/citations";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { type QueryClient, useMutation, useQueryClient } from "@tanstack/react-query";
 import { MUTATION_KEYS, QUERY_KEYS } from "./keys";
 import { toast } from "sonner";
 import type { AdvancedSettingsValidation } from "@/utilities/advancedSettingsSchema";
@@ -43,6 +43,11 @@ import {
 import type { MessagePipeline } from "@/utilities/messageEndpoint";
 import { shouldToastStreamError } from "@/utilities/streamError";
 import {
+  JOB_ERROR_MESSAGES,
+  type SentDocuments,
+} from "./useConversationDocuments";
+import { DocumentWaitCanceled, waitForIngestJob } from "./documentWait";
+import {
   forgetStoppedPartialsFrom,
   rememberStoppedPartial,
 } from "@/utilities/stoppedPartials";
@@ -77,6 +82,8 @@ type SendRequestProps = {
   modelSelection?: ModelSelection;
   models?: ModelListResponse;
   attachments?: ImageAttachment[];
+  /** Conversation documents uploaded with this message, and their ingest job. */
+  sentDocuments?: SentDocuments;
 };
 
 
@@ -101,7 +108,8 @@ export const sendRequest = async ({
   modelSelection,
   models,
   attachments,
-}: SendRequestProps) => {
+  documentIds,
+}: SendRequestProps & { documentIds?: string[] }) => {
   const { url, payload } = buildMessageRequest({
     conversationId,
     mode: "sync",
@@ -113,9 +121,50 @@ export const sendRequest = async ({
     modelSelection,
     models,
     attachments,
+    documentIds,
   });
   const response = await api.post<CreateMessageResponse>(url, payload);
   return mapCreateMessageResponse(response.data);
+};
+
+const documentLabel = (sent: SentDocuments) =>
+  sent.documents.length === 1
+    ? sent.documents[0].filename
+    : `${sent.documents.length} documents`;
+
+const readingNotice = (sent: SentDocuments) =>
+  `Reading ${documentLabel(sent)}. Your question is answered once it is ready…`;
+
+/**
+ * Hold the turn until the documents sent with it are parsed and embedded, so
+ * the answer can search them. Returns the ids to put on the message; a failed
+ * job drops its documents, and the question is answered without them.
+ */
+const waitForSentDocuments = async (
+  queryClient: QueryClient,
+  conversationId: string | undefined,
+  sent: SentDocuments | undefined,
+): Promise<string[] | undefined> => {
+  if (!sent || !conversationId) return undefined;
+  const job = await waitForIngestJob(conversationId, sent.jobId);
+  const ids = new Set(sent.documents.map((doc) => doc.id));
+  if (job.status === "failed") {
+    const reason =
+      JOB_ERROR_MESSAGES[job.error_code ?? ""] ??
+      JOB_ERROR_MESSAGES.document_ingest_failed;
+    toast.error(`${documentLabel(sent)}: ${reason} Answering without it.`);
+  }
+  updateLastTempMessage(queryClient, conversationId, (msg) => ({
+    ...msg,
+    pre_answer_notices: [],
+    attachments:
+      job.status === "failed"
+        ? (msg.attachments ?? []).filter(
+            (a) => !ids.has(a.id ?? a.document_id ?? ""),
+          )
+        : msg.attachments,
+  }));
+  return job.status === "failed" ? undefined : [...ids];
 };
 
 export const useSendRequest = (conversationId?: string) => {
@@ -133,7 +182,13 @@ export const useSendRequest = (conversationId?: string) => {
       modelSelection,
       models,
       attachments,
+      sentDocuments,
     }: SendRequestProps) => {
+      const documentIds = await waitForSentDocuments(
+        queryClient,
+        conversationId,
+        sentDocuments,
+      );
       const cachedModels =
         models ??
         queryClient.getQueryData<ModelListResponse>([QUERY_KEYS.models]);
@@ -152,6 +207,7 @@ export const useSendRequest = (conversationId?: string) => {
         modelSelection,
         models: cachedModels,
         attachments,
+        documentIds,
       });
 
       // Everything the stream has painted into the bubble so far. Declared
@@ -174,6 +230,7 @@ export const useSendRequest = (conversationId?: string) => {
             modelSelection,
             models: cachedModels,
             attachments,
+            documentIds,
           }),
         );
       }
@@ -431,7 +488,13 @@ export const useSendRequest = (conversationId?: string) => {
         documents: [],
         use_rag: false,
         metadata: {},
-        attachments: newMessage.attachments,
+        attachments: [
+          ...(newMessage.attachments ?? []),
+          ...(newMessage.sentDocuments?.documents ?? []),
+        ],
+        ...(newMessage.sentDocuments
+          ? { pre_answer_notices: [readingNotice(newMessage.sentDocuments)] }
+          : {}),
       };
 
       if (previousData) {
@@ -468,6 +531,27 @@ export const useSendRequest = (conversationId?: string) => {
       const watchdogTimedOut = consumeWatchdogTimeoutFlag();
       const userSuppressed = consumeSuppressToastFlag();
 
+      if (error instanceof DocumentWaitCanceled) {
+        // Stopped while the documents were still processing: nothing reached
+        // the model, so the turn is dropped and the text goes back to the
+        // composer. The documents keep processing for the next question.
+        queryClient.setQueryData<ChaMessageType>(
+          [QUERY_KEYS.conversation, conversationId],
+          (oldData) =>
+            oldData
+              ? {
+                  ...oldData,
+                  messages: (oldData.messages ?? []).filter(
+                    (msg: MessageType) => !msg.id?.startsWith("temp-"),
+                  ),
+                }
+              : oldData,
+        );
+        toast.info(
+          "Question not sent. The documents keep processing; ask again when you are ready.",
+        );
+        return;
+      }
       if (isServiceBusyError(error)) {
         // The backend refused before persisting anything: drop the optimistic
         // turn and hand the text back to the composer instead of painting a

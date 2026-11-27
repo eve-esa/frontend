@@ -104,6 +104,14 @@ export const PRIVATE_COLLECTIONS_ENABLED = isEnabled(
 export const ATTACHMENTS_ENABLED = isEnabled("FEATURE_ATTACHMENTS", false);
 
 /**
+ * Documents attached to one conversation (POST /conversations/{id}/documents): a PDF, TXT or MD
+ * file from the attach button is parsed and searched in that conversation instead of being stored
+ * as an artifact. Needs ATTACHMENTS_ENABLED for the attach button. Off keeps today's behaviour.
+ */
+export const CONVERSATION_DOCUMENTS_ENABLED =
+  ATTACHMENTS_ENABLED && isEnabled("FEATURE_CONVERSATION_DOCUMENTS", false);
+
+/**
  * The "Answered by" line under an answer, naming the model that produced it.
  *
  * A diagnostic, so blank must not turn it on: an undefined GitHub Actions variable arrives as
