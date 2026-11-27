@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   McpServerPublic,
+  ToolkitAccount,
   ToolkitUserCredentials,
 } from "@/services/useGetMcpServers";
 import { ToolkitsSection } from "./ToolkitsSection";
@@ -23,9 +24,29 @@ const creds = (
   ...overrides,
 });
 
+const account = (via: "header" | "variable"): ToolkitAccount => ({
+  id: "cdse",
+  label: "Copernicus Data Space",
+  provider: "Sentinel Hub",
+  url: "https://dataspace.copernicus.eu/",
+  tools: ["compute_metrics"],
+  credentials: [
+    {
+      name: "client_id",
+      label: "Copernicus client ID",
+      secret: false,
+      help_text: "OAuth client id from the Sentinel Hub dashboard.",
+      url: "https://shapps.dataspace.copernicus.eu/dashboard/#/account/settings",
+      via,
+    },
+  ],
+  services: [],
+});
+
 const server = (
   name: string,
-  user_credentials: ToolkitUserCredentials | null | undefined
+  user_credentials: ToolkitUserCredentials | null | undefined,
+  accounts: ToolkitAccount[] | null = null
 ): McpServerPublic => ({
   id: `id-${name}`,
   timestamp: "2026-11-20T00:00:00Z",
@@ -41,6 +62,7 @@ const server = (
   deleted_at: null,
   attribution: null,
   user_credentials,
+  accounts,
 });
 
 let servers: McpServerPublic[];
@@ -142,10 +164,67 @@ describe("ToolkitsSection", () => {
       expect(input.hasAttribute("data-private")).toBe(true);
     }
     expect(screen.getByText("Your account name")).toBeTruthy();
-    const link = screen.getByTestId("settings-toolkits-help-link") as HTMLAnchorElement;
-    expect(link.getAttribute("href")).toBe("https://provider.example/keys");
-    expect(link.getAttribute("target")).toBe("_blank");
-    expect(link.getAttribute("rel")).toBe("noopener noreferrer");
+    expect(screen.queryByText("Where to get these")).toBeNull();
+    for (const name of ["username", "api_key"]) {
+      const link = screen.getByTestId(
+        `settings-toolkits-credential-link-${name}`
+      ) as HTMLAnchorElement;
+      expect(link.getAttribute("href")).toBe("https://provider.example/keys");
+      expect(link.getAttribute("target")).toBe("_blank");
+      expect(link.getAttribute("rel")).toBe("noopener noreferrer");
+    }
+  });
+
+  it("shows only the name and status, and links each field to its page", () => {
+    servers = [
+      server(
+        "effis",
+        creds({
+          help_url: null,
+          fields: [
+            { name: "client_id", label: "Copernicus client ID", secret: false, help_text: null },
+          ],
+        }),
+        [account("header")]
+      ),
+      server("cdse", null, [account("variable")]),
+    ];
+    render(<ToolkitsSection />);
+    const row = screen.getByTestId("settings-toolkits-row-effis").textContent;
+    expect(row).not.toContain("effis provider");
+    expect(row).not.toContain("Copernicus Data Space");
+    expect(screen.queryByTestId("settings-toolkits-row-cdse")).toBeNull();
+    expect(screen.getByTestId("settings-toolkits-add-effis").textContent).toBe(
+      "Add credentials"
+    );
+    fireEvent.click(screen.getByTestId("settings-toolkits-add-effis"));
+    expect(
+      screen.getByTestId("settings-toolkits-credential-link-client_id").getAttribute("href")
+    ).toBe("https://shapps.dataspace.copernicus.eu/dashboard/#/account/settings");
+    expect(screen.getByText("OAuth client id from the Sentinel Hub dashboard.")).toBeTruthy();
+    expect(
+      screen.getByTestId("settings-toolkits-credential-link-client_id").getAttribute("aria-label")
+    ).toBe("Where to get Copernicus client ID");
+  });
+
+  it("does not turn a non-http field url into a link", () => {
+    const bad = account("header");
+    bad.credentials[0].url = "javascript:alert(1)";
+    servers = [
+      server(
+        "effis",
+        creds({
+          help_url: null,
+          fields: [
+            { name: "client_id", label: "Copernicus client ID", secret: false, help_text: null },
+          ],
+        }),
+        [bad]
+      ),
+    ];
+    render(<ToolkitsSection />);
+    fireEvent.click(screen.getByTestId("settings-toolkits-add-effis"));
+    expect(screen.queryByTestId("settings-toolkits-credential-link-client_id")).toBeNull();
   });
 
   it("keeps Save disabled until every field is filled, then sends exactly the values", () => {
@@ -195,6 +274,46 @@ describe("ToolkitsSection", () => {
     fireEvent.click(screen.getByTestId("settings-toolkits-add-alpha"));
     expect((screen.getByTestId("settings-toolkits-field-username") as HTMLInputElement).value).toBe("");
     expect((screen.getByTestId("settings-toolkits-field-api_key") as HTMLInputElement).value).toBe("");
+  });
+
+  it("groups the form under each service", () => {
+    const weather = account("header");
+    weather.id = "weather";
+    weather.label = "Weather Desk";
+    weather.credentials[0].name = "weather_key";
+    weather.credentials[0].label = "Weather key";
+    const maps = account("header");
+    maps.id = "maps";
+    maps.label = "Map Desk";
+    maps.credentials[0].name = "maps_token";
+    maps.credentials[0].label = "Maps token";
+    servers = [
+      server(
+        "dummy",
+        creds({
+          help_url: null,
+          fields: [
+            { name: "weather_key", label: "Weather key", secret: true, help_text: null },
+            { name: "maps_token", label: "Maps token", secret: true, help_text: null },
+          ],
+        }),
+        [weather, maps]
+      ),
+    ];
+    render(<ToolkitsSection />);
+    expect(screen.getByTestId("settings-toolkits-row-dummy").textContent).not.toContain(
+      "Weather Desk"
+    );
+    fireEvent.click(screen.getByTestId("settings-toolkits-add-dummy"));
+    const form = screen.getByTestId("settings-toolkits-form");
+    expect(form.textContent).toContain("This toolkit uses 2 services.");
+    const legends = [...form.querySelectorAll("legend")].map((node) => node.textContent);
+    expect(legends).toEqual(["Weather Desk", "Map Desk"]);
+    const weatherLink = screen.getByTestId(
+      "settings-toolkits-service-link-weather"
+    ) as HTMLAnchorElement;
+    expect(weatherLink.getAttribute("href")).toBe("https://dataspace.copernicus.eu/");
+    expect(weatherLink.getAttribute("target")).toBe("_blank");
   });
 
   it("Remove asks first, names the toolkit, and deletes only on confirm", () => {

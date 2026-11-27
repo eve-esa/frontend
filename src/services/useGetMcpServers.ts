@@ -61,6 +61,30 @@ export type ToolkitUserCredentials = {
   updated_at: string | null;
 };
 
+export type ToolkitAccountCredential = {
+  name: string;
+  label: string;
+  secret: boolean;
+  help_text: string | null;
+  url: string | null;
+  /** `header` values can be saved in Settings. `variable` values are shown only. */
+  via: "header" | "variable";
+};
+
+/**
+ * One upstream account from a toolkit's environment.yaml, on GET /mcp-servers.
+ * Header and variable names are not included.
+ */
+export type ToolkitAccount = {
+  id: string;
+  label: string;
+  provider: string | null;
+  url: string | null;
+  tools: string[];
+  credentials: ToolkitAccountCredential[];
+  services: ToolkitAccount[];
+};
+
 export type McpServerPublic = {
   id: string | null;
   timestamp: string;
@@ -83,6 +107,11 @@ export type McpServerPublic = {
    * credentials. Optional so a response from a backend without the field still fits.
    */
   user_credentials?: ToolkitUserCredentials | null;
+  /**
+   * Accounts the toolkit needs, from its environment.yaml. Optional so a response
+   * from a backend without the field still fits. Empty or null means none.
+   */
+  accounts?: ToolkitAccount[] | null;
 };
 
 export type McpServersResponse = {
