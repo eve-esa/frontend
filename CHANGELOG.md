@@ -16,6 +16,28 @@ Release and promotes staging. Production is promoted from there by an explicit d
 The "Pilot history" section at the bottom predates this repository's version series: no tag was ever
 cut for it. The released tags start at `v0.0.1`.
 
+## [1.4.0](https://github.com/eve-esa/frontend/compare/v1.3.2...v1.4.0) (2026-11-27)
+
+
+### Added
+
+* **chat:** pin the composer at the bottom on phones ([#219](https://github.com/eve-esa/frontend/issues/219)) ([83f5e44](https://github.com/eve-esa/frontend/commit/83f5e44170ec89a0a5e2cb0868a0376de2e9afd8))
+* **settings:** let users add their own toolkit credentials ([#222](https://github.com/eve-esa/frontend/issues/222)) ([03f443a](https://github.com/eve-esa/frontend/commit/03f443aa97879fe886b17db69cc06a3bd35d5cfc))
+* **settings:** show toolkit services ([#233](https://github.com/eve-esa/frontend/issues/233)) ([dfc5843](https://github.com/eve-esa/frontend/commit/dfc58436f9a216d2604f0b80649a5d0ed8521bb7))
+* show streamed thinking ([#235](https://github.com/eve-esa/frontend/issues/235)) ([89e3bda](https://github.com/eve-esa/frontend/commit/89e3bda33dd8d6ea3e6298affd9b3c4321dcc6f2))
+* show when file storage is full ([1c1ecdc](https://github.com/eve-esa/frontend/commit/1c1ecdc0f04bfcbef1b5dfb31dec787b29475278))
+* **toolkits:** link toolkits that take your credentials to Settings ([#225](https://github.com/eve-esa/frontend/issues/225)) ([8bc2e8c](https://github.com/eve-esa/frontend/commit/8bc2e8c4f1508b39e673ab8b883d9beb1b6cf5da))
+
+
+### Fixed
+
+* **agent-steps:** load the offloaded result in Open full result ([#221](https://github.com/eve-esa/frontend/issues/221)) ([82ebb91](https://github.com/eve-esa/frontend/commit/82ebb917049ddd8fd6eb61ad5449bf4e3e9603b2))
+* **chat:** download saved workspace files ([#223](https://github.com/eve-esa/frontend/issues/223)) ([2e8346c](https://github.com/eve-esa/frontend/commit/2e8346c832cefc47198720c4e734b265c09c619b))
+* **chat:** expand tool input and split sources ([#227](https://github.com/eve-esa/frontend/issues/227)) ([c8b5827](https://github.com/eve-esa/frontend/commit/c8b5827791f23e672809649acb2098d3d6de258a))
+* **chat:** keep the agent steps clock running until the turn ends ([#228](https://github.com/eve-esa/frontend/issues/228)) ([8340089](https://github.com/eve-esa/frontend/commit/8340089e60b41aa1612f0ad54c44b2240c7e20e5))
+* **chat:** show a turn still running after a reload ([#229](https://github.com/eve-esa/frontend/issues/229)) ([61fa658](https://github.com/eve-esa/frontend/commit/61fa658ee85c13c9f5acf124452888ba6bf4b5ce))
+* **toolkits:** one line and one action for credentials in the toolkits panel ([#226](https://github.com/eve-esa/frontend/issues/226)) ([97d6b5d](https://github.com/eve-esa/frontend/commit/97d6b5dba39e1e8492fdd92fdb45393780c1860e))
+
 ## [1.3.2](https://github.com/eve-esa/frontend/compare/v1.3.1...v1.3.2) (2026-11-20)
 
 
