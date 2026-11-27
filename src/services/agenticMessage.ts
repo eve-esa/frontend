@@ -73,6 +73,7 @@ type MessageRequestInput = GenerationInput & {
   mcpServers: string[];
   skills: string[];
   attachments?: ImageAttachment[];
+  documentIds?: string[];
 };
 
 /**
@@ -87,6 +88,7 @@ export const buildMessageRequest = ({
   mcpServers,
   skills,
   attachments,
+  documentIds,
   ...generation
 }: MessageRequestInput) => {
   const { url, extraPayload } = resolveMessageEndpoint(
@@ -118,6 +120,7 @@ export const buildMessageRequest = ({
       ...(attachments?.length
         ? { artifact_ids: attachments.map((a) => a.id) }
         : {}),
+      ...(documentIds?.length ? { document_ids: documentIds } : {}),
       ...extraPayload,
     },
   };

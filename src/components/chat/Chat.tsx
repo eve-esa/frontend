@@ -32,6 +32,7 @@ import { useRetry } from "@/services/useRetry";
 import { prefetchTokenUsage } from "@/services/useTokenUsage";
 import { useListModels } from "@/services/useListModels";
 import { MOBILE_COMPOSER_ENABLED } from "@/utilities/features";
+import type { SentDocuments } from "@/services/useConversationDocuments";
 
 export const Chat = () => {
   const navigate = useNavigate();
@@ -116,7 +117,11 @@ export const Chat = () => {
   }, [conversationId, queryClient]);
 
   const handleSendRequest = useCallback(
-    (input: string, attachments?: ImageAttachment[]) => {
+    (
+      input: string,
+      attachments?: ImageAttachment[],
+      sentDocuments?: SentDocuments,
+    ) => {
       if (!conversationId) return;
 
       const settings = readStoredSettings();
@@ -132,6 +137,7 @@ export const Chat = () => {
         modelSelection,
         models,
         attachments,
+        sentDocuments,
       });
     },
     [sendRequest, conversationId, models],
@@ -142,7 +148,11 @@ export const Chat = () => {
       firstMessageSent.current = true;
       localStorage.removeItem(LOCAL_STORAGE_DRAFT_NEW_CONVERSATION);
       setDraftMessage(null);
-      handleSendRequest(draftMessage.input, draftMessage.attachments);
+      handleSendRequest(
+        draftMessage.input,
+        draftMessage.attachments,
+        draftMessage.sentDocuments,
+      );
     }
   }, [draftMessage, isMutating, handleSendRequest]);
 

@@ -43,6 +43,7 @@ import { updateLastTempMessage } from "@/services/agenticMessage";
 import { CustomModelsDialog } from "./CustomModelsDialog";
 import {
   ATTACHMENTS_ENABLED,
+  CONVERSATION_DOCUMENTS_ENABLED,
   CUSTOM_MODELS_ENABLED,
   MOBILE_COMPOSER_ENABLED,
   MODEL_PICKER_ENABLED,
@@ -57,7 +58,27 @@ import {
   type ImageAttachment,
   type MessageType,
 } from "@/types";
-import { useParams } from "react-router-dom";
+import { generatePath, useNavigate, useParams } from "react-router-dom";
+import api from "@/services/axios";
+import {
+  documentErrorMessage,
+  isConversationDocument,
+  MAX_CONVERSATION_DOCUMENT_BYTES,
+  type SentDocuments,
+  uploadConversationDocuments,
+} from "@/services/useConversationDocuments";
+import {
+  cancelDocumentWait,
+  isDocumentWaitActive,
+} from "@/services/documentWait";
+import { httpCreateConversation } from "@/services/useCreateConversation";
+import { LOCAL_STORAGE_DRAFT_NEW_CONVERSATION } from "@/utilities/localStorage";
+import { serializeDraftNewConversation } from "@/utilities/draftNewConversation";
+import { StagedDocuments } from "./StagedDocuments";
+
+// The chat route's path, as in useReportBug.ts. Importing @/utilities/routes here would pull every
+// page (and the OIDC module) into the composer and close an import cycle through ChatPage.
+const CHAT_PATH = "/chat/:conversationId";
 import { abortCurrentStream } from "@/services/streaming";
 import {
   cancelBusyWait,
@@ -151,7 +172,11 @@ export type MessageInputProps = {
   className?: string;
   placeholder?: string;
   disabled?: boolean;
-  sendRequest?: (input: string, attachments?: ImageAttachment[]) => void;
+  sendRequest?: (
+    input: string,
+    attachments?: ImageAttachment[],
+    sentDocuments?: SentDocuments,
+  ) => void;
   suggestions?: string[];
   /**
    * True once the conversation holds a message. With FEATURE_MOBILE_COMPOSER on, the notice under
@@ -196,8 +221,34 @@ export const MessageInput = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
   const { mutateAsync: uploadImage } = useUploadImage();
+  const navigate = useNavigate();
+  // PDF, TXT and MD become documents of this conversation. They stay here,
+  // removable and not uploaded, until Send: then they are uploaded, parsed in
+  // the background, and the question waits for them.
+  const [stagedDocuments, setStagedDocuments] = useState<File[]>([]);
+  const [isSendingDocuments, setIsSendingDocuments] = useState(false);
 
-  const isUploading = attachments.some((a) => a.status === "uploading");
+  const stageDocuments = useCallback((files: File[]) => {
+    const fitting = files.filter((file) => {
+      if (file.size <= MAX_CONVERSATION_DOCUMENT_BYTES) return true;
+      toast.error(`${file.name}: file exceeds 10 MB`);
+      return false;
+    });
+    setStagedDocuments((prev) => [
+      ...prev,
+      ...fitting.filter(
+        (file) =>
+          !prev.some((p) => p.name === file.name && p.size === file.size),
+      ),
+    ]);
+  }, []);
+
+  const unstageDocument = useCallback((file: File) => {
+    setStagedDocuments((prev) => prev.filter((p) => p !== file));
+  }, []);
+
+  const isUploading =
+    isSendingDocuments || attachments.some((a) => a.status === "uploading");
 
   // A refused send (overloaded backend, twice, or Stop during the countdown)
   // comes back here: text and attachments return to the composer, ahead of
@@ -271,7 +322,12 @@ export const MessageInput = ({
   );
 
   const addFiles = useCallback(
-    (files: File[]) => {
+    (dropped: File[]) => {
+      const documents = CONVERSATION_DOCUMENTS_ENABLED
+        ? dropped.filter(isConversationDocument)
+        : [];
+      if (documents.length > 0) stageDocuments(documents);
+      const files = dropped.filter((file) => !documents.includes(file));
       if (files.length === 0) return;
       const accepted: File[] = [];
       let slots = MAX_ATTACHMENTS_PER_MESSAGE - attachments.length;
@@ -316,7 +372,7 @@ export const MessageInput = ({
       setAttachments((prev) => [...prev, ...newItems]);
       newItems.forEach((item) => void uploadOne(item));
     },
-    [attachments.length, uploadOne],
+    [attachments.length, uploadOne, stageDocuments],
   );
 
   const removeAttachment = useCallback((localId: string) => {
@@ -367,13 +423,62 @@ export const MessageInput = ({
     };
   }, []);
 
-  const onSubmit = (data: { input: string }) => {
+  const onSubmit = async (data: { input: string }) => {
     const inputLengthWithoutNewlines = data.input.replace(/\n/g, "").length;
     if (inputLengthWithoutNewlines > maxCharacters || isUploading) return;
 
     const uploaded = attachments
       .filter((a) => a.status === "done" && a.uploaded)
       .map((a) => a.uploaded as ImageAttachment);
+
+    // Staged documents go up now. The turn waits for their background job
+    // (useSendRequest), so the answer can search them.
+    let sentDocuments: SentDocuments | undefined;
+    if (stagedDocuments.length > 0) {
+      setIsSendingDocuments(true);
+      let created: string | undefined;
+      try {
+        let target = conversationId;
+        if (!target) {
+          created = (await httpCreateConversation(data.input)).id as string;
+          target = created;
+        }
+        sentDocuments = await uploadConversationDocuments(
+          target,
+          stagedDocuments,
+        );
+        setStagedDocuments([]);
+        if (created) {
+          // New chat: Chat replays the draft once the conversation opens.
+          localStorage.setItem(
+            LOCAL_STORAGE_DRAFT_NEW_CONVERSATION,
+            serializeDraftNewConversation({
+              input: data.input,
+              attachments: uploaded.length > 0 ? uploaded : undefined,
+              sentDocuments,
+            }),
+          );
+          clearAttachments();
+          reset();
+          void queryClient.invalidateQueries({
+            queryKey: [QUERY_KEYS.conversationsList],
+          });
+          navigate(generatePath(CHAT_PATH, { conversationId: created }));
+          return;
+        }
+      } catch (error) {
+        toast.error(
+          documentErrorMessage(error, "The documents could not be uploaded."),
+        );
+        // An empty conversation made only for this upload is not kept.
+        if (created) {
+          void api.delete(`/conversations/${created}`).catch(() => undefined);
+        }
+        return;
+      } finally {
+        setIsSendingDocuments(false);
+      }
+    }
 
     if (conversationId) {
       clearBusyNotice(conversationId);
@@ -392,7 +497,11 @@ export const MessageInput = ({
     } else {
       clearAttachments();
     }
-    sendRequest?.(data.input, uploaded.length > 0 ? uploaded : undefined);
+    sendRequest?.(
+      data.input,
+      uploaded.length > 0 ? uploaded : undefined,
+      sentDocuments,
+    );
     reset();
   };
 
@@ -406,6 +515,7 @@ export const MessageInput = ({
       "application/pdf": [".pdf"],
       "text/csv": [".csv"],
       "text/plain": [".txt"],
+      ...(CONVERSATION_DOCUMENTS_ENABLED ? { "text/markdown": [".md"] } : {}),
       "application/json": [".json"],
       "application/geo+json": [".geojson"],
     },
@@ -535,6 +645,12 @@ export const MessageInput = ({
     // turn and returns the text to the composer.
     if (conversationId && isBusyWaitActive(conversationId)) {
       cancelBusyWait(conversationId);
+      return;
+    }
+    // Stop while the sent documents are still processing: the question has
+    // not reached the model yet, so the wait is canceled and nothing else.
+    if (conversationId && isDocumentWaitActive(conversationId)) {
+      cancelDocumentWait(conversationId);
       return;
     }
     // Position of the turn this Stop is for, read before anything awaits: the
@@ -727,7 +843,7 @@ export const MessageInput = ({
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,text/csv,text/plain,application/json,.pdf,.csv,.txt,.json,.geojson"
+                accept={`image/png,image/jpeg,image/webp,image/gif,application/pdf,text/csv,text/plain,application/json,.pdf,.csv,.txt,.json,.geojson${CONVERSATION_DOCUMENTS_ENABLED ? ",.md,text/markdown" : ""}`}
                 multiple
                 className="hidden"
                 data-testid="attach-image-input"
@@ -771,6 +887,12 @@ export const MessageInput = ({
                 }
               }}
               placeholder={placeholder}
+            />
+
+            <StagedDocuments
+              files={stagedDocuments}
+              onRemove={unstageDocument}
+              disabled={isSendingDocuments}
             />
 
             <AttachmentPreviewList
