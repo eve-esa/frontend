@@ -1,4 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCircleInfo } from "@fortawesome/free-solid-svg-icons";
 import { Button } from "@/components/ui/Button";
 import {
   Dialog,
@@ -9,9 +11,12 @@ import {
 } from "@/components/ui/Dialog";
 import { Input } from "@/components/ui/Input";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { Tooltip } from "@/components/ui/Tooltip";
 import {
   useGetMcpServers,
   type McpServerPublic,
+  type ToolkitAccount,
+  type ToolkitAccountCredential,
   type ToolkitUserCredentials,
 } from "@/services/useGetMcpServers";
 import {
@@ -29,6 +34,69 @@ type CredentialsServer = McpServerPublic & {
 const hasCredentialForm = (server: McpServerPublic): server is CredentialsServer =>
   Boolean(server.user_credentials);
 
+// The payload only carries http(s) URLs. Anything else is treated as unset
+// so a stray value cannot become an href.
+const httpUrl = (value: string | null | undefined): string | null => {
+  const trimmed = value?.trim() ?? "";
+  if (trimmed.startsWith("https://") || trimmed.startsWith("http://")) {
+    return trimmed;
+  }
+  return null;
+};
+
+const listServices = (accounts: ToolkitAccount[]): ToolkitAccount[] =>
+  accounts.flatMap((account) => [account, ...listServices(account.services)]);
+
+const accountCredentials = (server: McpServerPublic) => {
+  const byName = new Map<string, ToolkitAccountCredential>();
+  for (const service of listServices(server.accounts ?? [])) {
+    for (const credential of service.credentials) byName.set(credential.name, credential);
+  }
+  return byName;
+};
+
+type FieldHintProps = {
+  label: string;
+  name: string;
+  help: string | null;
+  url: string | null;
+};
+
+/** The help text in a tooltip. With a link, the icon opens the page where the value is issued. */
+const FieldHint = ({ label, name, help, url }: FieldHintProps) => {
+  if (!help && !url) return null;
+  const icon = <FontAwesomeIcon icon={faCircleInfo} className="size-4 text-natural-200" />;
+  return (
+    <Tooltip
+      content={
+        <span className="flex flex-col gap-1">
+          {help && <span>{help}</span>}
+          {url && <span className="text-natural-200">Click to open where to get it.</span>}
+        </span>
+      }
+      className="max-w-[280px] md:max-w-[350px]"
+      disableClick
+    >
+      {url ? (
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`Where to get ${label}`}
+          data-testid={`settings-toolkits-credential-link-${name}`}
+          className="inline-flex"
+        >
+          {icon}
+        </a>
+      ) : (
+        <span tabIndex={-1} aria-hidden className="inline-flex cursor-help">
+          {icon}
+        </span>
+      )}
+    </Tooltip>
+  );
+};
+
 type CredentialsFormProps = {
   server: CredentialsServer;
   onDone: () => void;
@@ -40,10 +108,31 @@ type CredentialsFormProps = {
  */
 const CredentialsForm = ({ server, onDone }: CredentialsFormProps) => {
   const { fields, help_url: helpUrl } = server.user_credentials;
+  const details = accountCredentials(server);
   const [values, setValues] = useState<Record<string, string>>({});
   const { mutate, isPending, isError, error } = useSaveToolkitCredentials();
 
   const complete = fields.every((field) => (values[field.name] ?? "") !== "");
+  const services = listServices(server.accounts ?? []);
+  const groups = services
+    .map((service) => ({
+      id: service.id,
+      label: service.label,
+      url: httpUrl(service.url),
+      fields: fields.filter((field) =>
+        service.credentials.some(
+          (credential) => credential.via === "header" && credential.name === field.name
+        )
+      ),
+      readOnly: service.credentials.filter(
+        (credential) =>
+          credential.via !== "header" || !fields.some((field) => field.name === credential.name)
+      ),
+    }))
+    .filter((group) => group.fields.length > 0 || group.readOnly.length > 0);
+  const grouped = new Set(groups.flatMap((group) => group.fields.map((field) => field.name)));
+  const loose = fields.filter((field) => !grouped.has(field.name));
+  const firstName = groups[0]?.fields[0]?.name ?? loose[0]?.name;
 
   const finish = () => {
     setValues({});
@@ -59,6 +148,46 @@ const CredentialsForm = ({ server, onDone }: CredentialsFormProps) => {
     mutate({ serverId: server.id, values: payload }, { onSuccess: finish });
   };
 
+  const renderField = (field: (typeof fields)[number]) => {
+    const id = `settings-toolkits-field-${field.name}`;
+    const helpId = `${id}-help`;
+    const detail = details.get(field.name);
+    const help = field.help_text ?? detail?.help_text ?? null;
+    const url = httpUrl(detail?.url) ?? httpUrl(helpUrl);
+    return (
+      <div key={field.name} className="flex flex-col gap-2">
+        <div className="flex items-center gap-2">
+          <label htmlFor={id} className="font-['NotesESA'] text-sm">
+            {field.label}
+          </label>
+          <FieldHint label={field.label} name={field.name} help={help} url={url} />
+        </div>
+        <Input
+          id={id}
+          data-testid={id}
+          autoFocus={field.name === firstName}
+          data-private
+          data-1p-ignore="true"
+          data-lpignore="true"
+          name={`eve-toolkit-${field.name}`}
+          type={field.secret ? "password" : "text"}
+          autoComplete="off"
+          spellCheck={false}
+          aria-describedby={help ? helpId : undefined}
+          value={values[field.name] ?? ""}
+          onChange={(e) =>
+            setValues((prev) => ({ ...prev, [field.name]: e.target.value }))
+          }
+        />
+        {help && (
+          <span id={helpId} className="sr-only">
+            {help}
+          </span>
+        )}
+      </div>
+    );
+  };
+
   return (
     <form
       onSubmit={submit}
@@ -66,50 +195,50 @@ const CredentialsForm = ({ server, onDone }: CredentialsFormProps) => {
       data-testid="settings-toolkits-form"
       className="mt-2 flex flex-col gap-5"
     >
-      {fields.map((field) => {
-        const id = `settings-toolkits-field-${field.name}`;
-        const helpId = `${id}-help`;
-        return (
-          <div key={field.name} className="flex flex-col gap-2">
-            <label htmlFor={id} className="font-['NotesESA'] text-sm">
-              {field.label}
-            </label>
-            <Input
-              id={id}
-              data-testid={id}
-              data-private
-              data-1p-ignore="true"
-              data-lpignore="true"
-              name={`eve-toolkit-${field.name}`}
-              type={field.secret ? "password" : "text"}
-              autoComplete="off"
-              spellCheck={false}
-              aria-describedby={field.help_text ? helpId : undefined}
-              value={values[field.name] ?? ""}
-              onChange={(e) =>
-                setValues((prev) => ({ ...prev, [field.name]: e.target.value }))
-              }
-            />
-            {field.help_text && (
-              <p id={helpId} className="text-sm text-natural-200">
-                {field.help_text}
-              </p>
-            )}
-          </div>
-        );
-      })}
-
-      {helpUrl && (
-        <a
-          href={helpUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          data-testid="settings-toolkits-help-link"
-          className="text-sm underline"
-        >
-          Where to get these
-        </a>
+      {groups.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <p className="text-sm text-natural-200">
+            This toolkit uses {groups.length} {groups.length === 1 ? "service" : "services"}.
+            Each service needs its own credentials.
+          </p>
+          {groups.map((group) => (
+            <fieldset
+              key={group.label}
+              className="flex flex-col gap-4 rounded-md border border-primary-400/40 p-3"
+            >
+              <legend className="px-1 text-sm font-medium">
+                {group.url ? (
+                  <a
+                    href={group.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    data-testid={`settings-toolkits-service-link-${group.id}`}
+                    className="underline"
+                  >
+                    {group.label}
+                  </a>
+                ) : (
+                  group.label
+                )}
+              </legend>
+              {group.fields.map((field) => renderField(field))}
+              {group.readOnly.map((credential) => (
+                <div key={credential.name} className="flex items-center gap-2">
+                  <p className="text-sm">{credential.label}</p>
+                  <FieldHint
+                    label={credential.label}
+                    name={credential.name}
+                    help={credential.help_text}
+                    url={httpUrl(credential.url)}
+                  />
+                  <p className="text-sm text-natural-200">The server reads this key.</p>
+                </div>
+              ))}
+            </fieldset>
+          ))}
+        </div>
       )}
+      {loose.map((field) => renderField(field))}
 
       {isError && (
         <p
@@ -257,11 +386,6 @@ export const ToolkitsSection = () => {
               >
                 <div className="min-w-0">
                   <p className="font-medium">{server.name}</p>
-                  {server.provider && (
-                    <p className="truncate text-sm text-natural-200">
-                      {server.provider}
-                    </p>
-                  )}
                   <p
                     data-testid={`settings-toolkits-status-${server.name}`}
                     className="text-sm text-natural-200"
@@ -309,7 +433,7 @@ export const ToolkitsSection = () => {
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
         <DialogContent
           data-testid="settings-toolkits-dialog"
-          className="max-w-lg"
+          className="max-h-[80vh] overflow-y-auto sm:max-w-2xl"
         >
           <DialogHeader>
             <DialogTitle>
