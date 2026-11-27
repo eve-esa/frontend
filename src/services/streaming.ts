@@ -12,6 +12,9 @@ export type StreamEvent =
       artifact_ids?: string[];
     }
   | { type: "status"; content: string }
+  // Agentic pipeline only: a fragment of the model's reasoning. Fragments of
+  // one think arrive in order and are closed by the next token or tool call.
+  | { type: "reasoning"; content: string }
   | { type: "requery"; content: string }
   // Agentic pipeline only (stream-generate-agentic): emitted when the agent
   // invokes an MCP tool ("tool_call") or the tool returns ("tool_result").

@@ -43,8 +43,10 @@ import { swapTempForSaved } from "@/utilities/savedTurn";
 import {
   applyCancelledCalls,
   applyModelFallback,
+  applyReasoning,
   applyToolCall,
   applyToolResult,
+  closeReasoning,
 } from "@/utilities/toolActivity";
 import type { MessagePipeline } from "@/utilities/messageEndpoint";
 import { shouldToastStreamError } from "@/utilities/streamError";
@@ -271,10 +273,16 @@ export const useSendRequest = (conversationId?: string) => {
                   clearSummarizing({
                     ...msg,
                     output: (msg.output || "") + content,
+                    tool_activity: closeReasoning(msg.tool_activity, Date.now()),
                   }),
                   evt,
                 ),
               );
+            } else if (AGENT_STEPS_ENABLED && type === "reasoning" && typeof content === "string") {
+              updateTemp((msg) => ({
+                ...msg,
+                tool_activity: applyReasoning(msg.tool_activity, content, Date.now()),
+              }));
             } else if (type === "final" && typeof answer === "string") {
               finalAnswer = answer;
               streamedOutput = answer;

@@ -325,6 +325,35 @@ export const rowsFromActivity = (
   const rows: AgentStepRow[] = [];
   const subagents = new Map<string, AgentStepRow>();
   activity.forEach((entry, index) => {
+    if (entry.kind === "reasoning") {
+      const open = entry.state === "running" && !opts.stopped;
+      const durationS =
+        entry.durationMs !== undefined
+          ? entry.durationMs / 1000
+          : entry.startedAtMs !== undefined && entry.endedAtMs !== undefined
+            ? Math.max(0, (entry.endedAtMs - entry.startedAtMs) / 1000)
+            : null;
+      const preview = entry.preview ?? null;
+      rows.push({
+        ...emptyRow(entry.id ?? `live-reasoning-${index}`),
+        kind: "reasoning",
+        status: open ? "running" : entry.state === "running" && opts.stopped ? "stopped" : "done",
+        title: open
+          ? "Thinking…"
+          : durationS !== null
+            ? `Thought for ${Math.max(1, Math.round(durationS))}s`
+            : "Thought",
+        server: null,
+        skillName: null,
+        plan: null,
+        query: null,
+        preview,
+        durationS,
+        output: preview ? parseToolContent(preview) : null,
+        raw: entry,
+      });
+      return;
+    }
     if (entry.kind === "model_fallback") {
       rows.push({
         ...emptyRow(entry.id ?? `live-switch-${index}`),
@@ -416,7 +445,7 @@ export const rowsFromActivity = (
 // Persisted trace
 // ---------------------------------------------------------------------------
 
-const readReasoning = (step: AgentStepView): string | null => {
+const readReasoning = (step: { raw: unknown }): string | null => {
   const raw = step.raw as Record<string, unknown>;
   const kwargs = isRecord(raw.additional_kwargs) ? raw.additional_kwargs : {};
   return str(raw.reasoning) ?? str(raw.reasoning_content) ?? str(kwargs.reasoning_content);
@@ -498,7 +527,27 @@ export const rowsFromTrace = (
       }
       continue;
     }
-    if (step.kind === "answer") continue;
+    if (step.kind === "answer") {
+      // A think with no tool call is stored on the final answer, not on an
+      // agent step. Same row the live stream built.
+      const reasoning = readReasoning(step);
+      if (reasoning) {
+        rows.push({
+          ...emptyRow(`r-${step.index}`),
+          kind: "reasoning",
+          title: step.durationS !== null ? `Thought for ${Math.max(1, Math.round(step.durationS))}s` : "Thought",
+          server: null,
+          skillName: null,
+          plan: null,
+          query: null,
+          preview: reasoning,
+          durationS: step.durationS,
+          output: parseToolContent(reasoning),
+          raw: step.raw,
+        });
+      }
+      continue;
+    }
     if (step.kind === "other") {
       const kind = str(raw.kind);
       rows.push({
@@ -1060,6 +1109,7 @@ export const latestRunningRow = (rows: readonly AgentStepRow[]): AgentStepRow | 
 export const activityOf = (row: AgentStepRow): string => {
   // One name for the retrieval step live, folded and expanded (decision 0007);
   // the collections it searched are on the step's meta line.
+  if (row.kind === "reasoning") return "Thinking";
   if (isKnowledgeBaseTool(row.tool, row.server)) return `Searching ${EVE_SOURCES_LABEL}`;
   if (row.kind === "skill") return `Reading skill ${row.skillName ?? row.title}`;
   if (row.kind === "plan") return "Planning";

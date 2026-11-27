@@ -221,3 +221,42 @@ describe("stopped run total", () => {
     expect(summaryText(view, { stopped: true, stoppedAfterS: view.totalS })).toBe("Stopped after 14s, 2 steps");
   });
 });
+
+describe("live reasoning", () => {
+  const thinking = (preview: string, state: ToolActivityEntry["state"]): ToolActivityEntry => ({
+    label: state === "running" ? "Thinking…" : "Thought",
+    state,
+    kind: "reasoning",
+    id: "reasoning-0",
+    preview,
+    startedAtMs: 0,
+    ...(state === "done" ? { endedAtMs: 4_200 } : {}),
+  });
+
+  it("shows a running think that fills, then the duration once it closes", () => {
+    const open = rowsFromActivity([thinking("hmm", "running")]);
+    expect(open[0]).toMatchObject({
+      kind: "reasoning",
+      status: "running",
+      title: "Thinking…",
+      preview: "hmm",
+    });
+    expect(currentActivity(open)).toBe("Thinking…");
+
+    const closed = rowsFromActivity([thinking("hmm", "done")]);
+    expect(closed[0]).toMatchObject({ status: "done", title: "Thought for 4s", preview: "hmm" });
+  });
+
+  it("reads reasoning stored on the final answer", () => {
+    const view = buildStepsFromTrace([
+      {
+        role: "assistant",
+        content: "done",
+        reasoning_content: "hmm",
+        started_at_s: 0,
+        latency_s: 3,
+      },
+    ]);
+    expect(view.rows[0]).toMatchObject({ kind: "reasoning", preview: "hmm", title: "Thought for 3s" });
+  });
+});

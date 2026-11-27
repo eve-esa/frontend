@@ -81,7 +81,7 @@ export const activityVerbTarget = (
   catalog?: CollectionCatalog | null,
 ): VerbTarget | null => {
   const row = latestRunningRow(rows);
-  if (!row) return null;
+  if (!row || row.kind === "reasoning") return null;
   if (isKnowledgeBaseTool(row.tool, row.server)) return stepVerbTarget({ ...row, status: "running" }, catalog);
   if (row.kind === "mcp") return { verb: "Calling", targets: row.server ? [{ label: row.server, kind: "server" }] : [] };
   if (row.kind === "skill" && row.skillName) return { verb: "Reading skill", targets: [{ label: row.skillName, kind: "skill" }] };
@@ -130,6 +130,9 @@ const line = (
 export const stepLine = (row: AgentStepRow, catalog?: CollectionCatalog | null): StepLine => {
   const present = row.status === "running" || row.status === "stopped";
   const failed = row.status === "error";
+  if (row.kind === "reasoning") {
+    return line([], present ? "Thinking" : row.title, firstLine(row.preview, 160), false);
+  }
   if (row.kind === "group" && row.children.length > 0) {
     // "Searched EVE sources 3 times": the calls' own verb and chip, in the
     // group's tense, and the count as the detail.

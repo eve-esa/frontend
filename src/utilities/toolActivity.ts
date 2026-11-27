@@ -60,6 +60,47 @@ function optionalFields(evt: Record<string, unknown>): Partial<ToolActivityEntry
   return out;
 }
 
+/** Close a running reasoning row. A token or a tool call ends that think. */
+export function closeReasoning(
+  activity: ToolActivityEntry[] | undefined,
+  nowMs?: number,
+): ToolActivityEntry[] {
+  const entries = activity ?? [];
+  if (!entries.some((entry) => entry.kind === "reasoning" && entry.state === "running")) {
+    return entries;
+  }
+  return entries.map((entry) => {
+    if (entry.kind !== "reasoning" || entry.state !== "running") return entry;
+    const done: ToolActivityEntry = { ...entry, state: "done", label: "Thought" };
+    if (nowMs !== undefined) done.endedAtMs = nowMs;
+    return done;
+  });
+}
+
+/** Append a reasoning fragment, or start a new row after a token or tool call. */
+export function applyReasoning(
+  activity: ToolActivityEntry[] | undefined,
+  content: string,
+  nowMs?: number,
+): ToolActivityEntry[] {
+  const entries = activity ?? [];
+  const last = entries[entries.length - 1];
+  if (last && last.kind === "reasoning" && last.state === "running") {
+    return entries.map((entry, index) =>
+      index === entries.length - 1 ? { ...entry, preview: (entry.preview ?? "") + content } : entry,
+    );
+  }
+  const entry: ToolActivityEntry = {
+    label: "Thinking…",
+    state: "running",
+    kind: "reasoning",
+    id: `reasoning-${entries.length}`,
+    preview: content,
+  };
+  if (nowMs !== undefined) entry.startedAtMs = nowMs;
+  return [...entries, entry];
+}
+
 export function applyToolCall(
   activity: ToolActivityEntry[] | undefined,
   evt: Record<string, unknown>,
@@ -80,7 +121,7 @@ export function applyToolCall(
   if (evt.args !== undefined && evt.args !== null) entry.args = evt.args;
   if (nowMs !== undefined) entry.startedAtMs = nowMs;
   if (requestCollections) entry.requestCollections = requestCollections;
-  return [...(activity ?? []), entry];
+  return [...closeReasoning(activity, nowMs), entry];
 }
 
 const truncate = (s: string, max: number) =>

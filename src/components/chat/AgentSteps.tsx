@@ -876,7 +876,9 @@ const ToolStepRow = ({ row, nested = false }: { row: AgentStepRow; nested?: bool
   // finished (pattern after the shadcn/ui Subagent and AG-UI Dojo subagents,
   // no code copied); a manual toggle wins until that automatic state changes.
   // Every other row starts folded.
-  const autoOpen = row.kind === "subagent" && (row.status === "running" || row.status === "error");
+  const autoOpen =
+    (row.kind === "subagent" && (row.status === "running" || row.status === "error")) ||
+    (row.kind === "reasoning" && row.status === "running");
   const [toggle, setToggle] = useState<BlockToggle | null>(null);
   const open = resolveBlockOpen(toggle, autoOpen);
   const children = hasChildren ? (
