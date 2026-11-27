@@ -23,6 +23,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/Collapsible";
 import { ArtifactDownloadChip } from "@/components/ui/ArtifactDownloadChip";
+import SmartText from "@/components/ui/LazySmartText";
 import { StepSourceChips } from "./citations/StepSourceChips";
 import { CopyButton } from "@/components/ui/CopyButton";
 import { Spinner } from "@/components/ui/Spinner";
@@ -867,6 +868,18 @@ const RowTitle = ({ row }: { row: AgentStepRow }) => {
   );
 };
 
+/**
+ * A think is the model's own text, not a call: the whole trace as markdown,
+ * with no Input and Output boxes and no line cap (pattern after the AI SDK
+ * Elements and assistant-ui Reasoning disclosures, no code copied).
+ */
+const ReasoningBody = ({ row, live }: { row: AgentStepRow; live: boolean }) =>
+  row.preview ? (
+    <div data-testid="agent-step-reasoning" className={cn("mt-1 mb-1 text-[13px] leading-5", MUTED)}>
+      <SmartText text={row.preview} className="text-[13px] leading-5 text-inherit" isStreaming={live} />
+    </div>
+  ) : null;
+
 const ToolStepRow = ({ row, nested = false }: { row: AgentStepRow; nested?: boolean }) => {
   const { catalog } = useContext(BlockContextValue);
   const isPlan = row.kind === "plan";
@@ -942,7 +955,11 @@ const ToolStepRow = ({ row, nested = false }: { row: AgentStepRow; nested?: bool
               </>
             ) : (
               <>
-                {!isGroup && <StepResult row={row} />}
+                {row.kind === "reasoning" ? (
+                  <ReasoningBody row={row} live={row.status === "running"} />
+                ) : (
+                  !isGroup && <StepResult row={row} />
+                )}
                 {children}
               </>
             )}

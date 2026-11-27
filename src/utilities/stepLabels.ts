@@ -131,7 +131,7 @@ export const stepLine = (row: AgentStepRow, catalog?: CollectionCatalog | null):
   const present = row.status === "running" || row.status === "stopped";
   const failed = row.status === "error";
   if (row.kind === "reasoning") {
-    return line([], present ? "Thinking" : row.title, firstLine(row.preview, 160), false);
+    return line([], present ? "Thinking" : row.title, null, false);
   }
   if (row.kind === "group" && row.children.length > 0) {
     // "Searched EVE sources 3 times": the calls' own verb and chip, in the

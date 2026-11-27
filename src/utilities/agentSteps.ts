@@ -349,7 +349,6 @@ export const rowsFromActivity = (
         query: null,
         preview,
         durationS,
-        output: preview ? parseToolContent(preview) : null,
         raw: entry,
       });
       return;
@@ -542,7 +541,6 @@ export const rowsFromTrace = (
           query: null,
           preview: reasoning,
           durationS: step.durationS,
-          output: parseToolContent(reasoning),
           raw: step.raw,
         });
       }

@@ -1,5 +1,10 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+// The markdown renderer is lazy: static markup would only reach its skeleton.
+vi.mock("@/components/ui/LazySmartText", () => ({
+  default: ({ text }: { text: string }) => <div data-testid="smart-text">{text}</div>,
+}));
 import type { AgenticTraceStep, ToolActivityEntry } from "@/types";
 import { buildCollectionCatalog, buildStepsFromActivity } from "@/utilities/agentSteps";
 import { AgentSteps, ExitBadge, HighlightedCode, StepResult, resolveBlockOpen } from "./AgentSteps";
@@ -414,6 +419,24 @@ describe("verb plus target", () => {
     );
     expect(targets(html)).toEqual(["shell"]);
     expect(html).toMatch(/data-testid="agent-step-verb"[^>]*>Ran code</);
+  });
+});
+
+describe("reasoning row", () => {
+  it("shows the whole think as text, not as tool input and output", () => {
+    const think = Array.from({ length: 30 }, (_, i) => `step ${i} ${"x".repeat(200)}`).join("\n");
+    const html = renderToStaticMarkup(
+      <AgentSteps
+        activity={[running({ id: "reasoning-0", kind: "reasoning", label: "Thinking…", preview: think, startedAtMs: 0 })]}
+        live
+        answerStarted={false}
+      />,
+    );
+    expect(html).toContain('data-testid="agent-step-reasoning"');
+    expect(html).toContain("step 29");
+    expect(html).toContain("x".repeat(200));
+    expect(html).not.toContain('data-testid="agent-step-detail-panel"');
+    expect(html).not.toContain('data-testid="agent-step-detail"');
   });
 });
 
