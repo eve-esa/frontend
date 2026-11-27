@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  applyReasoning,
   applyToolCall,
   applyToolResult,
+  closeReasoning,
   mcpServerForTool,
 } from "./toolActivity";
 import type { ToolActivityEntry } from "@/types";
@@ -137,5 +139,32 @@ describe("applyToolCall request collections", () => {
   it("leaves the entry shape alone without them", () => {
     const [entry] = applyToolCall([], { type: "tool_call", tool: "eve_retrieval_retrieve" });
     expect("requestCollections" in entry).toBe(false);
+  });
+});
+
+describe("applyReasoning", () => {
+  it("appends fragments to the open think and starts a new one after a token", () => {
+    const first = applyReasoning(undefined, "hm", 1_000);
+    const grown = applyReasoning(first, "m", 1_100);
+    expect(grown).toHaveLength(1);
+    expect(grown[0]).toMatchObject({
+      kind: "reasoning",
+      state: "running",
+      preview: "hmm",
+      startedAtMs: 1_000,
+    });
+
+    const closed = closeReasoning(grown, 2_000);
+    expect(closed[0]).toMatchObject({ state: "done", endedAtMs: 2_000 });
+    const next = applyReasoning(closed, "again", 3_000);
+    expect(next).toHaveLength(2);
+    expect(next[1].preview).toBe("again");
+  });
+
+  it("closes the open think when a tool call starts", () => {
+    const thinking = applyReasoning(undefined, "hmm", 1_000);
+    const withCall = applyToolCall(thinking, { type: "tool_call", tool: "search" }, [], 2_000);
+    expect(withCall[0]).toMatchObject({ kind: "reasoning", state: "done", endedAtMs: 2_000 });
+    expect(withCall[1]).toMatchObject({ tool: "search", state: "running" });
   });
 });
