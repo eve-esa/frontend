@@ -70,10 +70,14 @@ const MODELS: ModelListResponse = {
 
 const SETTINGS = { score_threshold: 0.42, temperature: 0.3, k: 7 };
 
-const load = (agenticChat: "true" | "false") => {
+const load = (
+  agenticChat: "true" | "false",
+  extra: Record<string, string> = {},
+) => {
   stubRuntimeConfig({
     FEATURE_AGENTIC_CHAT: agenticChat,
     FEATURE_TOOLKITS: "true",
+    ...extra,
   });
   installMemoryLocalStorage();
   localStorage.setItem(
@@ -860,5 +864,101 @@ describe("summarizing events", () => {
     expect(flags).toEqual([undefined, true]);
     expect(tempMessage()?.output).toBe("");
     expect(JSON.stringify(tempMessage())).not.toContain("skip me");
+  });
+});
+
+describe("storage quota notices", () => {
+  const turn = {
+    query: "hello",
+    conversationId: "conv-1",
+    settings: SETTINGS,
+    models: MODELS,
+  };
+
+  const send = async (
+    events: unknown[] | null,
+    flag: "true" | "false",
+    body?: Record<string, unknown>,
+  ) => {
+    const mod = await load("true", { FEATURE_STORAGE_QUOTA: flag });
+    const { getStorageNotice, clearStorageNotice } = await import(
+      "./storageNotice"
+    );
+    clearStorageNotice();
+    if (events) {
+      mocks.postStream.mockImplementation(
+        ({ onEvent }: { onEvent: (evt: unknown) => void }) => {
+          events.forEach((evt) => onEvent(evt));
+          return Promise.resolve();
+        },
+      );
+      const options = mod.useSendRequest("conv-1") as unknown as MutationOptions;
+      const message = await options.mutationFn(turn);
+      return { message, notice: getStorageNotice("conv-1") };
+    }
+    mocks.post.mockResolvedValueOnce({
+      data: {
+        id: "m1",
+        query: "hello",
+        answer: "done",
+        documents: [],
+        use_rag: true,
+        conversation_id: "conv-1",
+        ...body,
+      },
+    });
+    const message = await mod.sendRequest(turn);
+    return { message, notice: getStorageNotice("conv-1") };
+  };
+
+  it("a notice frame sets the store and the answer still resolves", async () => {
+    const { message, notice } = await send(
+      [
+        {
+          type: "notice",
+          code: "storage_quota_exceeded",
+          used_bytes: 10,
+          max_bytes: 20,
+        },
+        { type: "final", answer: "saved answer" },
+      ],
+      "true",
+    );
+    expect(notice).toMatchObject({ usedBytes: 10, maxBytes: 20 });
+    expect(message).toMatchObject({ output: "saved answer" });
+  });
+
+  it("final.notices sets the store when the notice frame was missed", async () => {
+    const { message, notice } = await send(
+      [{ type: "final", answer: "done", notices: ["storage_quota_exceeded"] }],
+      "true",
+    );
+    expect(notice).not.toBeNull();
+    expect(message).toMatchObject({ output: "done" });
+  });
+
+  it("ignores the frame and final.notices when the flag is off", async () => {
+    const { message, notice } = await send(
+      [
+        {
+          type: "notice",
+          code: "storage_quota_exceeded",
+          used_bytes: 10,
+          max_bytes: 20,
+        },
+        { type: "final", answer: "done", notices: ["storage_quota_exceeded"] },
+      ],
+      "false",
+    );
+    expect(notice).toBeNull();
+    expect(message).toMatchObject({ output: "done" });
+  });
+
+  it("reads top-level notices on the blocking answer", async () => {
+    const { message, notice } = await send(null, "true", {
+      notices: ["storage_quota_exceeded"],
+    });
+    expect(notice).not.toBeNull();
+    expect(message).toMatchObject({ output: "done" });
   });
 });

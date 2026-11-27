@@ -5,7 +5,23 @@ import type { TokenUsageResponse } from "@/services/useTokenUsage";
 
 const tokenUsage = vi.fn();
 const messageStats = vi.fn();
+const storageFlags = vi.hoisted(() => ({ on: false }));
+const storageUsage = vi.hoisted(() => vi.fn());
+const storageRecount = vi.hoisted(() => vi.fn());
 
+vi.mock("@/utilities/features", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/utilities/features")>();
+  return {
+    ...actual,
+    get STORAGE_QUOTA_ENABLED() {
+      return storageFlags.on;
+    },
+  };
+});
+vi.mock("@/services/useStorageUsage", () => ({
+  useStorageUsage: () => storageUsage(),
+  useRecountStorageUsage: () => storageRecount(),
+}));
 vi.mock("@/services/useTokenUsage", () => ({
   useTokenUsage: () => tokenUsage(),
 }));
@@ -43,7 +59,35 @@ const ok = (data: TokenUsageResponse) => ({
   refetch: vi.fn(),
 });
 
+const GIB = 1024 * 1024 * 1024;
+
+const storageOk = (
+  data: Record<string, unknown>,
+  extra: Record<string, unknown> = {},
+) => ({
+  data,
+  isLoading: false,
+  isError: false,
+  refetch: vi.fn(),
+  ...extra,
+});
+
 beforeEach(() => {
+  storageFlags.on = false;
+  storageRecount.mockReturnValue({
+    mutate: vi.fn(),
+    isPending: false,
+    isError: false,
+  });
+  storageUsage.mockReturnValue(
+    storageOk({
+      unlimited: false,
+      used_bytes: 0,
+      max_bytes: 20 * GIB,
+      remaining_bytes: 20 * GIB,
+      used_ratio: 0,
+    }),
+  );
   tokenUsage.mockReturnValue(ok(limited));
   messageStats.mockImplementation((enabled: boolean) => ({
     data: enabled ? stats : undefined,
@@ -199,5 +243,106 @@ describe("UsageSection activity", () => {
     expect(screen.getByTestId("settings-usage-co2eq").textContent).toBe(
       "12.35 kg"
     );
+  });
+});
+
+describe("UsageSection storage", () => {
+  beforeEach(() => {
+    storageFlags.on = true;
+  });
+
+  it("shows used, limit, remaining and the bar", () => {
+    storageUsage.mockReturnValue(
+      storageOk({
+        unlimited: false,
+        used_bytes: 5 * GIB,
+        max_bytes: 20 * GIB,
+        remaining_bytes: 15 * GIB,
+        used_ratio: 0.25,
+      }),
+    );
+    render(<UsageSection />);
+    expect(screen.getByTestId("settings-storage-used").textContent).toBe(
+      "5.0 GB",
+    );
+    expect(screen.getByTestId("settings-storage-limit").textContent).toBe(
+      "20 GB",
+    );
+    expect(screen.getByTestId("settings-storage-remaining").textContent).toBe(
+      "15 GB",
+    );
+    expect(
+      screen.getByTestId("settings-storage-bar").getAttribute("aria-valuenow"),
+    ).toBe("25");
+    expect(screen.getByText(/your storage/)).toBeTruthy();
+    expect(screen.getByTestId("settings-storage-recount").textContent).toBe(
+      "Recalculate",
+    );
+  });
+
+  it("recounts storage from the button", () => {
+    const mutate = vi.fn();
+    storageRecount.mockReturnValue({ mutate, isPending: false, isError: false });
+    render(<UsageSection />);
+    fireEvent.click(screen.getByTestId("settings-storage-recount"));
+    expect(mutate).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows a few files in MB, never as 0 GB, and says Under 1%", () => {
+    storageUsage.mockReturnValue(
+      storageOk({
+        unlimited: false,
+        used_bytes: 2 * 1024 * 1024,
+        max_bytes: 20 * GIB,
+        remaining_bytes: 20 * GIB - 2 * 1024 * 1024,
+        used_ratio: 0.0001,
+      }),
+    );
+    render(<UsageSection />);
+    expect(screen.getByTestId("settings-storage-used").textContent).toBe(
+      "2.0 MB",
+    );
+    expect(screen.getByText("Under 1%")).toBeTruthy();
+  });
+
+  it("says Unlimited and draws no storage bar when the plan has no cap", () => {
+    storageUsage.mockReturnValue(
+      storageOk({
+        unlimited: true,
+        used_bytes: 512 * 1024,
+        max_bytes: null,
+        remaining_bytes: null,
+        used_ratio: null,
+      }),
+    );
+    render(<UsageSection />);
+    expect(screen.getByTestId("settings-storage-unlimited").textContent).toBe(
+      "Unlimited",
+    );
+    expect(screen.getByTestId("settings-storage-used").textContent).toBe(
+      "512 KB",
+    );
+    expect(screen.queryByTestId("settings-storage-bar")).toBeNull();
+  });
+
+  it("offers a retry when storage usage fails to load", () => {
+    const refetch = vi.fn();
+    storageUsage.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      refetch,
+    });
+    render(<UsageSection />);
+    expect(screen.getByText("Could not load your storage usage.")).toBeTruthy();
+    fireEvent.click(screen.getByTestId("settings-storage-retry"));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("hides the panel when the flag is off", () => {
+    storageFlags.on = false;
+    render(<UsageSection />);
+    expect(screen.queryByRole("heading", { name: "Storage" })).toBeNull();
+    expect(screen.queryByText(/your storage/)).toBeNull();
   });
 });

@@ -4,6 +4,7 @@ import { MUTATION_KEYS, QUERY_KEYS } from "./keys";
 import api from "./axios";
 import type { ApiError } from "@/types";
 import { handleApiError } from "@/utilities/helpers";
+import { invalidateStorageUsage } from "./useStorageUsage";
 
 const CONVERSATION_DELETE_INCOMPLETE = "conversation_delete_incomplete";
 
@@ -79,6 +80,7 @@ export const useDeleteConversation = (
       queryClient.invalidateQueries({
         queryKey: [QUERY_KEYS.conversationsList],
       });
+      void invalidateStorageUsage(queryClient);
     },
   });
 

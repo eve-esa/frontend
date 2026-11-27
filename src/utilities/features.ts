@@ -266,3 +266,13 @@ export const MOBILE_COMPOSER_ENABLED = isEnabled("FEATURE_MOBILE_COMPOSER", fals
  * Default off: a new capability ships off in production and on where an environment opts in.
  */
 export const TOOLKIT_CREDENTIALS_ENABLED = isEnabled("FEATURE_TOOLKIT_CREDENTIALS", false);
+
+/**
+ * Per-user storage: the Storage panel in Settings Usage (`GET /users/me/storage-usage`), the
+ * banner above the composer when a turn reports `storage_quota_exceeded`, and the "Manage
+ * storage" action on the upload toast. Off, none of these show and the usage endpoint is never
+ * called, so a backend without it never sees the request.
+ *
+ * Default off: a new capability ships off in production and on where an environment opts in.
+ */
+export const STORAGE_QUOTA_ENABLED = isEnabled("FEATURE_STORAGE_QUOTA", false);

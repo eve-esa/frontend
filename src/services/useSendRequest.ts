@@ -24,6 +24,12 @@ import {
 import { handleApiError } from "@/utilities/helpers";
 import { isCancellation, logError } from "./errorLogging";
 import { invalidateTokenUsage } from "./useTokenUsage";
+import { invalidateStorageUsage } from "./useStorageUsage";
+import { setStorageNotice, storageNoticeFromFrame } from "./storageNotice";
+import {
+  STORAGE_QUOTA_CODE,
+  hasStorageQuotaNotice,
+} from "@/utilities/storageQuota";
 import {
   buildMessageRequest,
   mapCreateMessageResponse,
@@ -50,6 +56,7 @@ import {
   AGENTIC_CHAT_ENABLED,
   AGENT_STEPS_ENABLED,
   INLINE_CITATIONS_ENABLED,
+  STORAGE_QUOTA_ENABLED,
   STREAMING_ENABLED,
   STREAM_STATUS_NOTICES_ENABLED,
 } from "@/utilities/features";
@@ -94,6 +101,17 @@ const citationFields = (evt: unknown): CitationMetadata | null => {
   return Object.keys(out).length ? out : null;
 };
 
+/** A quota notice is not a failed turn. The answer still resolves. */
+const rememberStorageQuota = (
+  conversationId: string | undefined,
+  body: Record<string, unknown>,
+) => {
+  if (!STORAGE_QUOTA_ENABLED || !conversationId) return;
+  const frame = body.type === "notice" && body.code === STORAGE_QUOTA_CODE;
+  if (!frame && !hasStorageQuotaNotice(body.notices)) return;
+  setStorageNotice(conversationId, storageNoticeFromFrame(body));
+};
+
 export const sendRequest = async ({
   query,
   conversationId,
@@ -115,6 +133,7 @@ export const sendRequest = async ({
     attachments,
   });
   const response = await api.post<CreateMessageResponse>(url, payload);
+  rememberStorageQuota(conversationId, response.data as Record<string, unknown>);
   return mapCreateMessageResponse(response.data);
 };
 
@@ -221,6 +240,13 @@ export const useSendRequest = (conversationId?: string) => {
           payload,
           onEvent: (evt) => {
             const { type, content, answer } = evt as Record<string, unknown>;
+
+            // Before the pre-answer branch: a quota `notice` is not answer text.
+            // `final.notices` covers a frame this parser missed. A new send does
+            // not clear the banner; the next full turn sends the notice again.
+            if (type === "notice" || type === "final") {
+              rememberStorageQuota(conversationId, evt as Record<string, unknown>);
+            }
 
             if (type === "error") {
               // Terminal event: the backend persists the failure and closes
@@ -586,6 +612,7 @@ export const useSendRequest = (conversationId?: string) => {
     },
     onSettled: () => {
       void invalidateTokenUsage(queryClient);
+      void invalidateStorageUsage(queryClient);
       // A stop must still reconcile (the old skip left the temp message
       // frozen forever), but only once the backend has persisted the stop:
       // see reconcileAfterStop.

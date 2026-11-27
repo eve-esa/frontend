@@ -177,6 +177,7 @@ jobs:
               "FEATURE_SETTINGS_USAGE": "${{ vars.FEATURE_SETTINGS_USAGE }}",
               "FEATURE_MOBILE_COMPOSER": "${{ vars.FEATURE_MOBILE_COMPOSER }}",
               "FEATURE_TOOLKIT_CREDENTIALS": "${{ vars.FEATURE_TOOLKIT_CREDENTIALS }}",
+              "FEATURE_STORAGE_QUOTA": "${{ vars.FEATURE_STORAGE_QUOTA }}",
               "CONTACT_URL": "${{ vars.VITE_CONTACT_URL }}",
               "PRIVACY_POLICY_URL": "${{ vars.VITE_PRIVACY_POLICY_URL }}",
               "ABOUT_US_URL": "${{ vars.VITE_ABOUT_US_URL }}",

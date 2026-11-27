@@ -5,6 +5,7 @@ import api from "./axios";
 import type { ApiError, MessageType } from "@/types";
 import { MUTATION_KEYS, QUERY_KEYS } from "./keys";
 import { invalidateTokenUsage } from "./useTokenUsage";
+import { invalidateStorageUsage } from "./useStorageUsage";
 import { RATE_LIMITED_CODE, busyRefusal } from "./serviceBusy";
 import { handleApiError } from "@/utilities/helpers";
 
@@ -46,6 +47,7 @@ export const useRetry = ({ conversationId }: SendRequestProps) => {
         queryKey: [QUERY_KEYS.conversation, conversationId],
       });
       void invalidateTokenUsage(queryClient);
+      void invalidateStorageUsage(queryClient);
     },
   });
 };
